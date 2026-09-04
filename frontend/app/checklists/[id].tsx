@@ -170,6 +170,31 @@ export default function EditChecklistScreen() {
     }, [hasChanges, checklist])
   );
 
+  // Zuverlässiges Auto-Save (SDK 57): entprelltes Speichern bei JEDER Änderung,
+  // da der useFocusEffect-Cleanup beim Zurücknavigieren nicht mehr zuverlässig feuert
+  const latestChecklistRef = useRef<{ checklist: any; hasChanges: boolean }>({ checklist: null, hasChanges: false });
+  latestChecklistRef.current = { checklist, hasChanges };
+
+  useEffect(() => {
+    if (!hasChanges || !checklist) return;
+    const timer = setTimeout(() => {
+      ChecklistService.update(checklist.id, checklist)
+        .then(() => setHasChanges(false))
+        .catch((e) => console.error('Checklist auto-save error:', e));
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [checklist, hasChanges]);
+
+  // Fallback: beim Unmount letzte ungespeicherte Änderung sofort sichern
+  useEffect(() => {
+    return () => {
+      const { checklist: c, hasChanges: h } = latestChecklistRef.current;
+      if (h && c) {
+        ChecklistService.update(c.id, c).catch(() => {});
+      }
+    };
+  }, []);
+
   const loadChecklist = async () => {
     try {
       const projects = await ProjectService.getAll();

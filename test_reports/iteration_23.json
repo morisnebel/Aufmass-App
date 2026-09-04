@@ -1,0 +1,35 @@
+{
+  "summary": "Frontend-only regression after Expo SDK 54→57 upgrade. BUG 2 (Checklist sub-items) CONFIRMED and reproduced deterministically: sub-items added via 'Add sub-item' + Enter (confirmNewSubItem) are visible in UI (state updates, 'Unsaved changes' banner appears) but the auto-save on navigate-back (useFocusEffect cleanup at /app/frontend/app/checklists/[id].tsx:162-171) DOES NOT persist them to AsyncStorage. Verified via SPA back navigation (router.back equivalent, page.go_back) and via full nav — both leave subItems: [] in aufmassprofi_checklists storage. Only the explicit 'Save & Back' button (handleSave) reliably persists sub-items. On reopen the sub-item is gone. BUG 1 (Sketch tools): /sketches/draw screen loads cleanly with no console errors, all toolbars render, Elemente:0 counter visible; default tool is 'Zoom' (highlighted green) — not Pen. Comprehensive canvas interaction testing (pen drag, edit/select/move, delete, undo) via Playwright mouse events is unreliable against React Native PanResponder on web preview and was NOT completed in this run. Main agent should retest sketch edit-mode manually or with lower-level pointer events. No console errors were observed on the checklist or sketch draw screens. Deprecated warnings detected: 'shadow*' style props and props.pointerEvents (many occurrences via react-native-web).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "checklists/[id].tsx", "issue": "Auto-save via useFocusEffect cleanup fails on SDK 57. Sub-items added via addSubItem+confirmNewSubItem are lost when leaving the screen with system/router back (only Save&Back works).", "testID": "", "priority": "CRITICAL"}
+    ],
+    "integration_issues": [
+      {"flow": "Checklist add sub-item → back navigate → reopen", "issue": "Storage aufmassprofi_checklists still has subItems: [] after nav-back; explicit Save button works. useFocusEffect cleanup executes but async ChecklistService.update never persists (fire-and-forget after unmount; state closure race).", "affected_testIDs": []}
+    ],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "react-native-web (multiple screens)", "issue": "Deprecated warning: 'shadow*' style props are deprecated. Use boxShadow. Many screens trigger this."},
+      {"component": "react-native-web (multiple screens)", "issue": "Deprecated warning: props.pointerEvents is deprecated. Use style.pointerEvents."}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_23.json"],
+  "action_items": [
+    "FIX BUG 2 (HIGH): In /app/frontend/app/checklists/[id].tsx, replace the useFocusEffect autosave (lines 162-171) with a mechanism that reliably persists on unmount. Options: (a) debounced save on every setChecklist/setHasChanges change via useEffect on checklist; (b) keep a ref (checklistRef, hasChangesRef) synced via useEffect and read the ref in cleanup and await the save; (c) use navigation beforeRemove listener (from @react-navigation/native) which supports async cleanup. Verify with pattern: add sub-item → hardware/SPA back → reopen → sub-item MUST persist.",
+    "Retest sketch tools manually (Pen freehand drag, Line via 'Linientyp wählen' modal, Circle, Rectangle, Angle, Text, Measure Line/Polygon, Edit-select/move/delete, Undo/Redo, Zoom, Grid, Delete Page) — Playwright mouse events on RN PanResponder on web preview did not yield reliable coverage. Note: on web the default tool is 'Zoom' — verify this is intentional after SDK 57 upgrade.",
+    "Address react-native-web deprecation warnings (shadow*, props.pointerEvents) globally — likely one shared style-util migration."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/checklists/[id].tsx:162-171 — useFocusEffect cleanup calls async saveChecklistSilent() as fire-and-forget. On SDK 57/expo-router 5.x + React 19 this pattern is unreliable because the async work may be scheduled after unmount and never awaited. Use a ref-based sync + navigation beforeRemove or a debounced useEffect.",
+    "/app/frontend/services/LocalStorage.ts:1465-1495 — ChecklistService.create/update rely on chkExtractImages which mutates via spread; subItems structure is preserved correctly — not the cause of the bug.",
+    "File /app/frontend/app/checklists/[id].tsx is >1700 lines — should be split into subcomponents (RecursiveItem, MeasurementModal, Numpad) for maintainability."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "Priority Bug 2 fully reproduced; Bug 1 partial (screen loads clean, canvas interaction not covered)"},
+  "seed_data_creation": "Injected localStorage keys aufmassprofi_customers/projects/checklist_templates/checklists via page.evaluate to bypass full UI flow for checklist test. Removed on page reload — no persisted test data left behind.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Bug 2 root cause identified: useFocusEffect cleanup fire-and-forget async save in /app/frontend/app/checklists/[id].tsx. After fix, retest by seeding cl1 as done here, adding sub-item, using SPA back (page.go_back), then verifying JSON.parse(localStorage['aufmassprofi_checklists'])[0].items[0].subItems has the entry. Also retest with nested sub-of-sub. Bug 1 sketch tool interactions still need a native app pass — web-preview Playwright drags may not fire RN PanResponder move events reliably.",
+  "rca_of_issue": "BUG 2 RCA — checklist sub-item lost after back navigation:\n1) User taps 'Add sub-item' → openInputs adds the path, TextInput appears (autoFocus).\n2) User types text + Enter → confirmNewSubItem() calls setChecklist(newItems) and setHasChanges(true). Sub-item is visible in UI, banner 'Unsaved changes' appears.\n3) User taps back (SPA router.back or full nav): useFocusEffect cleanup runs — `if (hasChanges && checklist) saveChecklistSilent()` — but saveChecklistSilent is invoked without await; component tree unmounts; the AsyncStorage.setItem inside ChecklistService.update is scheduled after unmount and never completes (verified: aufmassprofi_checklists in localStorage remains with subItems:[]).\n4) On reopen, loadChecklist reads the (unchanged) storage → sub-item missing.\nExplicit 'Save & Back' works because handleSave awaits ChecklistService.update before router.back().\nReproduction on web:\n  - seed cl1 with one checked item and empty subItems\n  - open /checklists/cl1 → tap 'Add sub-item' → type X → Enter\n  - page.go_back()\n  - JSON.parse(localStorage.getItem('aufmassprofi_checklists'))[0].items[0].subItems === [] ← BUG\nMitigation: replace useFocusEffect with either (a) debounced auto-save useEffect on [checklist, hasChanges] persisting on every change, or (b) navigation beforeRemove listener that awaits the save and only then allows the pop."
+}

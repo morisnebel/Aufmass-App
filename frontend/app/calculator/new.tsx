@@ -35,6 +35,9 @@ import Svg, {
   Polyline,
 } from 'react-native-svg';
 
+// Workaround RN-SVG Fabric-Bug (SDK 57): erzwingt Canvas-Neuzeichnen pro Render
+let fabricTick = 0;
+
 // Custom SVG Icons for Toolbar
 const AreaIcon = ({ size = 24, color = '#4CAF50' }: { size?: number; color?: string }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24">
@@ -6011,6 +6014,7 @@ export default function AreaCalculatorEditor() {
           {pendingMemoPointer && renderMemoPointer({ ...pendingMemoPointer, id: 'preview', text: '', color: annotationColor }, true)}
           
           </G>{/* End of zoom/pan transformation group */}
+          <Circle key={`inv-${fabricTick++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
         </Svg>
         
         {/* Reference Image Overlay - Top Right Corner */}

@@ -33,6 +33,9 @@ import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync, readAsStrin
 import { WebView } from 'react-native-webview';
 import { SvgXml } from 'react-native-svg';
 import Svg, { Path as SvgPath, Text as SvgText, Image as SvgImage } from 'react-native-svg';
+
+// Workaround RN-SVG Fabric-Bug (SDK 57): erzwingt Canvas-Neuzeichnen pro Render
+let fabricTick = 0;
 import ViewShot from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -5645,6 +5648,7 @@ export default function ProjectDetailScreen() {
                                 {t.text}
                               </SvgText>
                             ))}
+                            <SvgPath key={`inv-${fabricTick++}`} d="M -9999 -9999" fill="none" stroke="none" />
                           </Svg>
                         );
                       } catch (e) {

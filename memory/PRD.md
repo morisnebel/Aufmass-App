@@ -161,3 +161,21 @@
   Rapport-Fotos (reports/edit.tsx): vorher unskaliertes q0.6-Base64 → jetzt 1600px/q0.85
   via ImageManipulator. Skizzen selbst sind SVG (Vektor) = verlustfrei scharf.
   Gilt nur für NEU aufgenommene/importierte Bilder.
+- Fix Checklisten-Unterpunkte gehen verloren (SDK 57 Regression, DONE): Der
+  useFocusEffect-Cleanup (Auto-Save beim Verlassen) feuert unter expo-router 57 nicht
+  mehr zuverlässig. Fix in checklists/[id].tsx: entprelltes Auto-Save (600ms) bei JEDER
+  Änderung via useEffect auf [checklist, hasChanges] + Unmount-Fallback über Ref.
+  Verifiziert per Playwright: Checkbox/Unterpunkt werden nach 600ms in AsyncStorage
+  persistiert und überleben Neuladen (iteration_23.json enthält RCA).
+- Fix Skizzen zeichnen nicht sichtbar auf Gerät (SDK 57 Regression, WORKAROUND): User
+  berichtet in Expo Go (iPad): Zeichnen erzeugt nichts Sichtbares, Elemente erscheinen
+  erst nach Neuöffnen der Skizze, dann nicht editierbar. Diagnose: bekannter
+  react-native-svg 15.15.x Fabric-Bug – SVG-Canvas invalidiert nicht bei Prop-Updates
+  (nur bei Mount-Mutationen; GitHub issues #2937/#2671). Workaround: unsichtbares
+  Element mit neuem Key pro Render ("fabricTick") am Ende jedes dynamischen SVG-Canvas
+  → erzwingt native Mount-Mutation → Neuzeichnen. Eingebaut in: sketches/draw.tsx
+  (Haupt-Canvas + Lupe + Winkelmesser), calculator/new.tsx, photos/annotate.tsx,
+  imagemeter/measure.tsx, documents/view.tsx (Anmerkungs-Overlay), projects/[id].tsx
+  (Preview-Svg), src/components/SignaturePad.tsx. Web weiterhin OK (Smoke-Test).
+  WICHTIG: Fix konnte nur auf Web verifiziert werden – USER MUSS in Expo Go auf dem
+  iPad nachtesten. Falls weiterhin kaputt: Fallback = key-Remount des ganzen <Svg>.

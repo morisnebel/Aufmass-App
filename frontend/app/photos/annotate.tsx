@@ -17,6 +17,9 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, G, Text as SvgText, Line, Circle, Polygon, Defs, Marker } from 'react-native-svg';
+
+// Workaround RN-SVG Fabric-Bug (SDK 57): erzwingt Canvas-Neuzeichnen pro Render
+let fabricTick = 0;
 import { captureRef } from 'react-native-view-shot';
 import { PhotoService } from '../../services/LocalStorage';
 import * as Sharing from 'expo-sharing';
@@ -1273,6 +1276,7 @@ export default function AnnotatePhotoScreen() {
                   </G>
                 );
               })}
+              <Circle key={`inv-${fabricTick++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
             </Svg>
           </View>
         </View>

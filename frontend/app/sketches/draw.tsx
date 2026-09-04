@@ -341,6 +341,10 @@ export default function DrawSketchScreen() {
   const [historyIndex, setHistoryIndex] = useState(0);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [drawMode, setDrawMode] = useState<DrawMode>('select');
+  // Workaround RN-SVG Fabric-Bug (SDK 57/RN 0.86): SVG-Canvas invalidiert auf iOS/Android
+  // nicht zuverlässig bei Prop-Updates. Ein pro Render neu gemountetes unsichtbares
+  // Element erzwingt eine native Mount-Mutation → Canvas zeichnet neu.
+  const fabricInvalidateTick = useRef(0);
   // Linien-Pfeiltyp: none = normale Linie, end = Pfeil →, both = Doppelpfeil ↔
   const [lineArrowType, setLineArrowType] = useState<'none' | 'end' | 'both'>('none');
   const [showLineTypePicker, setShowLineTypePicker] = useState(false);
@@ -7973,6 +7977,10 @@ export default function DrawSketchScreen() {
               })()}
             </>
           )}
+          {/* Fabric-Invalidierungs-Workaround: unsichtbares Element mit neuem Key pro Render */}
+          {Platform.OS !== 'web' && (
+            <Circle key={`inv-${fabricInvalidateTick.current++}`} cx={-99999} cy={-99999} r={0.1} fill="none" stroke="none" opacity={0} />
+          )}
         </Svg>
 
         {/* Info overlay - mit eigenem Responder damit Buttons funktionieren */}
@@ -10091,6 +10099,9 @@ export default function DrawSketchScreen() {
                       <Line key={`gh${i}`} x1={0} y1={pos} x2={magnifierSize} y2={pos} stroke="#e0e0e0" strokeWidth={0.5} />
                     ) : null;
                   })}
+                  {Platform.OS !== 'web' && (
+                    <Circle key={`inv-${fabricInvalidateTick.current++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
+                  )}
                 </Svg>
               )}
               
@@ -10224,6 +10235,9 @@ export default function DrawSketchScreen() {
               >
                 Winkel
               </SvgText>
+              {Platform.OS !== 'web' && (
+                <Circle key={`inv-${fabricInvalidateTick.current++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
+              )}
             </Svg>
           </View>
           

@@ -10,6 +10,9 @@ import { View, Text, TouchableOpacity, StyleSheet, PanResponder, GestureResponde
 import Svg, { Path } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 
+// Workaround RN-SVG Fabric-Bug (SDK 57): erzwingt Canvas-Neuzeichnen pro Render
+let fabricTick = 0;
+
 interface SignaturePadProps {
   value?: string;
   onChange: (svgPath: string) => void;
@@ -142,6 +145,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
           {paths.map((d, i) => (
             <Path key={i} d={d} stroke="#1a237e" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
           ))}
+          <Path key={`inv-${fabricTick++}`} d="M -9999 -9999" stroke="none" fill="none" />
         </Svg>
         {isEmpty && (
           <View pointerEvents="none" style={styles.placeholderContainer}>

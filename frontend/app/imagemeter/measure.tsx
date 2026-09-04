@@ -17,6 +17,9 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Line, Circle, G, Text as SvgText, Rect, Path, Polygon } from 'react-native-svg';
+
+// Workaround RN-SVG Fabric-Bug (SDK 57): erzwingt Canvas-Neuzeichnen pro Render
+let fabricTick = 0;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTranslation } from 'react-i18next';
 import { captureRef } from 'react-native-view-shot';
@@ -1083,6 +1086,7 @@ export default function ImageMeterMeasureScreen() {
                 </G>
               );
             })()}
+            <Circle key={`inv-${fabricTick++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
           </Svg>
         </View>
 

@@ -22,6 +22,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { WebView } from 'react-native-webview';
 import Svg, { Path, Text as SvgText, Rect, Circle, Line, G } from 'react-native-svg';
+
+// Workaround RN-SVG Fabric-Bug (SDK 57): erzwingt Canvas-Neuzeichnen pro Render
+let fabricTick = 0;
 import { DocumentService, Document } from '../../services/LocalStorage';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -1989,6 +1992,7 @@ export default function DocumentViewScreen() {
                           />
                         );
                       })()}
+                      <Circle key={`inv-${fabricTick++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
                     </Svg>
                   </View>
                 </ScrollView>

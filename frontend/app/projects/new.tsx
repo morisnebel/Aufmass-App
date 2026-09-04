@@ -709,7 +709,7 @@ export default function NewProjectScreen() {
         name,
         description: description || undefined,
         customer_id: customerId,
-        status: 'aktiv',
+        status: 'anfrage',
         project_number: finalProjectNumber || undefined,
         bauherr_name: selectedCustomer?.name || undefined,
         bauherr_phone: selectedCustomer?.phone || undefined,

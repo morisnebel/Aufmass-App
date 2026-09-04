@@ -317,3 +317,26 @@
 - Hinweis: app/calculator/new.tsx nutzt noch einen dynamischen import() (Z.~3242) -
   falls dort nativ Fehler auftauchen, ebenfalls auf statischen Import umstellen.
 - Nativ-Verifikation (iPad) durch User ausstehend: Swipe-Prompt, Kontakte, Expertenmodus.
+
+## Session 05.09. Teil 2 - Auto-Save + Projekt-Status-Pipeline
+- FEATURE Auto-Speichern (sketches/draw.tsx): setInterval alle 120s ruft performAutoSaveRef
+  (latest-ref pattern). Speichert nur bestehende Skizzen (sketchId && lastLoadedSketchId match),
+  nur bei Änderungen (elements-Referenzvergleich + backgroundImageChangedRef). Speichert
+  sketch_meta_ + Bild-Extraktion + SketchService.update (ohne Preview/sketch_data = leichtgewichtig).
+  Grüne Pill "Automatisch gespeichert · HH:MM" (styles.autoSaveNotice) 3s eingeblendet.
+- FEATURE Status-Pipeline: NEU src/constants/projectStatus.ts (PROJECT_STATUSES: anfrage lila,
+  angebot orange, ausfuehrung grün, fertig blau, abgebrochen rot, archiviert grau;
+  normalizeStatus mappt legacy aktiv->ausfuehrung, abgeschlossen->fertig; getStatusMeta/-Order).
+  - app/index.tsx: Filter-Tabs horizontal scrollbar (Alle + 6 Status), 'Alle' blendet
+    archiviert aus; Karten-Pill mit Farbe+Label; Pill-Tap -> Alert-Chooser mit 6 Status;
+    Bulk-Auswahl: EIN "Status"-Button öffnet Chooser (ersetzt 3 Einzelbuttons); Sortierung
+    nach Pipeline-Reihenfolge; gespeicherter Filter validiert gegen neue Keys.
+  - projects/new.tsx: Default-Status 'anfrage'.
+  - projects/[id].tsx: Status-Badge via getStatusMeta; Edit-Modal mit 6 Wrap-Buttons
+    (statusButtonsCompact flexWrap); setEditProjectStatus(normalizeStatus(...)); PDF-HTML-Label via Meta.
+- GETESTET: testing_agent iteration_24.json: 10/12 PASS, retest_needed=false.
+  Bekannte WEB-ONLY Einschränkung (nativ ok): Alert.alert Multi-Button-Chooser (Pill-Tap auf
+  Home + Bulk-Status) ist auf react-native-web no-op (window.alert 1 Button). Nativ iOS/iPad
+  funktioniert. Statuswechsel via Edit-Modal geht überall. Optionaler späterer Fix: Modal-Chooser für Web.
+- Bekannte Console-Warnung (low): "Unexpected text node: ." irgendwo <View>-Kind auf allen Routen.
+- User baut als nächstes TestFlight-Build; nativ zu verifizieren: Auto-Save-Pill, Swipe-Prompt, Kontakte.

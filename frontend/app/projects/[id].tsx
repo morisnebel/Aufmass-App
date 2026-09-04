@@ -22,6 +22,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from '
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, EmployeeMasterService, MaterialMasterService, MachineMasterService, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage, migrateChecklistImages } from '../../services/LocalStorage';
+import { PROJECT_STATUSES, getStatusMeta, normalizeStatus } from '../../src/constants/projectStatus';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
 import { isPro, getProStatus } from '../../services/FeatureFlags';
@@ -851,7 +852,7 @@ export default function ProjectDetailScreen() {
       setEditProjectNumber(project.project_number || '');
       setEditProjectName(project.name);
       setEditProjectDescription(project.description || '');
-      setEditProjectStatus(project.status);
+      setEditProjectStatus(normalizeStatus(project.status));
       
       // Parse customer address as fallback
       const customerAddr = parseCustomerAddress(customer?.address);
@@ -4259,7 +4260,7 @@ export default function ProjectDetailScreen() {
             ` : ''}
             <div class="info-row">
               <span class="info-label">${t('projects.status')}:</span>
-              <span class="info-value">${project?.status === 'aktiv' ? t('projects.statusActive') : project?.status === 'abgeschlossen' ? t('projects.statusCompleted') : t('projects.statusCancelled')}</span>
+              <span class="info-value">${getStatusMeta(project?.status).label}</span>
             </div>
             ${(objektStreet || objektPlz || objektCity || objektName || objektAddressName || objektDescription || objektContactPerson || objektPhone || objektEmail || objektNumber) ? `
               <div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid #e0e0e0;">
@@ -5177,9 +5178,9 @@ export default function ProjectDetailScreen() {
               )}
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Status:</Text>
-                <View style={[styles.statusBadge, { backgroundColor: project.status === 'aktiv' ? '#4caf50' : project.status === 'abgeschlossen' ? '#2196f3' : '#ff9800' }]}>
+                <View style={[styles.statusBadge, { backgroundColor: getStatusMeta(project.status).color }]}>
                   <Text style={styles.statusBadgeText}>
-                    {project.status === 'aktiv' ? t('projects.statusActive') : project.status === 'abgeschlossen' ? t('projects.statusCompleted') : t('projects.statusCancelled')}
+                    {getStatusMeta(project.status).label}
                   </Text>
                 </View>
               </View>
@@ -7396,20 +7397,22 @@ export default function ProjectDetailScreen() {
                   <View style={styles.compactInputGroup}>
                     <Text style={styles.compactLabel}>Status</Text>
                     <View style={styles.statusButtonsCompact}>
-                      {['aktiv', 'abgeschlossen', 'abgebrochen'].map((status) => (
+                      {PROJECT_STATUSES.map((statusMeta) => (
                         <TouchableOpacity
-                          key={status}
+                          key={statusMeta.key}
                           style={[
                             styles.statusButtonCompact,
-                            editProjectStatus === status && styles.statusButtonActiveCompact,
+                            editProjectStatus === statusMeta.key && styles.statusButtonActiveCompact,
+                            editProjectStatus === statusMeta.key && { borderColor: statusMeta.color, backgroundColor: statusMeta.color + '20' },
                           ]}
-                          onPress={() => setEditProjectStatus(status)}
+                          onPress={() => setEditProjectStatus(statusMeta.key)}
                         >
                           <Text style={[
                             styles.statusButtonTextCompact,
-                            editProjectStatus === status && styles.statusButtonTextActiveCompact,
+                            editProjectStatus === statusMeta.key && styles.statusButtonTextActiveCompact,
+                            editProjectStatus === statusMeta.key && { color: statusMeta.color },
                           ]}>
-                            {status === 'aktiv' ? t('projects.statusActive') : status === 'abgeschlossen' ? t('home.completed') : t('home.cancelled')}
+                            {statusMeta.label}
                           </Text>
                         </TouchableOpacity>
                       ))}
@@ -9359,10 +9362,12 @@ const styles = StyleSheet.create({
   },
   statusButtonsCompact: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
   },
   statusButtonCompact: {
-    flex: 1,
+    flexBasis: '30%',
+    flexGrow: 1,
     padding: 8,
     borderRadius: 6,
     borderWidth: 1,

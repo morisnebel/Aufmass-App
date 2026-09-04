@@ -27,13 +27,12 @@ import { Features, AppName, getProStatus, loadProStatus } from '../services/Feat
 import { BackupService } from '../services/BackupService';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PROJECT_STATUSES, getStatusMeta, getStatusOrder, normalizeStatus } from '../src/constants/projectStatus';
 
-// Status-Optionen
+// Status-Optionen (Pipeline: Anfrage → Angebot → Ausführung → Fertig, + Abgebrochen/Archiv)
 const STATUS_OPTIONS = [
-  { key: 'all', labelKey: 'home.allProjects', icon: 'folder-outline' },
-  { key: 'aktiv', labelKey: 'home.active', icon: 'play-circle-outline', color: '#4caf50' },
-  { key: 'abgeschlossen', labelKey: 'home.completed', icon: 'checkmark-circle-outline', color: '#2196f3' },
-  { key: 'abgebrochen', labelKey: 'home.cancelled', icon: 'close-circle-outline', color: '#f44336' },
+  { key: 'all', labelKey: 'home.allProjects', icon: 'folder-outline' } as any,
+  ...PROJECT_STATUSES.map(s => ({ key: s.key, label: s.label, icon: s.icon, color: s.color })),
 ];
 
 export default function HomeScreen() {
@@ -58,7 +57,7 @@ export default function HomeScreen() {
   // Letzten Filter aus AsyncStorage laden
   useEffect(() => {
     AsyncStorage.getItem('lastActiveFilter').then(saved => {
-      if (saved && ['all', 'aktiv', 'abgeschlossen', 'abgebrochen'].includes(saved)) {
+      if (saved && ['all', ...PROJECT_STATUSES.map(s => s.key)].includes(saved)) {
         setActiveFilter(saved);
       }
     }).catch(() => {});
@@ -351,7 +350,7 @@ export default function HomeScreen() {
       return;
     }
     
-    const statusLabel = newStatus === 'abgeschlossen' ? t('home.markAsCompleted') : (newStatus === 'aktiv' ? t('home.markAsActive') : t('home.markAsCancelled'));
+    const statusLabel = getStatusMeta(newStatus).label;
     
     Alert.alert(
       t('home.statusChanged'),
@@ -554,14 +553,13 @@ export default function HomeScreen() {
 
   // Status ändern
   const changeProjectStatus = async (projectId: string, currentStatus: string) => {
-    const statusOptions = ['aktiv', 'abgeschlossen', 'abgebrochen'];
-    const buttons = statusOptions.map(status => ({
-      text: status.charAt(0).toUpperCase() + status.slice(1),
+    const buttons = PROJECT_STATUSES.map(statusMeta => ({
+      text: `${statusMeta.label}${normalizeStatus(currentStatus) === statusMeta.key ? ' ✓' : ''}`,
       onPress: async () => {
         try {
           const project = projects.find(p => p.id === projectId);
           if (project) {
-            await ProjectService.update(projectId, { ...project, status });
+            await ProjectService.update(projectId, { ...project, status: statusMeta.key });
             loadData();
           }
         } catch (error) {
@@ -569,7 +567,7 @@ export default function HomeScreen() {
           Alert.alert(t('common.error'), t('home.statusChangeError'));
         }
       },
-      style: status === currentStatus ? 'cancel' : 'default' as const,
+      style: normalizeStatus(currentStatus) === statusMeta.key ? 'cancel' : 'default' as const,
     }));
     buttons.push({ text: t('common.cancel'), onPress: () => {}, style: 'cancel' as const });
     
@@ -614,8 +612,12 @@ export default function HomeScreen() {
 
   // Gefilterte und sortierte Projekte
   const filteredProjects = projects.filter(project => {
-    // Status-Filter
-    if (activeFilter !== 'all' && project.status !== activeFilter) {
+    // Status-Filter (Pipeline-Keys, alte Werte werden gemappt)
+    const projectStatus = normalizeStatus(project.status);
+    if (activeFilter === 'all') {
+      // Archivierte Projekte in "Alle" ausblenden
+      if (projectStatus === 'archiviert') return false;
+    } else if (projectStatus !== activeFilter) {
       return false;
     }
     
@@ -644,8 +646,7 @@ export default function HomeScreen() {
       case 'name_desc':
         return b.name.localeCompare(a.name, 'de');
       case 'status':
-        const statusOrder = { 'aktiv': 0, 'abgeschlossen': 1, 'abgebrochen': 2 };
-        return (statusOrder[a.status as keyof typeof statusOrder] || 3) - (statusOrder[b.status as keyof typeof statusOrder] || 3);
+        return getStatusOrder(a.status) - getStatusOrder(b.status);
       default:
         return 0;
     }
@@ -661,14 +662,7 @@ export default function HomeScreen() {
   });
 
   // Status-Farbe ermitteln
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'aktiv': return '#4caf50';
-      case 'abgeschlossen': return '#2196f3';
-      case 'abgebrochen': return '#f44336';
-      default: return '#1976d2';
-    }
-  };
+  const getStatusColor = (status: string) => getStatusMeta(status).color;
 
   const renderProject = ({ item }: { item: Project }) => {
     const customer = customers[item.customer_id];
@@ -744,7 +738,7 @@ export default function HomeScreen() {
             onPress={() => !selectionMode && changeProjectStatus(item.id, item.status)}
             disabled={selectionMode}
           >
-            <Text style={[styles.statusText, { color: statusColor }]}>{item.status === 'aktiv' ? t('projects.statusActive') : item.status === 'abgeschlossen' ? t('projects.statusCompleted') : t('projects.statusCancelled')}</Text>
+            <Text style={[styles.statusText, { color: statusColor }]}>{getStatusMeta(item.status).label}</Text>
             {!selectionMode && <Ionicons name="chevron-down" size={14} color={statusColor} />}
           </TouchableOpacity>
           <Text style={styles.projectDate}>
@@ -1075,8 +1069,9 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Status-Filter Tabs */}
+      {/* Status-Filter Tabs (scrollbar für die Pipeline) */}
       <View style={styles.filterContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
         {STATUS_OPTIONS.map(option => (
           <TouchableOpacity
             key={option.key}
@@ -1100,10 +1095,11 @@ export default function HomeScreen() {
               ]}
               numberOfLines={1}
             >
-              {t(option.labelKey)}
+              {option.labelKey ? t(option.labelKey) : option.label}
             </Text>
           </TouchableOpacity>
         ))}
+        </ScrollView>
       </View>
 
       {/* Buttons und Quick-Actions - nur anzeigen wenn Suche nicht aktiv */}
@@ -1270,29 +1266,18 @@ export default function HomeScreen() {
           
           <TouchableOpacity
             style={[styles.multiSelectButton, { backgroundColor: '#e8f5e9' }]}
-            onPress={() => moveSelectedToStatus('aktiv')}
+            onPress={() => {
+              const buttons: any[] = PROJECT_STATUSES.map(s => ({
+                text: s.label,
+                onPress: () => moveSelectedToStatus(s.key),
+              }));
+              buttons.push({ text: t('common.cancel'), style: 'cancel' });
+              Alert.alert('Status ändern', 'Neuen Status für die ausgewählten Projekte wählen:', buttons);
+            }}
             disabled={selectedProjects.size === 0}
           >
-            <Ionicons name="play-circle-outline" size={16} color="#4caf50" />
-            <Text style={[styles.multiSelectButtonText, { color: '#4caf50' }]}>{t('home.active')}</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.multiSelectButton, { backgroundColor: '#e3f2fd' }]}
-            onPress={() => moveSelectedToStatus('abgeschlossen')}
-            disabled={selectedProjects.size === 0}
-          >
-            <Ionicons name="checkmark-circle-outline" size={16} color="#1976d2" />
-            <Text style={[styles.multiSelectButtonText, { color: '#1976d2' }]}>{t('home.completed')}</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.multiSelectButton, { backgroundColor: '#fff3e0' }]}
-            onPress={() => moveSelectedToStatus('abgebrochen')}
-            disabled={selectedProjects.size === 0}
-          >
-            <Ionicons name="close-circle-outline" size={16} color="#f57c00" />
-            <Text style={[styles.multiSelectButtonText, { color: '#f57c00' }]}>{t('home.cancelled')}</Text>
+            <Ionicons name="swap-horizontal-outline" size={16} color="#4caf50" />
+            <Text style={[styles.multiSelectButtonText, { color: '#4caf50' }]}>Status</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -1411,18 +1396,20 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   filterContainer: {
-    flexDirection: 'row',
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  filterScrollContent: {
+    flexDirection: 'row',
     gap: 8,
+    flexGrow: 1,
   },
   filterTab: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     borderRadius: 8,
     backgroundColor: '#fff',
     borderWidth: 1,

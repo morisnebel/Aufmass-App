@@ -1818,6 +1818,92 @@ export default function DrawSketchScreen() {
     );
   });
 
+  // ===== AUTO-SPEICHERN: alle 2 Minuten im Hintergrund (nur bestehende Skizzen) =====
+  const [autoSaveNotice, setAutoSaveNotice] = useState<string | null>(null);
+  const autoSavingRef = useRef(false);
+  const lastAutoSavedElementsRef = useRef<any>(null);
+  const autoSaveNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const performAutoSaveRef = useRef<() => void>(() => {});
+
+  const performAutoSave = async () => {
+    // Nur bestehende Skizzen, nicht während eines laufenden Speichervorgangs
+    if (autoSavingRef.current || isSaving || loading) return;
+    if (!sketchId || lastLoadedSketchId.current !== sketchId) return;
+    if (elements.length === 0) return;
+    // Nichts geändert seit dem letzten Auto-Save?
+    if (lastAutoSavedElementsRef.current === elements && !backgroundImageChangedRef.current) return;
+
+    autoSavingRef.current = true;
+    try {
+      const metadata = {
+        elements,
+        canvasWidth: width,
+        canvasHeight: height - 120,
+        lineSegmentMeasurements,
+        measureLineStyles,
+        totalLfmBoxPositions,
+        legendPosition,
+        notes,
+        labelOffsets,
+        polygonAreaVisible,
+      };
+      // Große Bild-URIs separat speichern (wie beim normalen Speichern)
+      const extractedImageOps: Promise<any>[] = [];
+      const lightElements = metadata.elements.map((el: any) => {
+        if (el.type === 'image' && el.data?.uri && el.data.uri.length > 1000) {
+          const imageKey = `sketch_img_${sketchId}_${el.id}`;
+          extractedImageOps.push(
+            AsyncStorage.setItem(imageKey, el.data.uri).catch(err =>
+              console.error('AutoSave: Error saving image element:', err)
+            )
+          );
+          return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
+        }
+        return el;
+      });
+      const lightMetadata = { ...metadata, elements: lightElements };
+
+      const ops: Promise<any>[] = [
+        AsyncStorage.setItem(`sketch_meta_${sketchId}`, JSON.stringify(lightMetadata)),
+        ...extractedImageOps,
+        SketchService.update(sketchId, { project_id: projectId, title, notes, pdf_size: pdfSize }),
+      ];
+      if (backgroundImageChangedRef.current) {
+        if (backgroundImage) {
+          ops.push(AsyncStorage.setItem(`sketch_bg_${sketchId}`, backgroundImage));
+        } else {
+          ops.push(AsyncStorage.removeItem(`sketch_bg_${sketchId}`));
+        }
+      }
+      await Promise.all(ops);
+      if (backgroundImageChangedRef.current) backgroundImageChangedRef.current = false;
+      lastAutoSavedElementsRef.current = elements;
+
+      if (isMountedRef.current) {
+        const time = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        setAutoSaveNotice(`Automatisch gespeichert · ${time}`);
+        if (autoSaveNoticeTimerRef.current) clearTimeout(autoSaveNoticeTimerRef.current);
+        autoSaveNoticeTimerRef.current = setTimeout(() => {
+          if (isMountedRef.current) setAutoSaveNotice(null);
+        }, 3000);
+      }
+      console.log('Auto-save completed for sketch', sketchId);
+    } catch (e) {
+      console.error('Auto-save failed:', e);
+    } finally {
+      autoSavingRef.current = false;
+    }
+  };
+  performAutoSaveRef.current = performAutoSave;
+
+  useEffect(() => {
+    const intervalId = setInterval(() => performAutoSaveRef.current(), 120000); // alle 2 Minuten
+    return () => {
+      clearInterval(intervalId);
+      if (autoSaveNoticeTimerRef.current) clearTimeout(autoSaveNoticeTimerRef.current);
+    };
+  }, []);
+
   // Generate unique ID
   const generateId = () => `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -7117,6 +7203,14 @@ export default function DrawSketchScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Auto-Save Hinweis */}
+      {autoSaveNotice && (
+        <View pointerEvents="none" style={styles.autoSaveNotice}>
+          <Ionicons name="checkmark-circle" size={14} color="#fff" />
+          <Text style={styles.autoSaveNoticeText}>{autoSaveNotice}</Text>
+        </View>
+      )}
+
       {/* Toolbar mit Labels - scrollbar für iPhone und im Querformat */}
       <View style={[styles.toolbarContainer, isPhoneLandscape && { borderBottomWidth: 0.5 }]}>
         <ScrollView 
@@ -10628,6 +10722,25 @@ export default function DrawSketchScreen() {
 }
 
 const styles = StyleSheet.create({
+  autoSaveNotice: {
+    position: 'absolute',
+    top: 110,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(46,125,50,0.92)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    zIndex: 9999,
+    elevation: 10,
+  },
+  autoSaveNoticeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',

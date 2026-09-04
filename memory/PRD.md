@@ -378,3 +378,17 @@
 - VERIFIZIERT (Web-Screenshots): Punkte setzen, Polygon schließen (Fläche benennen Modal), Auswahl-Modus,
   Eckpunkt ziehen -> Fläche 0.63->1.06 m² neu berechnet. Nativ (Pencil) vom User zu bestätigen.
 - MERKE: Falls weitere Screens rohe onTouch*-Props auf Views mit SVG-Kindern haben -> gleiches Muster anwenden.
+
+## Session 05.09. Teil 5 - PDF-Branding im Rapport-PDF
+- User-Wunsch: Firmenlogo + Farben aus den Einstellungen auch im Rapport-PDF (Projekt-PDF hatte beides schon).
+- Logo + Firmendaten waren im Rapport-PDF bereits integriert (generateReportHtml lädt logo_data etc.).
+- NEU: Akzentfarben. ReportPdfService.ts:
+  - export PDF_ACCENT_COLORS (identisch zu PDF_COLOR_OPTIONS in settings/index.tsx: blue/light_blue/gray/
+    light_gray/green/light_green/orange/red/black mit color+textColor)
+  - export getReportAccentCss(settings) -> ":root { --report-accent; --report-accent-text; --report-accent-light }"
+    (nutzt pdf_header_section_color || pdf_header_color || 'blue'; light = accent+"1f" 12% alpha)
+  - REPORT_CSS: alle hardcodierten #1976d2/#e3f2fd/#e0f2fe durch var(--report-accent[-text|-light]) ersetzt
+    (Header-Linie, Titel, Info-Boxen, Section-Titles, Tabellen-Header, Total-Row, Role-Summary) + Inline-Farbe Z.167.
+  - generateReportHtml injiziert accentCss nach REPORT_CSS im <style>.
+- projects/[id].tsx appendReportsToHtml: injiziert ebenfalls getReportAccentCss(s) (Rapporte im Projekt-PDF).
+- tsc + eslint sauber, Bundle lädt. PDF-Farbwahl in Einstellungen -> PDF-Layout (Kopfbereich-Farbe) steuert jetzt beide PDFs.

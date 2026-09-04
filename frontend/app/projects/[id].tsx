@@ -4512,7 +4512,7 @@ export default function ProjectDetailScreen() {
     if (!reportsList || reportsList.length === 0) return html;
     try {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const { generateReportSectionHtml, REPORT_CSS } = require('../../services/ReportPdfService');
+      const { generateReportSectionHtml, REPORT_CSS, getReportAccentCss } = require('../../services/ReportPdfService');
       // Firmendaten + Master-Daten für Preisberechnung
       const s: any = await SettingsService.get();
       const [employeesMaster, materialsMaster, machinesMaster] = await Promise.all([
@@ -4549,7 +4549,7 @@ export default function ProjectDetailScreen() {
       // inject extra css + reports before </body>
       let result = html;
       if (result.includes('</head>')) {
-        result = result.replace('</head>', `<style>${REPORT_CSS}</style></head>`);
+        result = result.replace('</head>', `<style>${REPORT_CSS}\n${getReportAccentCss(s)}</style></head>`);
       }
       if (result.includes('</body>')) {
         result = result.replace('</body>', `${rapportePages}</body>`);

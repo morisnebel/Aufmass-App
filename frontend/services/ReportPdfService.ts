@@ -164,7 +164,7 @@ export const generateReportSectionHtml = (
           }).join('')}
           <tr class="emp-total-row">
             <td colspan="6" style="text-align:right;font-weight:700;">Gesamtstunden:</td>
-            <td style="text-align:right;font-weight:800;color:#1976d2;">${formatHoursHM(report.total_hours ?? report.employees.reduce((s, e) => {
+            <td style="text-align:right;font-weight:800;color:var(--report-accent, #1976d2);">${formatHoursHM(report.total_hours ?? report.employees.reduce((s, e) => {
               const ea = e as any;
               if (e.hours != null) return s + e.hours;
               if (!ea.time_from || !ea.time_to) return s;
@@ -795,7 +795,39 @@ export const generateReportSectionHtml = (
   `;
 };
 
+/**
+ * Farboptionen - identisch zu den PDF-Layout-Einstellungen in den Settings
+ * (PDF_COLOR_OPTIONS in app/settings/index.tsx)
+ */
+export const PDF_ACCENT_COLORS: Record<string, { color: string; textColor: string }> = {
+  blue: { color: '#1976d2', textColor: '#ffffff' },
+  light_blue: { color: '#bbdefb', textColor: '#1565c0' },
+  gray: { color: '#9e9e9e', textColor: '#ffffff' },
+  light_gray: { color: '#e0e0e0', textColor: '#424242' },
+  green: { color: '#388e3c', textColor: '#ffffff' },
+  light_green: { color: '#c8e6c9', textColor: '#2e7d32' },
+  orange: { color: '#f57c00', textColor: '#ffffff' },
+  red: { color: '#d32f2f', textColor: '#ffffff' },
+  black: { color: '#212121', textColor: '#ffffff' },
+};
+
+/**
+ * Baut die CSS-Variablen für die Akzentfarbe des Rapport-PDFs aus den
+ * gespeicherten PDF-Einstellungen (Kopfbereich-Farbe aus den Settings).
+ */
+export const getReportAccentCss = (settings: any): string => {
+  const colorId = settings?.pdf_header_section_color || settings?.pdf_header_color || 'blue';
+  const accent = PDF_ACCENT_COLORS[colorId] || PDF_ACCENT_COLORS.blue;
+  // "1f" = ~12% Deckkraft als heller Hintergrund-Ton
+  return `:root { --report-accent: ${accent.color}; --report-accent-text: ${accent.textColor}; --report-accent-light: ${accent.color}1f; }`;
+};
+
 export const REPORT_CSS = `
+  :root {
+    --report-accent: #1976d2;
+    --report-accent-text: #ffffff;
+    --report-accent-light: #e3f2fd;
+  }
   .report-page {
     background: #fff;
     padding: 4px 0 12px 0;
@@ -804,23 +836,23 @@ export const REPORT_CSS = `
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    border-bottom: 2px solid #1976d2;
+    border-bottom: 2px solid var(--report-accent);
     padding-bottom: 7px;
     margin-bottom: 10px;
   }
   .report-header img { height: 42px !important; max-height: 42px !important; max-width: 110px !important; width: auto !important; object-fit: contain !important; }
-  .report-title { font-size: 15px; font-weight: bold; color: #1976d2; letter-spacing: 0.2px; }
+  .report-title { font-size: 15px; font-weight: bold; color: var(--report-accent); letter-spacing: 0.2px; }
   .report-number { font-size: 10px; color: #666; margin-top: 2px; }
   .report-meta { font-size: 10px; text-align: right; line-height: 1.55; }
   .info-box {
     background: #f5f7fa;
-    border-left: 3px solid #1976d2;
+    border-left: 3px solid var(--report-accent);
     padding: 7px 10px;
     margin-bottom: 10px;
     border-radius: 4px;
     page-break-inside: avoid;
   }
-  .info-box-title { font-weight: bold; color: #1976d2; margin-bottom: 4px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; }
+  .info-box-title { font-weight: bold; color: var(--report-accent); margin-bottom: 4px; font-size: 9px; text-transform: uppercase; letter-spacing: 0.6px; }
   .info-row { font-size: 10px; margin: 2px 0; line-height: 1.45; }
   .section { margin-bottom: 10px; orphans: 3; widows: 3; }
   /* Atomare Sektionen (Überschrift + kurzer Inhalt) — niemals zwischen Seiten zerreißen */
@@ -834,7 +866,7 @@ export const REPORT_CSS = `
     font-size: 11px;
     font-weight: bold;
     color: #333;
-    background: #e3f2fd;
+    background: var(--report-accent-light);
     padding: 4px 9px;
     border-radius: 4px;
     margin-bottom: 5px;
@@ -873,10 +905,10 @@ export const REPORT_CSS = `
     width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 4px;
     page-break-inside: avoid;
   }
-  .emp-table th { background: #1976d2; color: #fff; padding: 4px 7px; text-align: left; font-size: 9px; letter-spacing: 0.2px; }
+  .emp-table th { background: var(--report-accent); color: var(--report-accent-text); padding: 4px 7px; text-align: left; font-size: 9px; letter-spacing: 0.2px; }
   .emp-table td { padding: 4px 7px; border-bottom: 1px solid #e0e0e0; }
   .emp-table tr { page-break-inside: avoid; }
-  .emp-total-row td { background: #e0f2fe; padding: 5px 7px; font-size: 10.5px; border-top: 2px solid #1976d2; }
+  .emp-total-row td { background: var(--report-accent-light); padding: 5px 7px; font-size: 10.5px; border-top: 2px solid var(--report-accent); }
   .work-items {
     list-style: none;
     padding-left: 0;
@@ -925,7 +957,7 @@ export const REPORT_CSS = `
   }
   .role-summary {
     background: #f8fafc; border-radius: 6px; padding: 7px 9px; margin-top: 7px;
-    border-left: 3px solid #1976d2;
+    border-left: 3px solid var(--report-accent);
     page-break-inside: avoid;
   }
   .role-summary-title {
@@ -959,7 +991,7 @@ export const REPORT_CSS = `
     margin-top: 4px;
     page-break-inside: avoid;
   }
-  .material-table th { background: #1976d2; color: #fff; padding: 4px 7px; text-align: left; font-size: 9px; letter-spacing: 0.2px; }
+  .material-table th { background: var(--report-accent); color: var(--report-accent-text); padding: 4px 7px; text-align: left; font-size: 9px; letter-spacing: 0.2px; }
   .material-table td { padding: 4px 7px; border-bottom: 1px solid #e0e0e0; }
   .material-table tr { page-break-inside: avoid; }
   .info-grid { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -1059,9 +1091,11 @@ export const generateReportHtml = async (
   let employeesMaster: any[] = [];
   let materialsMaster: any[] = [];
   let machinesMaster: any[] = [];
+  let accentCss = getReportAccentCss(null);
   try {
     const s = await SettingsService.get();
     const sAny = s as any;
+    accentCss = getReportAccentCss(sAny);
     logoData = sAny.logo_data || sAny.company_logo || '';
     companyName = sAny.company_name || '';
     companySubtitle = sAny.company_subtitle || '';
@@ -1091,6 +1125,7 @@ export const generateReportHtml = async (
         @page { margin: 14mm; }
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 0; color: #333; }
         ${REPORT_CSS}
+        ${accentCss}
         .doc-footer { margin-top: 14px; padding-top: 6px; border-top: 1px solid #e0e0e0; font-size: 9px; color: #555; text-align: center; page-break-before: avoid; page-break-inside: avoid; }
       </style>
     </head>

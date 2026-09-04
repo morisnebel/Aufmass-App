@@ -7873,7 +7873,7 @@ export default function DrawSketchScreen() {
               key={`imglayer-${rev}-${backgroundImage ? backgroundImage.length : 0}`}
               width={screenWidth}
               height={canvasHeight}
-              style={[styles.svg, { position: 'absolute', top: 0, left: 0 }]}
+              style={[styles.svg, { position: 'absolute', top: 0, left: 0, backgroundColor: 'transparent' }]}
               pointerEvents="none"
               viewBox={Platform.OS === 'android' && androidViewBox.w > 0
                 ? `${androidViewBox.x} ${androidViewBox.y} ${androidViewBox.w} ${androidViewBox.h}`
@@ -7900,7 +7900,7 @@ export default function DrawSketchScreen() {
           key={Platform.OS === 'web' ? 'canvas' : `canvas-${fabricInvalidateTick.current++}`}
           width={screenWidth}
           height={canvasHeight}
-          style={styles.svg}
+          style={[styles.svg, { backgroundColor: 'transparent' }]}
           viewBox={Platform.OS === 'android' && androidViewBox.w > 0
             ? `${androidViewBox.x} ${androidViewBox.y} ${androidViewBox.w} ${androidViewBox.h}`
             : `0 0 ${screenWidth} ${canvasHeight}`
@@ -10177,14 +10177,13 @@ export default function DrawSketchScreen() {
             onTouchMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
             onTouchEnd={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
           >
-            {/* Vollbild-SVG für Linien und Griffe */}
+            {/* Vollbild-SVG für Linien und Griffe (Wrapper-View statt Svg-Prop für pointerEvents – Fabric-Bug) */}
+            <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
             <Svg 
               key={`prot-${fabricInvalidateTick.current++}`}
               width={screenWidth} 
               height={screenHeight} 
-              viewBox={`0 0 ${screenWidth} ${screenHeight}`}
-              style={{ position: 'absolute', top: 0, left: 0 }}
-              pointerEvents="none"
+              style={{ position: 'absolute', top: 0, left: 0, backgroundColor: 'transparent' }}
             >
               {/* Referenzlinie (blau) */}
               <Line 
@@ -10267,6 +10266,7 @@ export default function DrawSketchScreen() {
                 <Circle key={`inv-${fabricInvalidateTick.current++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
               )}
             </Svg>
+            </View>
           </View>
           
           {/* Kompakte Steuerelemente - verschiebbar */}

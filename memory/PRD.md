@@ -236,3 +236,13 @@
   useEffect (protractorInitializedRef, Zeile ~742). Debug-Idee: zIndex/elevation am
   Overlay prüfen, Hintergrundfarbe testweise setzen, oder Protractor-Grafik ins
   Haupt-Canvas-Svg verlagern.
+- FIX Runde 3 (04.09., Gerätetest ausstehend): (1) FOTOS UNSICHTBAR im Editor (aber in
+  Vorschau sichtbar): ROOT CAUSE = styles.svg hat backgroundColor '#fff' → das Haupt-Svg
+  übermalte die neue darunterliegende Bild-Ebene mit Weiß. Fix: Haupt-Svg + Bild-Ebene
+  backgroundColor 'transparent' (Weiß kommt vom canvasContainer). (2) WINKELMESSER
+  nativ unsichtbar (Web ok): Protraktor-Svg umgebaut wie Haupt-Canvas – pointerEvents
+  von Svg-Prop auf Wrapper-View verlagert, viewBox entfernt, bg transparent (Verdacht:
+  pointerEvents-Prop direkt auf Svg bricht Fabric-Rendering). Web-Regression getestet:
+  Zeichnen, Protraktor-Anzeige + Drag funktionieren. Checklisten laut User WIEDER OK.
+  FALLS Winkelmesser auf iPad weiterhin unsichtbar: Grafik testweise ins Haupt-Canvas-Svg
+  verlagern (das rendert nachweislich auf Gerät).

@@ -58,7 +58,7 @@ export default function NewPhotoScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
-        quality: 0.8,
+        quality: 0.9,
         selectionLimit: 20,
       });
 
@@ -72,8 +72,8 @@ export default function NewPhotoScreen() {
           try {
             const manipResult = await ImageManipulator.manipulateAsync(
               asset.uri,
-              [{ resize: { width: Math.min(asset.width || 1200, 1200) } }],
-              { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+              [{ resize: { width: Math.min(asset.width || 1800, 1800) } }],
+              { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
             );
             if (manipResult.base64) {
               base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
@@ -111,26 +111,21 @@ export default function NewPhotoScreen() {
     try {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: false,
-        quality: 0.8,
-        base64: true,
+        quality: 0.9,
       });
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         
-        // Android: base64 könnte undefined sein, dann URI als Fallback verwenden
-        // und mit ImageManipulator in base64 konvertieren
+        // Immer über ImageManipulator normalisieren: max. 1800px + 85% Qualität
+        // (scharfer Druck ~270 dpi, aber kein Full-Res-Base64 → kein OOM)
         let base64Image: string;
         
-        if (asset.base64) {
-          base64Image = `data:image/jpeg;base64,${asset.base64}`;
-        } else if (asset.uri) {
-          // Fallback: URI mit ImageManipulator in base64 konvertieren
-          console.log('base64 not available, converting from URI:', asset.uri);
+        if (asset.uri) {
           const manipResult = await ImageManipulator.manipulateAsync(
             asset.uri,
-            [{ resize: { width: 1200 } }],
-            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+            [{ resize: { width: Math.min(asset.width || 1800, 1800) } }],
+            { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
           );
           if (manipResult.base64) {
             base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
@@ -181,8 +176,8 @@ export default function NewPhotoScreen() {
           // Konvertiere zu Base64
           const manipResult = await ImageManipulator.manipulateAsync(
             uri,
-            [{ resize: { width: 1200 } }],
-            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+            [{ resize: { width: 1800 } }],
+            { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
           );
           
           if (manipResult.base64) {
@@ -205,8 +200,8 @@ export default function NewPhotoScreen() {
       if (mimeType.startsWith('image/')) {
         const manipResult = await ImageManipulator.manipulateAsync(
           fileUri,
-          [{ resize: { width: 1200 } }],
-          { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          [{ resize: { width: 1800 } }],
+          { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
         );
         
         if (manipResult.base64) {

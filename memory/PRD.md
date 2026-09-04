@@ -154,3 +154,10 @@
   (5) package-lock.json entfernt (Yarn ist Package Manager). Zusätzlich Fix: React 19.2
   "Unexpected text node" auf Skizzen-Screen ({notes.trim() && ...} → .length > 0).
   Testing-Agent Regression: 8/8 Szenarien PASS (iteration_22.json).
+- Druckqualität Bilder verbessert (DONE): Projektfotos (photos/new.tsx) von 1200px/q0.8
+  auf 1800px/q0.85 (~270 dpi im A4-Druck), Picker-Qualität 0.9; Kamera-Pfad nutzt jetzt
+  IMMER ImageManipulator-Resize (vorher Full-Res-Base64 direkt vom Picker = OOM-Risiko).
+  Skizzen-Hintergrund-/eingefügte Bilder (draw.tsx): q0.7→0.85, Kamera-Pfade 1200→1600px.
+  Rapport-Fotos (reports/edit.tsx): vorher unskaliertes q0.6-Base64 → jetzt 1600px/q0.85
+  via ImageManipulator. Skizzen selbst sind SVG (Vektor) = verlustfrei scharf.
+  Gilt nur für NEU aufgenommene/importierte Bilder.

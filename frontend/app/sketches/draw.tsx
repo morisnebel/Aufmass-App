@@ -2822,7 +2822,7 @@ export default function DrawSketchScreen() {
             },
           },
         ],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
       
       // Aktualisiere das Element mit dem zugeschnittenen Bild
@@ -2973,7 +2973,7 @@ export default function DrawSketchScreen() {
         const manipResult = await ImageManipulator.manipulateAsync(
           asset.uri,
           [{ resize: { width: Math.min(asset.width || 1600, 1600) } }],
-          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
         );
         if (manipResult.base64) {
           const base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
@@ -3008,7 +3008,7 @@ export default function DrawSketchScreen() {
         const manipResult = await ImageManipulator.manipulateAsync(
           asset.uri,
           [{ resize: { width: Math.min(asset.width || 1600, 1600) } }],
-          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
         );
         if (manipResult.base64) {
           const base64Image = `data:image/jpeg;base64,${manipResult.base64}`;
@@ -3028,7 +3028,7 @@ export default function DrawSketchScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: false,
-        quality: 0.7,
+        quality: 0.9,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -3037,8 +3037,8 @@ export default function DrawSketchScreen() {
         // Bild auf max. 1200px Breite reduzieren (verhindert OOM auf iPad)
         const manipResult = await ImageManipulator.manipulateAsync(
           asset.uri,
-          [{ resize: { width: Math.min(asset.width || 1200, 1200) } }],
-          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          [{ resize: { width: Math.min(asset.width || 1600, 1600) } }],
+          { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
         );
         
         if (!manipResult.base64) {
@@ -3172,8 +3172,8 @@ export default function DrawSketchScreen() {
       // Manipulate image to get base64
       const manipResult = await ImageManipulator.manipulateAsync(
         uri,
-        [{ resize: { width: 1200 } }],
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        [{ resize: { width: 1600 } }],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
       );
 
       if (!manipResult.base64) {
@@ -3236,7 +3236,7 @@ export default function DrawSketchScreen() {
 
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: false,
-        quality: 0.7,
+        quality: 0.9,
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -3245,8 +3245,8 @@ export default function DrawSketchScreen() {
         // Bild auf max. 1200px Breite reduzieren (verhindert OOM auf iPad)
         const manipResult = await ImageManipulator.manipulateAsync(
           asset.uri,
-          [{ resize: { width: Math.min(asset.width || 1200, 1200) } }],
-          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          [{ resize: { width: Math.min(asset.width || 1600, 1600) } }],
+          { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
         );
         
         if (!manipResult.base64) {

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import {
   ReportService, ProjectService, CustomerService,
   EmployeeMasterService, MaterialMasterService, MachineMasterService, ChecklistService,
@@ -838,13 +839,27 @@ export default function ReportEditScreen() {
         return;
       }
       const result = source === 'camera'
-        ? await ImagePicker.launchCameraAsync({ quality: 0.6, base64: true })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'] as any, allowsMultipleSelection: true, quality: 0.6, base64: true });
+        ? await ImagePicker.launchCameraAsync({ quality: 0.9 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'] as any, allowsMultipleSelection: true, quality: 0.9 });
       if (result.canceled) return;
       const assets = (result as any).assets || [];
-      const newPhotos: ReportPhoto[] = assets
-        .filter((a: any) => a.base64)
-        .map((a: any) => ({ id: localId(), uri: `data:image/jpeg;base64,${a.base64}`, caption: '' }));
+      const newPhotos: ReportPhoto[] = [];
+      for (const a of assets) {
+        if (!a?.uri) continue;
+        try {
+          // Auf max. 1600px verkleinern + 85% Qualität → scharfer Druck (~300 dpi) ohne OOM-Risiko
+          const manip = await ImageManipulator.manipulateAsync(
+            a.uri,
+            [{ resize: { width: Math.min(a.width || 1600, 1600) } }],
+            { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+          );
+          if (manip.base64) {
+            newPhotos.push({ id: localId(), uri: `data:image/jpeg;base64,${manip.base64}`, caption: '' });
+          }
+        } catch (manipErr) {
+          console.error('Photo resize error:', manipErr);
+        }
+      }
       setPhotos(prev => [...prev, ...newPhotos]);
     } catch (e) {
       console.error('Photo add error:', e);

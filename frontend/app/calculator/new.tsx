@@ -4325,7 +4325,10 @@ export default function AreaCalculatorEditor() {
       {/* Canvas */}
       <View 
         style={styles.canvas}
-        onTouchStart={(event) => {
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderTerminationRequest={() => false}
+        onResponderGrant={(event) => {
           const touch = event.nativeEvent;
           // Transform coordinates based on zoom/pan
           const rawX = touch.locationX;
@@ -4587,7 +4590,7 @@ export default function AreaCalculatorEditor() {
             return;
           }
         }}
-        onTouchMove={(event) => {
+        onResponderMove={(event) => {
           const touches = event.nativeEvent.touches;
           
           // Handle pinch-to-zoom and two-finger pan simultaneously
@@ -4844,7 +4847,7 @@ export default function AreaCalculatorEditor() {
             }));
           }
         }}
-        onTouchEnd={(event) => {
+        onResponderRelease={(event) => {
           setCurrentTouchPosition(null);
           setCurrentSnapPoint(null); // Clear snap indicator
           

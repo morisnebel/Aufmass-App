@@ -366,3 +366,15 @@
 - GETESTET: iteration_25.json - PDF-Fix PASS, Guards customers/new + customers/[id] + Notizen PASS.
   Bekannt: Browser-Back im Web triggert Guard nicht zuverlässig (Web-Limitation, nativ = Ziel-Plattform).
 - Nativ zu verifizieren (User/Build): Swipe-Back-Prompt auf allen Formular-Seiten.
+
+## Session 05.09. Teil 4 - Flächenrechner Touch-Fix (SDK 57 Regression)
+- BUG (User, iPad/Pencil): Flächen im Flächenrechner nicht mehr zeichenbar, Punkte nicht verschiebbar.
+- URSACHE: calculator/new.tsx Canvas-View nutzte noch rohe onTouchStart/onTouchMove/onTouchEnd Props -
+  dieselbe SDK-57-Regression, die schon den Skizzen-Canvas (draw.tsx) betraf. Der Svg-Remount-Hack
+  (key=calc-${fabricTick++}) war schon da, aber die Touch-Handler wurden beim damaligen Fix übersehen.
+- FIX: Canvas-View auf Responder-System umgestellt (onStartShouldSetResponder/onMoveShouldSetResponder
+  => true, onResponderTerminationRequest => false, onResponderGrant/Move/Release = alte Handler-Bodies).
+  Pinch-Zoom (2-Finger, touches.length===2 in Move) funktioniert im Responder-System weiter.
+- VERIFIZIERT (Web-Screenshots): Punkte setzen, Polygon schließen (Fläche benennen Modal), Auswahl-Modus,
+  Eckpunkt ziehen -> Fläche 0.63->1.06 m² neu berechnet. Nativ (Pencil) vom User zu bestätigen.
+- MERKE: Falls weitere Screens rohe onTouch*-Props auf Views mit SVG-Kindern haben -> gleiches Muster anwenden.

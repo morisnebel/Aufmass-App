@@ -191,3 +191,48 @@
   FALLS IMMER NOCH KAPUTT: Nächste Eskalation = RN-Feature-Flag/newArchEnabled:false
   geht in Expo Go NICHT; dann prüfen ob expo-doctor-gepinnte react-native-svg wirklich
   zur Expo-Go-Native-Version passt, oder Canvas testweise ohne ScrollView rendern.
+- STATUS nach Stufe-2-Fix (User-Feedback 04.09.): ZEICHNEN FUNKTIONIERT WIEDER in Expo Go.
+  3 OFFENE FOLGEPROBLEME (nächste Priorität, User-Screenshots vorhanden):
+  (1) FOTOS IN SKIZZE flackern/verschwinden kurz beim Zeichnen einer Linie, teils gar
+      nicht angezeigt. URSACHE: mein Svg-key-Remount pro Render lädt die <SvgImage>
+      (file:// Hintergrund-/eingefügte Fotos) bei jedem Strichpunkt neu. FIX-IDEE:
+      Bilder aus dem remountenden Svg herauslösen (eigenes, NICHT remountendes Svg/
+      RN-Image-Layer hinter dem Zeichen-Svg) ODER key nur ändern wenn elements sich
+      ändern und Live-Preview (currentPath/temp) in separates kleines Overlay-Svg
+      auslagern (Layer-Split: statische Ebene + Live-Ebene).
+  (2) WINKELMESSER: Live-Vorschau (Linien ziehen) unsichtbar, Winkel erscheint erst
+      nach 'Hinzufügen'; danach schlecht anpassbar. URSACHE: Protractor-Drag nutzt
+      vermutlich Animated/Refs OHNE React-Re-Render → key-Remount feuert nicht.
+      FIX-IDEE: bei Protractor-Drag-Move einen State-Tick setzen (throttled), damit
+      Re-Render + Remount passiert; draw.tsx Zeilen ~10150ff (prot-Svg hat schon key).
+  (3) CHECKLISTEN: Unterpositionen 'funktionieren nicht richtig' + SCREENSHOT zeigt:
+      Checklisten-VORLAGEN-Punkte werden LEER angezeigt (Bullets ohne Text, sowohl in
+      Vorlagen-Übersicht als auch in 'Neue Checkliste' aus Vorlage 'Test' mit Test1-3).
+      VERDACHT: Datenform-Mismatch items: string[] vs {text,checked,subItems}[] in
+      templates.tsx/new.tsx Render (Text-Feld liest item.text bei String-Items?) –
+      NICHT der Autosave (der wurde gefixt+verifiziert). Prüfen: templates.tsx
+      Erstellung (Punkte als Strings?) vs. Anzeige-Komponenten.
+- FIX (verifiziert): Leere Checklisten-/Vorlagen-Punkte – ROOT CAUSE gefunden: die
+  Bild-Auslagerungs-Walker in LocalStorage.ts (chkExtractItems + chkRestoreImages.walk)
+  machten {...it} auch auf STRING-Items (Vorlagen-Punkte sind Strings!) → Zeichen-Map
+  {0:'T',1:'e',...} ohne text → leere Bullets, und daraus erstellte Checklisten hatten
+  text:undefined. Fix: Walker lassen Nicht-Objekte unverändert; zusätzlich chkRepairItem/
+  chkRepairItems repariert bereits korrupte Zeichen-Map-Items beim Lesen (in
+  chkRestoreImages + ChecklistTemplateService.getAll). Per Playwright mit absichtlich
+  korruptem Template verifiziert (Test1/2/3 wieder sichtbar). HINWEIS: Checklisten, die
+  der User aus dem korrupten Template erstellt hat, haben text:undefined dauerhaft
+  verloren – User muss diese eine Checkliste neu aus der (reparierten) Vorlage anlegen.
+- FIX (implementiert, Gerätetest ausstehend): Foto-Flackern beim Zeichnen – Layer-Split
+  in draw.tsx: Hintergrundbild + type==='image'-Elemente in eigenem statischen Svg
+  (absolute, pointerEvents none, VOR dem Haupt-Svg = darunter), key nur aus Bild-Daten
+  (id/x/y/w/h/rotation/selektiert) → remountet nur bei Bild-Änderungen, nicht bei jedem
+  Strich. Haupt-Svg rendert elements.filter(!=='image'). Z-Order-Änderung: Bilder liegen
+  jetzt immer UNTER Zeichnungen (vorher gemischt in elements-Reihenfolge).
+- OFFEN (nächste Priorität): WINKELMESSER auf iPad – Live-Overlay (Mittelpunkt/
+  Referenzlinie/Winkellinie) unsichtbar bis 'Hinzufügen'; danach schwer anpassbar.
+  Screenshot zeigt: Panel (45°, +/-Buttons) rendert, aber Vollbild-Svg-Grafik nicht.
+  Overlay: draw.tsx ~10190 (showProtractor && View protractorOverlay > Svg key=prot-tick).
+  Verdacht: zIndex/Layering des protractorOverlay auf Fabric oder Initialisierung via
+  useEffect (protractorInitializedRef, Zeile ~742). Debug-Idee: zIndex/elevation am
+  Overlay prüfen, Hintergrundfarbe testweise setzen, oder Protractor-Grafik ins
+  Haupt-Canvas-Svg verlagern.

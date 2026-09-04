@@ -7859,6 +7859,42 @@ export default function DrawSketchScreen() {
             }
           }}
         >
+        {/* Statische Bild-Ebene (Hintergrund + eingefügte Fotos): eigener Svg-Layer,
+            der NUR remountet wenn sich die Bilder selbst ändern – verhindert das
+            Flackern der Fotos beim Zeichnen (Haupt-Canvas remountet pro Änderung) */}
+        {(() => {
+          const imageEls = elements.filter(el => el.type === 'image');
+          if (!backgroundImage && imageEls.length === 0) return null;
+          const rev = imageEls
+            .map(e => `${e.id}:${e.data?.x}:${e.data?.y}:${e.data?.width}:${e.data?.height}:${e.data?.rotation ?? 0}:${selectedElementId === e.id ? 'S' : ''}`)
+            .join('|');
+          return (
+            <Svg
+              key={`imglayer-${rev}-${backgroundImage ? backgroundImage.length : 0}`}
+              width={screenWidth}
+              height={canvasHeight}
+              style={[styles.svg, { position: 'absolute', top: 0, left: 0 }]}
+              pointerEvents="none"
+              viewBox={Platform.OS === 'android' && androidViewBox.w > 0
+                ? `${androidViewBox.x} ${androidViewBox.y} ${androidViewBox.w} ${androidViewBox.h}`
+                : `0 0 ${screenWidth} ${canvasHeight}`
+              }
+            >
+              {backgroundImage && (
+                <SvgImage
+                  href={backgroundImage}
+                  x={0}
+                  y={0}
+                  width={screenWidth}
+                  height={canvasHeight}
+                  preserveAspectRatio="xMidYMid meet"
+                  opacity={1}
+                />
+              )}
+              {imageEls.map(el => renderElement(el))}
+            </Svg>
+          );
+        })()}
         <Svg
           ref={svgRef}
           key={Platform.OS === 'web' ? 'canvas' : `canvas-${fabricInvalidateTick.current++}`}
@@ -7898,21 +7934,10 @@ export default function DrawSketchScreen() {
             </>
           )}
 
-          {/* Background image */}
-          {backgroundImage && (
-            <SvgImage
-              href={backgroundImage}
-              x={0}
-              y={0}
-              width={screenWidth}
-              height={canvasHeight}
-              preserveAspectRatio="xMidYMid meet"
-              opacity={1}
-            />
-          )}
+          {/* Background image + Foto-Elemente werden in der statischen Bild-Ebene darüber gerendert */}
 
-          {/* Render all elements */}
-          {elements.map(el => renderElement(el))}
+          {/* Render all elements (Bilder sind auf der statischen Ebene) */}
+          {elements.filter(el => el.type !== 'image').map(el => renderElement(el))}
 
           {/* Render temporary element */}
           {tempElement && renderElement(tempElement)}

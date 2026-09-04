@@ -1367,13 +1367,35 @@ const chkStoreInline = (val: string | undefined, ops: Promise<any>[]): string | 
 };
 
 const chkExtractItems = (items: any[], ops: Promise<any>[]): any[] =>
-  items.map(it => ({
-    ...it,
-    printImage: chkStoreInline(it.printImage, ops),
-    categoryLogo: chkStoreInline(it.categoryLogo, ops),
-    previewImages: Array.isArray(it.previewImages) ? it.previewImages.map((v: string) => chkStoreInline(v, ops)) : it.previewImages,
-    subItems: Array.isArray(it.subItems) ? chkExtractItems(it.subItems, ops) : it.subItems,
-  }));
+  items.map(it => {
+    // String-Items (z.B. Vorlagen-Punkte) unverändert lassen – {...string} würde sie zerstören!
+    if (!it || typeof it !== 'object') return it;
+    return {
+      ...it,
+      printImage: chkStoreInline(it.printImage, ops),
+      categoryLogo: chkStoreInline(it.categoryLogo, ops),
+      previewImages: Array.isArray(it.previewImages) ? it.previewImages.map((v: string) => chkStoreInline(v, ops)) : it.previewImages,
+      subItems: Array.isArray(it.subItems) ? chkExtractItems(it.subItems, ops) : it.subItems,
+    };
+  });
+
+// Repariert durch {...string} zerstörte String-Items (Zeichen-Map {0:'T',1:'e',...} -> String)
+const chkRepairItem = (it: any): any => {
+  if (it && typeof it === 'object' && it.text === undefined && typeof it['0'] === 'string') {
+    let s = '';
+    let i = 0;
+    while (typeof it[i] === 'string') { s += it[i]; i++; }
+    if (s.length > 0) return s;
+  }
+  return it;
+};
+
+const chkRepairItems = (items: any[]): any[] =>
+  items.map(raw => {
+    const it = chkRepairItem(raw);
+    if (!it || typeof it !== 'object') return it;
+    return { ...it, subItems: Array.isArray(it.subItems) ? chkRepairItems(it.subItems) : it.subItems };
+  });
 
 const chkExtractImages = <T extends { items?: any[]; templateLogo?: string }>(obj: T, ops: Promise<any>[]): T => {
   const out: any = { ...obj };
@@ -1394,23 +1416,31 @@ const chkCollectRefs = (obj: any, out: string[]) => {
 };
 
 const chkRestoreImages = async <T extends { items?: any[]; templateLogo?: string }>(obj: T): Promise<T> => {
+  // Zuerst evtl. zerstörte String-Items reparieren (Bug: {...string} in alten Versionen)
+  let base: any = obj;
+  if (Array.isArray(base?.items)) {
+    base = { ...base, items: chkRepairItems(base.items) };
+  }
   const refs: string[] = [];
-  chkCollectRefs(obj, refs);
-  if (refs.length === 0) return obj;
+  chkCollectRefs(base, refs);
+  if (refs.length === 0) return base;
   const unique = Array.from(new Set(refs));
   const pairs = await AsyncStorage.multiGet(unique);
   const map = new Map(pairs as [string, string | null][]);
   const resolve = (v: any) => (typeof v === 'string' && v.startsWith(CHK_IMG_PREFIX))
     ? (map.get(v.slice(CHK_IMG_PREFIX.length)) || undefined)
     : v;
-  const walk = (items: any[]): any[] => items.map(it => ({
-    ...it,
-    printImage: resolve(it.printImage),
-    categoryLogo: resolve(it.categoryLogo),
-    previewImages: Array.isArray(it.previewImages) ? it.previewImages.map(resolve).filter(Boolean) : it.previewImages,
-    subItems: Array.isArray(it.subItems) ? walk(it.subItems) : it.subItems,
-  }));
-  const out: any = { ...obj };
+  const walk = (items: any[]): any[] => items.map(it => {
+    if (!it || typeof it !== 'object') return it; // String-Items unverändert lassen
+    return {
+      ...it,
+      printImage: resolve(it.printImage),
+      categoryLogo: resolve(it.categoryLogo),
+      previewImages: Array.isArray(it.previewImages) ? it.previewImages.map(resolve).filter(Boolean) : it.previewImages,
+      subItems: Array.isArray(it.subItems) ? walk(it.subItems) : it.subItems,
+    };
+  });
+  const out: any = { ...base };
   if ('templateLogo' in out) out.templateLogo = resolve(out.templateLogo);
   if (Array.isArray(out.items)) out.items = walk(out.items);
   return out as T;
@@ -1516,7 +1546,9 @@ export interface ChecklistTemplate {
 
 export const ChecklistTemplateService = {
   getAll: async (): Promise<ChecklistTemplate[]> => {
-    const templates = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
+    const raw = await getItems<ChecklistTemplate>(KEYS.CHECKLIST_TEMPLATES);
+    // Zerstörte String-Items reparieren (Bug: {...string} in alten Versionen)
+    const templates = raw.map((t: any) => Array.isArray(t?.items) ? { ...t, items: chkRepairItems(t.items) } : t);
     // Nur die (kleinen) Vorlagen-Logos auflösen – Item-Bilder bleiben als Referenz (Performance)
     const logoRefs = templates
       .map(t => t.templateLogo)

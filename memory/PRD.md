@@ -428,3 +428,11 @@
   android.versionCode 121 ergänzt. Bundle-ID com.aufmassprofi.dach unverändert.
 - Info: Build-Nummern werden bei Apple PRO App (Bundle-ID) gezählt - "Menutotal" ist eine andere App
   und beeinflusst die Aufmassprofi-Nummerierung nicht.
+
+## Session 05.09. Teil 9 - iOS-Signing-Fehler (Zertifikat INVALID)
+- User meldet Build-Fail beim Xcode-Signing: iPhone Distribution Certificate INVALID.
+- Kein Code-/Config-Problem: app.json bleibt bei 1.1.11 / build 121 / com.aufmassprofi.dach.
+- support_agent-Antwort an User weitergegeben: iOS-Credentials im Publish-to-App-Store-Flow
+  zurücksetzen/neu authentifizieren; ggf. alte/revoked Zertifikate unter developer.apple.com
+  > Certificates aufräumen (Apple-Limit ~2-3 aktive Distribution-Certs); danach neuen Build starten.
+  Falls keine Reset-Option in der UI: support@emergent.sh mit Screenshot + Job-ID + Build-Log.

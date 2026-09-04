@@ -179,3 +179,15 @@
   (Preview-Svg), src/components/SignaturePad.tsx. Web weiterhin OK (Smoke-Test).
   WICHTIG: Fix konnte nur auf Web verifiziert werden – USER MUSS in Expo Go auf dem
   iPad nachtesten. Falls weiterhin kaputt: Fallback = key-Remount des ganzen <Svg>.
+- Skizzen-Fix Eskalation Stufe 2 (User: Tick-Workaround half NICHT in Expo Go):
+  Jetzt kompletter Svg-Remount pro Render via key (native: `canvas-${tick++}`, Web:
+  statischer key) auf ALLEN dynamischen Canvases: draw.tsx Haupt-Canvas + Lupe +
+  Winkelmesser, calculator/new.tsx, photos/annotate.tsx, imagemeter/measure.tsx,
+  documents/view.tsx, SignaturePad.tsx. Zusätzlich removeClippedSubviews={false} auf
+  der Canvas-ScrollView (RN 0.86 iOS View-Culling-Verdacht). Begründung: Initial-Mounts
+  rendern nachweislich (Elemente erscheinen nach Neuöffnen) → voller Remount = wie
+  Initial-Mount → muss rendern. Web-Smoke-Test OK (Pen+Rect, 0 Fehler).
+  USER MUSS in Expo Go neu testen (App in Expo Go komplett schließen + QR neu scannen).
+  FALLS IMMER NOCH KAPUTT: Nächste Eskalation = RN-Feature-Flag/newArchEnabled:false
+  geht in Expo Go NICHT; dann prüfen ob expo-doctor-gepinnte react-native-svg wirklich
+  zur Expo-Go-Native-Version passt, oder Canvas testweise ohne ScrollView rendern.

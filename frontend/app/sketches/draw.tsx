@@ -7805,6 +7805,7 @@ export default function DrawSketchScreen() {
       {/* Canvas mit ScrollView für Zoom */}
       <ScrollView
         ref={scrollViewRef}
+        removeClippedSubviews={false}
         style={[styles.canvasScrollView, isPhoneLandscape && { paddingLeft: insets.left, paddingRight: insets.right }]}
         contentContainerStyle={{ flexGrow: 1 }}
         minimumZoomScale={Platform.OS === 'ios' ? (zoomMode ? 0.5 : scale) : 1}
@@ -7860,6 +7861,7 @@ export default function DrawSketchScreen() {
         >
         <Svg
           ref={svgRef}
+          key={Platform.OS === 'web' ? 'canvas' : `canvas-${fabricInvalidateTick.current++}`}
           width={screenWidth}
           height={canvasHeight}
           style={styles.svg}
@@ -10085,7 +10087,7 @@ export default function DrawSketchScreen() {
                 </View>
               ) : (
                 /* Grid-basierte Lupe als Fallback (kein Bild verfügbar) */
-                <Svg width={magnifierSize} height={magnifierSize} style={{ position: 'absolute', top: 0, left: 0 }}>
+                <Svg key={`mag-${fabricInvalidateTick.current++}`} width={magnifierSize} height={magnifierSize} style={{ position: 'absolute', top: 0, left: 0 }}>
                   <Circle cx={halfSize} cy={halfSize} r={halfSize} fill="#f8f9fa" />
                   {Array.from({ length: Math.ceil(magnifierSize / 30) + 1 }, (_, i) => {
                     const pos = (i * 30) - ((Math.round(magnifierTargetPosition.x) * 3) % 30);
@@ -10152,6 +10154,7 @@ export default function DrawSketchScreen() {
           >
             {/* Vollbild-SVG für Linien und Griffe */}
             <Svg 
+              key={`prot-${fabricInvalidateTick.current++}`}
               width={screenWidth} 
               height={screenHeight} 
               viewBox={`0 0 ${screenWidth} ${screenHeight}`}

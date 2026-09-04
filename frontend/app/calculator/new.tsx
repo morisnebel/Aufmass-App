@@ -4977,7 +4977,7 @@ export default function AreaCalculatorEditor() {
           handleCanvasTouch(event);
         }}
       >
-        <Svg width={canvasWidth} height={canvasHeight}>
+        <Svg key={`calc-${fabricTick++}`} width={canvasWidth} height={canvasHeight}>
           {/* Zoom/Pan transformation group */}
           <G transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoomLevel})`}>
             

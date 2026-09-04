@@ -1113,7 +1113,7 @@ export default function AnnotatePhotoScreen() {
               }
             }}
           >
-            <Svg height={canvasDimensions.height || 400} width={canvasDimensions.width || SCREEN_WIDTH} style={{ position: 'absolute', top: 0, left: 0 }}>
+            <Svg key={`anno-${fabricTick++}`} height={canvasDimensions.height || 400} width={canvasDimensions.width || SCREEN_WIDTH} style={{ position: 'absolute', top: 0, left: 0 }}>
               {/* Draw paths */}
               {paths.map((p, index) => (
                 <G key={`path-${index}`}>

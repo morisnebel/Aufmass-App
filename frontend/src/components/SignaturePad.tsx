@@ -141,7 +141,7 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         style={[styles.canvas, { height }, isActive && styles.canvasActive]}
         {...(isActive ? panResponder.panHandlers : {})}
       >
-        <Svg width="100%" height="100%">
+        <Svg key={`sig-${fabricTick++}`} width="100%" height="100%">
           {paths.map((d, i) => (
             <Path key={i} d={d} stroke="#1a237e" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
           ))}

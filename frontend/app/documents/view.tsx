@@ -1852,7 +1852,7 @@ export default function DocumentViewScreen() {
                         resizeMode="contain"
                       />
                     )}
-                    <Svg style={StyleSheet.absoluteFill}>
+                    <Svg key={`docanno-${fabricTick++}`} style={StyleSheet.absoluteFill}>
                       {paths.map((p, i) => (
                         <Path key={i} d={p.path} stroke={p.color} strokeWidth={p.strokeWidth} fill="none" opacity={p.opacity} strokeLinecap="round" />
                       ))}

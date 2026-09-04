@@ -1016,7 +1016,7 @@ export default function ImageMeterMeasureScreen() {
           onResponderRelease={handleTouchEnd}
           onTouchEnd={(e) => { if (!isDraggingRef.current && !justDraggedRef.current && (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'rect' || drawMode === 'none')) handleCanvasTap(e); }}
         >
-          <Svg style={StyleSheet.absoluteFill}>
+          <Svg key={`meas-${fabricTick++}`} style={StyleSheet.absoluteFill}>
             {measurements.map(renderLine)}
             {areaMeasurements.map(renderArea)}
             {angleMeasurements.map(renderAngle)}

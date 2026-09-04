@@ -392,3 +392,19 @@
   - generateReportHtml injiziert accentCss nach REPORT_CSS im <style>.
 - projects/[id].tsx appendReportsToHtml: injiziert ebenfalls getReportAccentCss(s) (Rapporte im Projekt-PDF).
 - tsc + eslint sauber, Bundle lädt. PDF-Farbwahl in Einstellungen -> PDF-Layout (Kopfbereich-Farbe) steuert jetzt beide PDFs.
+
+## Session 05.09. Teil 6 - Foto-Fehler-Fix, Projekt duplizieren, Rapport-Farbvorschau
+- FIX "Error loading project photos ... reload of undefined" (User-Screenshot, Flächenrechner-Fotoauswahl):
+  dynamischer await import('@/services/LocalStorage') in calculator/new.tsx (Z.~3250) -> statischer
+  PhotoService-Import (gleiche Ursache wie Expertenmodus-Fehler in Teil 1). Keine dyn. Imports mehr in app/.
+- FEATURE Projekt duplizieren (app/index.tsx): copy-outline-Icon (testID duplicate-project-<id>) im
+  Karten-Footer neben Datum (in selectionMode ausgeblendet). confirmDuplicateProject (web: window.confirm/alert,
+  nativ: Alert). duplicateProject: ProjectService.create({...rest ohne id/created/updated, project_number:
+  getNextAvailableProjectNumber(), name+" (Kopie)", status:'anfrage'}) + alle Checklisten kopiert via
+  ChecklistService.getByProjectId (Bilder werden resolved) -> create mit resetItems (checked:false, note:'',
+  printImage/previewImages entfernt, subItems rekursiv; categoryLogo/templateLogo bleiben).
+- FEATURE Rapport-PDF Live-Vorschau (settings/index.tsx, PDF-Layout > Kopfbereich-Tab, unter Stil):
+  Mini-Mock (Header-Linie, Titel, Info-Box, Tabellenkopf, Gesamt-Zeile) mit gewählter PDF_COLOR_OPTIONS-Farbe,
+  aktualisiert live beim Farbwechsel (Screenshots blau/grün verifiziert). Styles rapportPreview* vor modalOverlay.
+- GETESTET: iteration_26.json ALL PASS (Duplizieren e2e inkl. Checklisten-Reset, Original intakt, Regression ok).
+- TESTER-TIPP: Disclaimer-Bypass via aufmassprofi_settings disclaimer_version '2026-06'.

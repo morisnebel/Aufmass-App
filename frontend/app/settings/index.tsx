@@ -788,6 +788,36 @@ export default function SettingsScreen() {
                       </TouchableOpacity>
                     ))}
                   </View>
+
+                  {/* Live-Vorschau: Rapport-PDF Farben */}
+                  <Text style={styles.layoutSubLabel}>Vorschau Rapport-PDF</Text>
+                  {(() => {
+                    const sel = PDF_COLOR_OPTIONS.find(c => c.id === settings.pdf_header_section_color) || PDF_COLOR_OPTIONS[0];
+                    return (
+                      <View style={styles.rapportPreviewBox}>
+                        <View style={[styles.rapportPreviewHeader, { borderBottomColor: sel.color }]}>
+                          <Text style={[styles.rapportPreviewTitle, { color: sel.color }]}>Rapport</Text>
+                          <Text style={styles.rapportPreviewMeta}>Nr. 2026-001 · 05.09.2026</Text>
+                        </View>
+                        <View style={[styles.rapportPreviewInfoBox, { borderLeftColor: sel.color }]}>
+                          <Text style={[styles.rapportPreviewInfoTitle, { color: sel.color }]}>PROJEKT & KUNDE</Text>
+                          <Text style={styles.rapportPreviewInfoText}>Musterprojekt · Max Mustermann</Text>
+                        </View>
+                        <View style={[styles.rapportPreviewTableHeader, { backgroundColor: sel.color }]}>
+                          <Text style={[styles.rapportPreviewTableHeaderText, { color: sel.textColor }]}>Mitarbeiter</Text>
+                          <Text style={[styles.rapportPreviewTableHeaderText, { color: sel.textColor }]}>Stunden</Text>
+                        </View>
+                        <View style={styles.rapportPreviewTableRow}>
+                          <Text style={styles.rapportPreviewTableText}>M. Mustermann</Text>
+                          <Text style={styles.rapportPreviewTableText}>8:00 h</Text>
+                        </View>
+                        <View style={[styles.rapportPreviewTotalRow, { backgroundColor: sel.color + '1f', borderTopColor: sel.color }]}>
+                          <Text style={styles.rapportPreviewTableTextBold}>Gesamt</Text>
+                          <Text style={[styles.rapportPreviewTableTextBold, { color: sel.color }]}>8:00 h</Text>
+                        </View>
+                      </View>
+                    );
+                  })()}
                 </>
               )}
               
@@ -1936,6 +1966,84 @@ const styles = StyleSheet.create({
   expertDeactivateText: {
     color: '#f44336',
     fontSize: 14,
+  },
+  // Rapport-PDF Live-Vorschau
+  rapportPreviewBox: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    padding: 12,
+    marginTop: 4,
+  },
+  rapportPreviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    borderBottomWidth: 2,
+    paddingBottom: 6,
+    marginBottom: 8,
+  },
+  rapportPreviewTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  rapportPreviewMeta: {
+    fontSize: 10,
+    color: '#666',
+  },
+  rapportPreviewInfoBox: {
+    backgroundColor: '#f5f7fa',
+    borderLeftWidth: 3,
+    borderRadius: 4,
+    padding: 7,
+    marginBottom: 8,
+  },
+  rapportPreviewInfoTitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    letterSpacing: 0.6,
+    marginBottom: 2,
+  },
+  rapportPreviewInfoText: {
+    fontSize: 10,
+    color: '#333',
+  },
+  rapportPreviewTableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+  },
+  rapportPreviewTableHeaderText: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  rapportPreviewTableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  rapportPreviewTableText: {
+    fontSize: 10,
+    color: '#333',
+  },
+  rapportPreviewTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    borderTopWidth: 2,
+  },
+  rapportPreviewTableTextBold: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#333',
   },
   modalOverlay: {
     position: 'absolute',

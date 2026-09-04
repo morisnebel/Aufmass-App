@@ -111,6 +111,7 @@ import {
   LineCategory,
   TextShortcutService,
   TextShortcut,
+  PhotoService,
 } from '../../services/LocalStorage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -3247,7 +3248,6 @@ export default function AreaCalculatorEditor() {
     try {
       // Use the projectId state variable (from params.projectId)
       if (projectId) {
-        const { PhotoService } = await import('@/services/LocalStorage');
         const photos = await PhotoService.getByProjectId(projectId);
         
         console.log('Raw photos loaded:', photos.length);

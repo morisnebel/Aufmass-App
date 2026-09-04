@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 26 frontend-only tests. All primary duplicate-project flows PASS: window.confirm shown with expected German text, window.alert success message, new project created with new number (PR-26901) + status 'anfrage' + name suffix '(Kopie)'. Duplicated checklist created with all items unchecked (0/3) and notes reset. Original project intact (2/3 items still checked). Duplicate icon hidden in selection mode (long-press). Status filter tabs still work (Angebot filter hides project, Anfrage shows it). Calculator regression: no 'Error loading project photos' error in console during project detail load. Disclaimer bypass required: setting {disclaimer_accepted_at, disclaimer_version:'2026-06'} in aufmassprofi_settings correctly dismisses modal on reload.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["Playwright inline scripts executed via mcp_browser_automation"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "index.tsx duplicateProject: correctly resets checklist items (checked=false, note='', printImage/previewImages cleared) recursively including subItems.",
+    "index.tsx confirmDuplicateProject: on web uses window.confirm + window.alert; on native uses Alert.alert two-button — matches spec.",
+    "Duplicate icon correctly hidden when selectionMode active (conditional render `!selectionMode &&`).",
+    "New project number generated via getNextAvailableProjectNumber() — sequential PR-26900 → PR-26901 verified.",
+    "getStatusMeta/normalizeStatus correctly renders 'Anfrage' badge for status 'anfrage'."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (not tested per request)", "frontend": "100%" },
+  "seed_data_creation": "Seeded via localStorage on web: settings (disclaimer_accepted_at + disclaimer_version='2026-06'), 1 customer (KD-26900), 1 project (PR-26900 'TEST Dup', status 'anfrage'), 1 checklist with 3 items (2 checked, 1 with note).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Disclaimer modal blocks UI on first load. DISCLAIMER_VERSION is '2026-06' (see /app/frontend/src/components/DisclaimerGate.tsx). To bypass in tests: localStorage.setItem('aufmassprofi_settings', JSON.stringify({disclaimer_accepted_at: new Date().toISOString(), disclaimer_version: '2026-06'})) then reload. On web the duplicate flow uses window.confirm + window.alert — override both BEFORE clicking the [data-testid=duplicate-project-<id>] icon.",
+  "rca_of_issue": "No bugs found — feature works as specified."
+}

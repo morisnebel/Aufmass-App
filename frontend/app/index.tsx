@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, ReportService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService } from '../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, ReportService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
@@ -661,6 +661,62 @@ export default function HomeScreen() {
            customer.email?.toLowerCase().includes(query);
   });
 
+  // Projekt duplizieren (inkl. Checklisten - Häkchen/Notizen/Fotos zurückgesetzt)
+  const duplicateProject = async (source: Project) => {
+    try {
+      const { id: _id, created_at: _c, updated_at: _u, ...rest } = source as any;
+      const newNumber = await getNextAvailableProjectNumber();
+      const newProject = await ProjectService.create({
+        ...rest,
+        project_number: newNumber,
+        name: `${source.name} (Kopie)`,
+        status: 'anfrage',
+      });
+
+      const checklists = await ChecklistService.getByProjectId(source.id);
+      const resetItems = (items: any[]): any[] =>
+        (items || []).map((it) => ({
+          ...it,
+          checked: false,
+          note: '',
+          printImage: undefined,
+          previewImages: undefined,
+          subItems: it.subItems ? resetItems(it.subItems) : undefined,
+        }));
+      for (const cl of checklists) {
+        await ChecklistService.create({
+          project_id: newProject.id,
+          template_id: cl.template_id,
+          template_name: cl.template_name,
+          templateLogo: cl.templateLogo,
+          items: resetItems(cl.items),
+        } as any);
+      }
+      await loadData();
+      const msg = `"${newProject.name}" wurde angelegt (Nr. ${newNumber}${checklists.length > 0 ? `, ${checklists.length} Checkliste${checklists.length > 1 ? 'n' : ''} kopiert` : ''}).`;
+      if (Platform.OS === 'web') {
+        window.alert(msg);
+      } else {
+        Alert.alert('Projekt dupliziert', msg);
+      }
+    } catch (e) {
+      console.error('Error duplicating project:', e);
+      Alert.alert(t('common.error'), 'Projekt konnte nicht dupliziert werden.');
+    }
+  };
+
+  const confirmDuplicateProject = (project: Project) => {
+    const message = `"${project.name}" wird samt Checklisten kopiert (Häkchen, Notizen und Fotos werden zurückgesetzt).`;
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Projekt duplizieren?\n${message}`)) duplicateProject(project);
+      return;
+    }
+    Alert.alert('Projekt duplizieren?', message, [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: 'Duplizieren', onPress: () => duplicateProject(project) },
+    ]);
+  };
+
   // Status-Farbe ermitteln
   const getStatusColor = (status: string) => getStatusMeta(status).color;
 
@@ -741,9 +797,20 @@ export default function HomeScreen() {
             <Text style={[styles.statusText, { color: statusColor }]}>{getStatusMeta(item.status).label}</Text>
             {!selectionMode && <Ionicons name="chevron-down" size={14} color={statusColor} />}
           </TouchableOpacity>
-          <Text style={styles.projectDate}>
-            {new Date(item.created_at).toLocaleDateString('de-DE')}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            {!selectionMode && (
+              <TouchableOpacity
+                onPress={() => confirmDuplicateProject(item)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                testID={`duplicate-project-${item.id}`}
+              >
+                <Ionicons name="copy-outline" size={18} color="#94a3b8" />
+              </TouchableOpacity>
+            )}
+            <Text style={styles.projectDate}>
+              {new Date(item.created_at).toLocaleDateString('de-DE')}
+            </Text>
+          </View>
         </View>
       </TouchableOpacity>
     );

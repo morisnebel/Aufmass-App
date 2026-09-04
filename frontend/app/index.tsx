@@ -71,6 +71,7 @@ export default function HomeScreen() {
   // Multi-Select Mode
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
+  const [openTasks, setOpenTasks] = useState<{ items: number; projects: number }>({ items: 0, projects: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
   // Pro-Banner: Ausgeliehene Maschinen, Inspektionen, TÜV & niedriger Lagerbestand
   const [loanedMachines, setLoanedMachines] = useState<MachineMaster[]>([]);
@@ -90,6 +91,35 @@ export default function HomeScreen() {
       ]);
 
       setProjects(projectsData);
+
+      // Offene Aufgaben (unerledigte Checklisten-Punkte) für das Dashboard zählen
+      try {
+        const allChecklists = await ChecklistService.getAll();
+        const activeIds = new Set(
+          projectsData
+            .filter((p: Project) => !['archiviert', 'fertig', 'abgebrochen'].includes(normalizeStatus(p.status)))
+            .map((p: Project) => p.id)
+        );
+        const countOpen = (items: any[]): number =>
+          (items || []).reduce(
+            (sum: number, it: any) =>
+              sum + (it && !it.checked ? 1 : 0) + (it?.subItems ? countOpen(it.subItems) : 0),
+            0
+          );
+        let openItems = 0;
+        const projSet = new Set<string>();
+        for (const cl of allChecklists) {
+          if (!activeIds.has(cl.project_id)) continue;
+          const c = countOpen(cl.items as any[]);
+          if (c > 0) {
+            openItems += c;
+            projSet.add(cl.project_id);
+          }
+        }
+        setOpenTasks({ items: openItems, projects: projSet.size });
+      } catch (e) {
+        console.error('Error counting open tasks:', e);
+      }
       
       const customerMap: { [key: string]: Customer } = {};
       customersData.forEach((customer: Customer) => {
@@ -1136,6 +1166,37 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Dashboard Übersicht: Projektzahlen je Status + offene Aufgaben */}
+      {projects.length > 0 && (
+        <View style={styles.dashboardCard}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dashboardChipsRow}>
+            {PROJECT_STATUSES.map(s => {
+              const count = projects.filter(p => normalizeStatus(p.status) === s.key).length;
+              if (count === 0) return null;
+              return (
+                <TouchableOpacity
+                  key={s.key}
+                  style={[styles.dashboardChip, { borderColor: s.color, backgroundColor: s.color + '14' }]}
+                  onPress={() => handleFilterChange(activeFilter === s.key ? 'all' : s.key)}
+                  testID={`dashboard-chip-${s.key}`}
+                >
+                  <Text style={[styles.dashboardChipCount, { color: s.color }]}>{count}</Text>
+                  <Text style={[styles.dashboardChipLabel, { color: s.color }]}>{s.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {openTasks.items > 0 && (
+            <View style={styles.dashboardTasksRow}>
+              <Ionicons name="checkbox-outline" size={15} color="#f57c00" />
+              <Text style={styles.dashboardTasksText}>
+                {openTasks.items} offene Aufgabe{openTasks.items !== 1 ? 'n' : ''} in {openTasks.projects} Projekt{openTasks.projects !== 1 ? 'en' : ''}
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
       {/* Status-Filter Tabs (scrollbar für die Pipeline) */}
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
@@ -1465,6 +1526,51 @@ const styles = StyleSheet.create({
   filterContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+  },
+  dashboardCard: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e8e8e8',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  dashboardChipsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dashboardChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  dashboardChipCount: {
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  dashboardChipLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  dashboardTasksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+  },
+  dashboardTasksText: {
+    fontSize: 12,
+    color: '#555',
+    fontWeight: '500',
   },
   filterScrollContent: {
     flexDirection: 'row',

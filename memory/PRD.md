@@ -408,3 +408,17 @@
   aktualisiert live beim Farbwechsel (Screenshots blau/grün verifiziert). Styles rapportPreview* vor modalOverlay.
 - GETESTET: iteration_26.json ALL PASS (Duplizieren e2e inkl. Checklisten-Reset, Original intakt, Regression ok).
 - TESTER-TIPP: Disclaimer-Bypass via aufmassprofi_settings disclaimer_version '2026-06'.
+
+## Session 05.09. Teil 7 - Dashboard Übersicht (Home)
+- NEU app/index.tsx: Dashboard-Karte über den Filter-Tabs (nur wenn Projekte existieren):
+  - Horizontale Chips je Status (PROJECT_STATUSES, nur count>0, Farbe+Anzahl+Label,
+    testID dashboard-chip-<key>); Tap = handleFilterChange(key) bzw. Toggle zurück auf 'all'.
+  - Zeile "X offene Aufgaben in Y Projekten": in loadData via ChecklistService.getAll()
+    (leichtgewichtig, Bild-Marker werden NICHT aufgelöst) rekursiv unchecked Items gezählt
+    (inkl. subItems), nur für Projekte deren Status nicht archiviert/fertig/abgebrochen ist.
+  - State openTasks {items, projects}; Styles dashboard* vor filterTab.
+- Hinweis User: Backup-Erinnerung, globale Suche (app/search.tsx) und Foto-Kommentare existieren bereits.
+- VERIFIZIERT per Screenshot mit geseedeten Daten (4 Projekte, 2 Checklisten): Chips 1/1/1/1,
+  "4 offene Aufgaben in 2 Projekten" korrekt (3 unchecked inkl. Sub-Item + 1).
+- Seed-Trick für Tests: localStorage aufmassprofi_settings {disclaimer_version:'2026-06',
+  disclaimer_accepted_at}, aufmassprofi_projects/_customers/_checklists direkt setzen + location.assign('/').

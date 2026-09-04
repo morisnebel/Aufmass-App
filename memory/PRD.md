@@ -262,3 +262,12 @@
   panHandlers; Handler sind idempotent). Web-Drag regressionsgetestet OK.
   Falls immer noch kein Drag auf iPad: PanResponder entfernen und NUR onTouch* nutzen,
   oder Drag-Handling in den Haupt-Canvas-Responder integrieren (drawMode-Weiche).
+- FIX Runde 6 (Winkelmesser-Drag NATIV, Gerätetest ausstehend): Overlay-Touches kamen
+  auf Fabric weiterhin nicht an (auch mit collapsable=false + onTouch*). Finale Lösung:
+  Drag-Handling in den HAUPT-CANVAS-Responder integriert – onTouchStart/Move/End
+  (draw.tsx ~3310/3678/3760) delegieren bei showProtractor && !web an
+  handleProtractorDragStart/Move/End und returnen. Overlay-Drag-View auf native
+  pointerEvents='none' (Touches fallen zum Canvas durch), Web behält Overlay-Handler
+  (onMouse*/onTouch* web-only). protractorPanResponder ist jetzt unbenutzt (nur Warnung).
+  Web regressionsgetestet: Anzeige + Mittelpunkt-Drag OK. Hinweis: solange Winkelmesser
+  offen ist, ist Zeichnen auf dem Canvas nativ deaktiviert (Touches gehen an Protraktor).

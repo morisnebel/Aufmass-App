@@ -3308,6 +3308,11 @@ export default function DrawSketchScreen() {
   // Bei einem gezoomten ScrollView sind diese Koordinaten bereits in Canvas-Koordinaten!
   // Der scrollOffset wird benötigt, um die Position des sichtbaren Ausschnitts zu berücksichtigen
   const onTouchStart = (event: any) => {
+    // Winkelmesser aktiv: Drag-Steuerung übernimmt der Canvas (Overlay empfängt auf Fabric keine Touches)
+    if (showProtractor && Platform.OS !== 'web') {
+      handleProtractorDragStart(event);
+      return;
+    }
     // === Android Zoom-Modus ===
     if (Platform.OS === 'android' && zoomMode) {
       const touches = event.nativeEvent.touches;
@@ -3671,6 +3676,11 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchMove = (event: any) => {
+    // Winkelmesser aktiv: Drag-Steuerung übernimmt der Canvas
+    if (showProtractor && Platform.OS !== 'web') {
+      handleProtractorDragMove(event);
+      return;
+    }
     // === Android Zoom-Modus ===
     if (Platform.OS === 'android' && zoomMode) {
       const touches = event.nativeEvent.touches;
@@ -3747,6 +3757,11 @@ export default function DrawSketchScreen() {
   };
 
   const onTouchEnd = (event: any) => {
+    // Winkelmesser aktiv: Drag-Steuerung übernimmt der Canvas
+    if (showProtractor && Platform.OS !== 'web') {
+      handleProtractorDragEnd();
+      return;
+    }
     // === Android Zoom-Modus ===
     if (Platform.OS === 'android' && zoomMode) {
       // Wenn Pinch endet: Animated.View-Zoom in SVG viewBox überführen
@@ -10214,15 +10229,15 @@ export default function DrawSketchScreen() {
           <View 
             style={[StyleSheet.absoluteFillObject, { zIndex: 1, backgroundColor: 'transparent' }]}
             collapsable={false}
-            {...(Platform.OS !== 'web' ? protractorPanResponder.current.panHandlers : {})}
+            pointerEvents={Platform.OS === 'web' ? 'auto' : 'none'}
             // @ts-ignore - Web-only events
             onMouseDown={Platform.OS === 'web' ? handleProtractorDragStart : undefined}
             onMouseMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
             onMouseUp={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
             onMouseLeave={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
-            onTouchStart={handleProtractorDragStart}
-            onTouchMove={handleProtractorDragMove}
-            onTouchEnd={handleProtractorDragEnd}
+            onTouchStart={Platform.OS === 'web' ? handleProtractorDragStart : undefined}
+            onTouchMove={Platform.OS === 'web' ? handleProtractorDragMove : undefined}
+            onTouchEnd={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
           >
             {/* Vollbild-SVG für Linien und Griffe (Wrapper-View statt Svg-Prop für pointerEvents – Fabric-Bug) */}
             <View style={StyleSheet.absoluteFillObject} pointerEvents="none">

@@ -605,3 +605,12 @@
   36pt (12,7mm) auf allen Seiten (wie bereits beim Rapport-Export bewaehrt). Gilt fuer alle
   Aufrufer (Projekt-PDF, Modal-Print, documents/view). Seitenzahl (y=14) liegt sauber im Rand.
 - Android unveraendert (nutzt @page CSS 15mm; margins-Option ist iOS-only).
+
+## Session Juni 2026 Teil 10 - Foto-Ordner im PDF + Ordner umbenennen
+- Foto-Ordner im PDF (ProjectPdfService ~Z511): Fotos nach folder sortiert, full-width
+  Ordner-Header (font-size: 14px explizit, da Container font-size:0) bei Ordnerwechsel.
+  Nur aktiv wenn mind. ein Foto einen Ordner hat. Runtime-verifiziert (3 Header, Reihenfolge ok).
+- Ordner umbenennen: Tap auf Ordner-Header im Skizzen- ODER Foto-Tab (Stift-Icon als Hinweis,
+  nur bei benannten Ordnern) -> Umbenennen-Modal (testID rename-folder-input/-save).
+  saveRenameFolder aktualisiert ALLE Skizzen UND Fotos mit dem alten Namen via
+  SketchService.update/PhotoService.update (leerer Name = Ordner aufloesen).

@@ -519,12 +519,25 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
           : 'photos-print-container';
       
       // Erstes Foto mit eingebetteter Überschrift
-      const firstPhotoHtml = generatePhotoHtml(photos[0]);
       // Überschrift VOR dem ersten Foto-Item einfügen (im Container, nicht außerhalb)
       const headingHtml = `<h2 class="photo-inline-heading">${t('photos.title')}</h2>`;
-      
-      const restPhotoItems = photos.slice(1).map(photo => generatePhotoHtml(photo)).join('');
-      photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${headingHtml}${firstPhotoHtml}${restPhotoItems}</div>`;
+
+      // Fotos nach Ordner gruppieren (nur wenn mindestens ein Foto einen Ordner hat)
+      const photoFolderOf = (p: any) => ((p.folder || '') as string).trim();
+      const anyPhotoFolder = photos.some((p: any) => photoFolderOf(p));
+      const sortedPhotos = anyPhotoFolder
+        ? [...photos].sort((a: any, b: any) => photoFolderOf(a).localeCompare(photoFolderOf(b)))
+        : photos;
+
+      const photoItems = sortedPhotos.map((photo, idx) => {
+        const pf = photoFolderOf(photo);
+        const prevPf = idx > 0 ? photoFolderOf(sortedPhotos[idx - 1]) : null;
+        const folderHeading = anyPhotoFolder && pf !== prevPf
+          ? `<div style="width: 100%; font-size: 14px; margin: 8px 0 4px 0; padding: 5px 10px; background: #f0f4f8; border-left: 4px solid #1976d2; border-radius: 4px; font-weight: 700; color: #333; page-break-after: avoid;">${pf || 'Ohne Ordner'}</div>`
+          : '';
+        return `${folderHeading}${generatePhotoHtml(photo)}`;
+      }).join('');
+      photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${headingHtml}${photoItems}</div>`;
     }
     
     // Generate sketches HTML (embedded as base64/SVG) with size options

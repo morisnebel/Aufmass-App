@@ -400,6 +400,30 @@ export default function ProjectDetailScreen() {
       console.error('Ordner speichern fehlgeschlagen:', e);
     }
   };
+  // Ordner zentral umbenennen (zieht alle Skizzen UND Fotos mit diesem Ordner mit)
+  const [renameFolderModal, setRenameFolderModal] = useState({ visible: false, oldName: '', value: '' });
+  const openRenameFolderModal = (name: string) => {
+    if (!name) return;
+    setRenameFolderModal({ visible: true, oldName: name, value: name });
+  };
+  const saveRenameFolder = async () => {
+    const oldName = renameFolderModal.oldName;
+    const newName = renameFolderModal.value.trim();
+    try {
+      await Promise.all([
+        ...sketches
+          .filter((s: any) => (((s.folder || '') as string).trim()) === oldName)
+          .map((s: any) => SketchService.update(s.id, { folder: newName } as any)),
+        ...photos
+          .filter((p: any) => (((p.folder || '') as string).trim()) === oldName)
+          .map((p: any) => PhotoService.update(p.id, { folder: newName } as any)),
+      ]);
+      setRenameFolderModal({ visible: false, oldName: '', value: '' });
+      await loadProjectData();
+    } catch (e) {
+      console.error('Ordner umbenennen fehlgeschlagen:', e);
+    }
+  };
   const viewShotRef = useRef<ViewShot>(null);
 
   // Checklist Image Preview Modal state
@@ -2594,12 +2618,17 @@ export default function ProjectDetailScreen() {
               return photoGroups.map(group => (
               <View key={group.name || '_none'}>
               {showPhotoFolderHeaders && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 6, paddingHorizontal: 4 }}>
+                <TouchableOpacity
+                  onPress={() => openRenameFolderModal(group.name)}
+                  disabled={!group.name}
+                  style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 6, paddingHorizontal: 4 }}
+                >
                   <Ionicons name={group.name ? 'folder' : 'folder-open-outline'} size={18} color={group.name ? '#1976d2' : '#999'} />
                   <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '700', color: group.name ? '#333' : '#999' }}>
                     {group.name || 'Ohne Ordner'} ({group.items.length})
                   </Text>
-                </View>
+                  {!!group.name && <Ionicons name="pencil" size={13} color="#bbb" style={{ marginLeft: 6 }} />}
+                </TouchableOpacity>
               )}
               <View style={styles.photoGrid}>
               {group.items.map((photo) => (
@@ -3127,12 +3156,17 @@ export default function ProjectDetailScreen() {
               return (
                 <View key={sketch.id}>
                   {showFolderHeader && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 6, paddingHorizontal: 4 }}>
+                    <TouchableOpacity
+                      onPress={() => openRenameFolderModal(sketchFolder)}
+                      disabled={!sketchFolder}
+                      style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 6, paddingHorizontal: 4 }}
+                    >
                       <Ionicons name={sketchFolder ? 'folder' : 'folder-open-outline'} size={18} color={sketchFolder ? '#1976d2' : '#999'} />
                       <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '700', color: sketchFolder ? '#333' : '#999' }}>
                         {sketchFolder || 'Ohne Ordner'}
                       </Text>
-                    </View>
+                      {!!sketchFolder && <Ionicons name="pencil" size={13} color="#bbb" style={{ marginLeft: 6 }} />}
+                    </TouchableOpacity>
                   )}
                 <View style={styles.itemCard}>
                   <TouchableOpacity
@@ -5158,6 +5192,44 @@ export default function ProjectDetailScreen() {
           </View>
         </View>
       )}
+
+      {/* Ordner-Umbenennen Modal */}
+      <Modal visible={renameFolderModal.visible} transparent animationType="fade" onRequestClose={() => setRenameFolderModal({ visible: false, oldName: '', value: '' })}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+              <Ionicons name="pencil" size={20} color="#1976d2" />
+              <Text style={{ marginLeft: 8, fontSize: 17, fontWeight: '700', color: '#333' }}>Ordner umbenennen</Text>
+            </View>
+            <Text style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>
+              Alle Skizzen und Fotos im Ordner "{renameFolderModal.oldName}" werden automatisch mitgezogen.
+            </Text>
+            <TextInput
+              value={renameFolderModal.value}
+              onChangeText={txt => setRenameFolderModal(m => ({ ...m, value: txt }))}
+              placeholder="Neuer Ordnername"
+              placeholderTextColor="#999"
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: '#333' }}
+              testID="rename-folder-input"
+            />
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+              <TouchableOpacity
+                onPress={() => setRenameFolderModal({ visible: false, oldName: '', value: '' })}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f5f5' }}
+              >
+                <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={saveRenameFolder}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: '#1976d2' }}
+                testID="rename-folder-save"
+              >
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Umbenennen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Skizzen-Ordner Modal */}
       <Modal visible={sketchFolderModal.visible} transparent animationType="fade" onRequestClose={() => setSketchFolderModal({ visible: false, kind: 'sketch', itemId: '', value: '' })}>

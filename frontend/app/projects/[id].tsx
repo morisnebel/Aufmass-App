@@ -315,6 +315,20 @@ export default function ProjectDetailScreen() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isSharingImage, setIsSharingImage] = useState(false);
   const [showCalcDetailsPage, setShowCalcDetailsPage] = useState(true); // Toggle for detailed calculation page - default ON
+  // Optionales PDF-Deckblatt (Logo, Projektdaten, Titelbild)
+  const [includeCoverPage, setIncludeCoverPage] = useState(false);
+  const [coverPhotoId, setCoverPhotoId] = useState<string | null>(null); // null = erstes Foto, 'none' = ohne Bild
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_pdf_cover')
+      .then(v => { if (v === '1') setIncludeCoverPage(true); })
+      .catch(() => {});
+  }, []);
+  const toggleCoverPage = () => {
+    setIncludeCoverPage(prev => {
+      AsyncStorage.setItem('aufmassprofi_pdf_cover', prev ? '0' : '1').catch(() => {});
+      return !prev;
+    });
+  };
   const viewShotRef = useRef<ViewShot>(null);
 
   // Checklist Image Preview Modal state
@@ -468,7 +482,7 @@ export default function ProjectDetailScreen() {
       };
       regeneratePdf();
     }
-  }, [showCalcDetailsPage]);
+  }, [showCalcDetailsPage, includeCoverPage, coverPhotoId]);
 
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(
@@ -2858,6 +2872,57 @@ export default function ProjectDetailScreen() {
 
     const detailedCalcPagesHtml = generateDetailedCalcPages();
 
+    // Optionales Deckblatt (Logo, Projektdaten, Titelbild)
+    let coverPageHtml = '';
+    if (includeCoverPage) {
+      const coverPhoto = coverPhotoId === 'none'
+        ? null
+        : (photos.find(p => p.id === coverPhotoId) || photos[0] || null);
+      const customerName = customer
+        ? ([customer.first_name, customer.last_name].filter(Boolean).join(' ') || (customer as any).customer_type_name || '-')
+        : '-';
+      const objektAddress = [
+        (project as any)?.objekt_street,
+        [(project as any)?.objekt_plz, (project as any)?.objekt_city].filter(Boolean).join(' '),
+      ].filter(Boolean).join(', ');
+      const addressLine = objektAddress || customer?.address || '';
+      coverPageHtml = `
+        <div style="page-break-after: always; display: flex; flex-direction: column; min-height: 255mm; padding: 6mm 2mm;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            ${companyLogo ? `<img src="${companyLogo}" style="height: 60px; max-width: 160px; object-fit: contain;" />` : '<div></div>'}
+            <div style="text-align: right; font-size: 10px; color: #555; line-height: 1.5;">
+              ${companyName ? `<strong style="font-size: 12px; color: #333;">${companyName}</strong><br/>` : ''}
+              ${companyStreet ? `${companyStreet}<br/>` : ''}
+              ${companyZipCode || companyCity ? `${companyZipCode} ${companyCity}` : ''}
+            </div>
+          </div>
+          <div style="margin-top: 24mm; text-align: center;">
+            <div style="font-size: 12px; letter-spacing: 4px; color: ${headerColor.color}; text-transform: uppercase; font-weight: 600;">Aufmass-Dokumentation</div>
+            <div style="font-size: 32px; font-weight: 800; color: #222; margin-top: 8px;">${project?.name || ''}</div>
+            <div style="font-size: 13px; color: #666; margin-top: 6px;">
+              ${project?.project_number ? `Projekt-Nr. ${project.project_number}` : ''}${project?.status ? ` &nbsp;&middot;&nbsp; ${getStatusMeta(project.status).label}` : ''}
+            </div>
+            <div style="width: 70px; height: 4px; background: ${headerColor.color}; margin: 14px auto 0 auto; border-radius: 2px;"></div>
+          </div>
+          ${coverPhoto ? `
+            <div style="text-align: center; margin: 10mm 0 0 0;">
+              <img src="${coverPhoto.image_data}" style="max-width: 155mm; max-height: 100mm; object-fit: contain; border-radius: 10px;" />
+            </div>
+          ` : ''}
+          <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; border-top: 2px solid ${headerColor.color}; padding-top: 10px; font-size: 11px; color: #444;">
+            <div style="line-height: 1.6;">
+              <strong style="color: ${headerColor.color}; font-size: 10px; letter-spacing: 1px;">KUNDE</strong><br/>
+              ${customerName}${addressLine ? `<br/>${addressLine}` : ''}
+            </div>
+            <div style="text-align: right; line-height: 1.6;">
+              <strong style="color: ${headerColor.color}; font-size: 10px; letter-spacing: 1px;">DATUM</strong><br/>
+              ${formatDate(new Date().toISOString())}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     // Build complete HTML
     const html = `
       <!DOCTYPE html>
@@ -4252,6 +4317,7 @@ export default function ProjectDetailScreen() {
         </style>
       </head>
       <body>
+        ${coverPageHtml}
         <div class="page">
         <div class="header">
           <div class="header-top">
@@ -8210,6 +8276,76 @@ export default function ProjectDetailScreen() {
                 Berechnungsdetails drucken
               </Text>
             </TouchableOpacity>
+          )}
+
+          {/* Toggle Deckblatt */}
+          <TouchableOpacity 
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              paddingVertical: 8,
+              paddingHorizontal: 16,
+              backgroundColor: includeCoverPage ? '#1976d2' : '#e0e0e0',
+              marginHorizontal: 16,
+              marginBottom: 8,
+              borderRadius: 20,
+            }}
+            onPress={toggleCoverPage}
+            testID="toggle-cover-page"
+          >
+            <Ionicons 
+              name={includeCoverPage ? "checkbox" : "square-outline"} 
+              size={20} 
+              color={includeCoverPage ? "#fff" : "#666"} 
+            />
+            <Text style={{ 
+              marginLeft: 8, 
+              color: includeCoverPage ? '#fff' : '#666',
+              fontWeight: '600',
+              fontSize: 14,
+            }}>
+              Deckblatt mit Titelbild
+            </Text>
+          </TouchableOpacity>
+
+          {/* Titelbild-Auswahl für das Deckblatt */}
+          {includeCoverPage && photos.length > 0 && (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              style={{ maxHeight: 64, marginBottom: 8 }}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 8, alignItems: 'center' }}
+            >
+              <TouchableOpacity
+                onPress={() => setCoverPhotoId('none')}
+                style={{
+                  width: 54, height: 54, borderRadius: 8, borderWidth: 2,
+                  borderColor: coverPhotoId === 'none' ? '#1976d2' : '#ddd',
+                  alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f5',
+                }}
+              >
+                <Ionicons name="image-outline" size={20} color="#999" />
+                <Text style={{ fontSize: 8, color: '#999' }}>Ohne</Text>
+              </TouchableOpacity>
+              {photos.map((photo, idx) => {
+                const isSelected = coverPhotoId === photo.id || (coverPhotoId === null && idx === 0);
+                return (
+                  <TouchableOpacity
+                    key={photo.id}
+                    onPress={() => setCoverPhotoId(photo.id)}
+                    style={{
+                      borderWidth: 2,
+                      borderColor: isSelected ? '#1976d2' : '#ddd',
+                      borderRadius: 8,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <Image source={{ uri: photo.image_data }} style={{ width: 50, height: 50 }} />
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           )}
           
           <ViewShot 

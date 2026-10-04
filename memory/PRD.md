@@ -454,3 +454,25 @@
 - FIX: app/_layout.tsx Stack.Screen "sketches/draw": gestureEnabled: false + fullScreenGestureEnabled: false.
 - usePreventRemove-Guard in draw.tsx bleibt als Sicherheitsnetz bestehen (greift z.B. bei
   programmatischen Removals); Zurückpfeil speichert weiterhin automatisch (handleBackPress).
+
+## Session 05.09. Teil 12 - PDF-Deckblatt (optional) für Projekt-PDF
+- NEU projects/[id].tsx:
+  - State includeCoverPage (persistiert in AsyncStorage 'aufmassprofi_pdf_cover') + coverPhotoId
+    (null=erstes Foto, 'none'=ohne Bild), toggleCoverPage().
+  - PDF-Vorschau-Modal: Toggle "Deckblatt mit Titelbild" (testID toggle-cover-page, gleiche Optik wie
+    "Berechnungsdetails drucken") + horizontale Titelbild-Auswahl (Thumbnails + "Ohne"-Chip) wenn Fotos existieren.
+  - Auto-Regenerate-Effect deps erweitert: [showCalcDetailsPage, includeCoverPage, coverPhotoId].
+  - generatePdfHtml: coverPageHtml (vor "Build complete HTML", eingefügt direkt nach <body> vor .page):
+    Logo + Firmenadresse oben, zentrierter Titel (AUFMASS-DOKUMENTATION, Projektname, Nr + Status,
+    Akzentlinie in headerColor), optional Titelbild (max 155x100mm), unten Kunde/Objektadresse + Datum
+    über Akzent-Trennlinie, page-break-after: always.
+- Web-Einschränkung: PDF-Options-Alert (Vorschau/Teilen/Speichern) ist auf Web no-op (bekannt, pre-existing)
+  -> Deckblatt-Toggle nur nativ testbar. Code nutzt identische Muster wie bestehende PDF-Teile
+  (photo.image_data, companyLogo, headerColor). Lint + tsc sauber (nur pre-existing Fehler).
+- User soll nativ verifizieren: Projekt-PDF > Vorschau > "Deckblatt mit Titelbild" + Bildauswahl.
+
+## Session Juni 2026 - Deckblatt-Verifikation (Fork)
+- Deckblatt-HTML 1:1 mit Beispieldaten gerendert und per Screenshot verifiziert: Layout korrekt
+  (Logo oben links, Firmendaten rechts, zentrierter Titel mit Akzentlinie, Titelbild, Kunde/Datum-Fusszeile).
+- Lint auf projects/[id].tsx: keine Fehler. App-Smoke-Test: lädt korrekt.
+- Status: Deckblatt-Feature VERIFIZIERT (Layout). Native PDF-Erzeugung (expo-print) kann der User auf dem Gerät prüfen.

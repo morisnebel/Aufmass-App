@@ -19,7 +19,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { styles } from '../../src/styles/calculatorStyles';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as Print from 'expo-print';
+import { createPdfFile } from '../../services/PdfExport';
 import * as Sharing from 'expo-sharing';
 import { useTranslation } from 'react-i18next';
 import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
@@ -3573,12 +3573,8 @@ export default function AreaCalculatorEditor() {
         </html>
       `;
       
-      // Create PDF
-      const { uri } = await Print.printToFileAsync({
-        html: htmlContent,
-        width: 595,
-        height: 842,
-      });
+      // Create PDF (A4 inkl. Seitenzahlen)
+      const uri = await createPdfFile(htmlContent);
       
       // Share PDF
       if (await Sharing.isAvailableAsync()) {

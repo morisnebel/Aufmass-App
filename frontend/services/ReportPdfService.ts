@@ -4,7 +4,7 @@
  * der auch in das Gesamt-Projekt-PDF eingebunden werden kann.
  */
 import { Report, Project, Customer, SettingsService, EmployeeMasterService, MaterialMasterService, MachineMasterService } from './LocalStorage';
-import * as Print from 'expo-print';
+import { createPdfFile } from './PdfExport';
 import * as Sharing from 'expo-sharing';
 import { getAppName } from './FeatureFlags';
 
@@ -1145,13 +1145,9 @@ export const exportReportAsPdf = async (
   customer: Customer | null
 ): Promise<void> => {
   const html = await generateReportHtml(report, project, customer);
-  const { uri } = await Print.printToFileAsync({
-    html,
-    base64: false,
-    // iOS/macOS ignoriert das CSS @page-Margin → echte Seitenränder nativ setzen
-    // (36pt ≈ 12,7mm pro Seite; gilt für ALLE Seiten inkl. Folgeseiten)
-    margins: { left: 36, top: 36, right: 36, bottom: 36 },
-  });
+  // A4 inkl. Seitenzahlen; iOS/macOS ignoriert CSS @page-Margin → echte Seitenränder nativ setzen
+  // (36pt ≈ 12,7mm pro Seite; gilt für ALLE Seiten inkl. Folgeseiten)
+  const uri = await createPdfFile(html, { margins: { left: 36, top: 36, right: 36, bottom: 36 } });
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(uri, {
       mimeType: 'application/pdf',

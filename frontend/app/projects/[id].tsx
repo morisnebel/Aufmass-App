@@ -27,6 +27,7 @@ import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 import { CoverStyle } from '../../services/CoverPageTemplates';
 import { generateProjectPdfHtml } from '../../services/ProjectPdfService';
 import PdfPreviewModal from '../../src/components/project/PdfPreviewModal';
+import { createPdfFile } from '../../services/PdfExport';
 import { styles } from '../../src/styles/projectDetailStyles';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
 import { Features } from '../../services/FeatureFlags';
@@ -354,6 +355,17 @@ export default function ProjectDetailScreen() {
     setCoverSubtitle(txt);
     if (id) AsyncStorage.setItem(`aufmassprofi_pdf_cover_subtitle_${id}`, txt).catch(() => {});
   };
+  // Deckblatt: Akzentfarbe (global, null = Farbe aus Einstellungen)
+  const [coverAccent, setCoverAccent] = useState<string | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_pdf_cover_accent')
+      .then(v => { if (v) setCoverAccent(v === 'auto' ? null : v); })
+      .catch(() => {});
+  }, []);
+  const changeCoverAccent = (accentId: string | null) => {
+    setCoverAccent(accentId);
+    AsyncStorage.setItem('aufmassprofi_pdf_cover_accent', accentId || 'auto').catch(() => {});
+  };
   const viewShotRef = useRef<ViewShot>(null);
 
   // Checklist Image Preview Modal state
@@ -510,7 +522,7 @@ export default function ProjectDetailScreen() {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [showCalcDetailsPage, includeCoverPage, coverPhotoId, coverStyle, coverSubtitle]);
+  }, [showCalcDetailsPage, includeCoverPage, coverPhotoId, coverStyle, coverSubtitle, coverAccent]);
 
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(
@@ -1423,7 +1435,7 @@ export default function ProjectDetailScreen() {
     return generateProjectPdfHtml({
       project, customer, roofs, photos, sketches, checklists,
       areaCalculations, imagemeterPhotos, remarks, t,
-      includeCoverPage, coverPhotoId, coverStyle, coverSubtitle,
+      includeCoverPage, coverPhotoId, coverStyle, coverSubtitle, coverAccent,
       showCalcDetailsPage,
     });
   };
@@ -1551,12 +1563,7 @@ export default function ProjectDetailScreen() {
       setIsGeneratingPdf(true);
       
       const html = await generateProjectPdfHtmlWithOptions({ includeReports });
-      const { uri } = await Print.printToFileAsync({
-        html,
-        base64: false,
-        width: 595,
-        height: 842,
-      });
+      const uri = await createPdfFile(html);
       
       // Hide loader BEFORE opening share dialog to prevent stuck overlay
       // Share dialog may not always resolve properly when user interacts with sub-dialogs (like Print)
@@ -1585,12 +1592,7 @@ export default function ProjectDetailScreen() {
       setIsGeneratingPdf(true);
       
       const html = await generateProjectPdfHtmlWithOptions({ includeReports });
-      const { uri } = await Print.printToFileAsync({
-        html,
-        base64: false,
-        width: 595,
-        height: 842,
-      });
+      const uri = await createPdfFile(html);
       
       // Hide loader BEFORE opening share dialog to prevent stuck overlay
       // Share dialog may not always resolve properly when user interacts with sub-dialogs (like Print)
@@ -1627,12 +1629,7 @@ export default function ProjectDetailScreen() {
       const html = await generatePdfHtml();
       
       // Generate PDF file first, then share
-      const { uri } = await Print.printToFileAsync({
-        html: html,
-        base64: false,
-        width: 595,
-        height: 842,
-      });
+      const uri = await createPdfFile(html);
       
       // Share the PDF file
       const canShare = await Sharing.isAvailableAsync();
@@ -1644,7 +1641,7 @@ export default function ProjectDetailScreen() {
         });
       } else {
         // Fallback to native print
-        await Print.printAsync({ html: html, width: 595, height: 842 });
+        await Print.printAsync({ uri });
       }
     } catch (error) {
       console.error('Error sharing PDF from preview:', error);
@@ -1665,12 +1662,7 @@ export default function ProjectDetailScreen() {
       const html = await generatePdfHtml();
       
       // Generate PDF file first, then share (iOS shows "Save to Files" option)
-      const { uri } = await Print.printToFileAsync({
-        html: html,
-        base64: false,
-        width: 595,
-        height: 842,
-      });
+      const uri = await createPdfFile(html);
       
       // Share the PDF file - iOS will show save option
       const canShare = await Sharing.isAvailableAsync();
@@ -1682,7 +1674,7 @@ export default function ProjectDetailScreen() {
         });
       } else {
         // Fallback to native print
-        await Print.printAsync({ html: html, width: 595, height: 842 });
+        await Print.printAsync({ uri });
       }
     } catch (error) {
       console.error('Error saving PDF from preview:', error);
@@ -5089,6 +5081,8 @@ export default function ProjectDetailScreen() {
         onChangeCoverStyle={changeCoverStyle}
         coverPhotoId={coverPhotoId}
         onSelectCoverPhoto={setCoverPhotoId}
+        coverAccent={coverAccent}
+        onChangeCoverAccent={changeCoverAccent}
         isSharingImage={isSharingImage}
         onShareAsImage={sharePreviewAsImage}
       />

@@ -28,7 +28,7 @@ let fabricTick = 0;
 import { DocumentService, Document } from '../../services/LocalStorage';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Print from 'expo-print';
+import { createPdfFile } from '../../services/PdfExport';
 import { captureRef } from 'react-native-view-shot';
 import { useTranslation } from 'react-i18next';
 
@@ -655,12 +655,8 @@ export default function DocumentViewScreen() {
     try {
       console.log('Creating PDF file');
       
-      // First create a PDF file
-      const { uri } = await Print.printToFileAsync({ 
-        html: htmlContent,
-        width: 595, // A4 width in points
-        height: 842, // A4 height in points
-      });
+      // First create a PDF file (A4 inkl. Seitenzahlen)
+      const uri = await createPdfFile(htmlContent);
       
       console.log('PDF created at:', uri);
       

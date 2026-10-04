@@ -8,6 +8,20 @@ import { isPro, getProStatus } from './FeatureFlags';
 import { getStatusMeta } from '../src/constants/projectStatus';
 import { buildCoverPageHtml, CoverStyle } from './CoverPageTemplates';
 
+// PDF-Farbpalette (auch für die Deckblatt-Akzentfarbe im PDF-Modal)
+export const PDF_COLOR_OPTIONS: { [key: string]: { color: string; textColor: string } } = {
+  blue: { color: '#1976d2', textColor: '#ffffff' },
+  light_blue: { color: '#bbdefb', textColor: '#1565c0' },
+  gray: { color: '#9e9e9e', textColor: '#ffffff' },
+  light_gray: { color: '#e0e0e0', textColor: '#424242' },
+  green: { color: '#388e3c', textColor: '#ffffff' },
+  light_green: { color: '#c8e6c9', textColor: '#2e7d32' },
+  orange: { color: '#f57c00', textColor: '#ffffff' },
+  red: { color: '#d32f2f', textColor: '#ffffff' },
+  black: { color: '#212121', textColor: '#ffffff' },
+  white: { color: '#ffffff', textColor: '#333333' },
+};
+
 export interface ProjectPdfContext {
   project: any;
   customer: any;
@@ -23,6 +37,7 @@ export interface ProjectPdfContext {
   coverPhotoId: string | null;
   coverStyle: CoverStyle;
   coverSubtitle: string;
+  coverAccent?: string | null; // Farb-ID aus PDF_COLOR_OPTIONS, null = Farbe aus Einstellungen
   showCalcDetailsPage: boolean;
 }
 
@@ -30,7 +45,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
   const {
     project, customer, roofs, photos, sketches, checklists,
     areaCalculations, imagemeterPhotos, remarks, t,
-    includeCoverPage, coverPhotoId, coverStyle, coverSubtitle,
+    includeCoverPage, coverPhotoId, coverStyle, coverSubtitle, coverAccent,
     showCalcDetailsPage,
   } = ctx;
     // Debug: Log remarks status
@@ -132,18 +147,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
     const gridColumns = checklistColumns === 1 ? '1fr' : checklistColumns === 2 ? '1fr 1fr' : '1fr 1fr 1fr';
     
     // Farb-Optionen für alle Bereiche
-    const colorOptions: { [key: string]: { color: string; textColor: string } } = {
-      blue: { color: '#1976d2', textColor: '#ffffff' },
-      light_blue: { color: '#bbdefb', textColor: '#1565c0' },
-      gray: { color: '#9e9e9e', textColor: '#ffffff' },
-      light_gray: { color: '#e0e0e0', textColor: '#424242' },
-      green: { color: '#388e3c', textColor: '#ffffff' },
-      light_green: { color: '#c8e6c9', textColor: '#2e7d32' },
-      orange: { color: '#f57c00', textColor: '#ffffff' },
-      red: { color: '#d32f2f', textColor: '#ffffff' },
-      black: { color: '#212121', textColor: '#ffffff' },
-      white: { color: '#ffffff', textColor: '#333333' },
-    };
+    const colorOptions = PDF_COLOR_OPTIONS;
     
     // Größen-Mapping für Schrift und Padding - deutlichere Unterschiede
     const sizeMapping = {
@@ -1527,6 +1531,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
         [(project as any)?.objekt_plz, (project as any)?.objekt_city].filter(Boolean).join(' '),
       ].filter(Boolean).join(', ');
       const addressLine = objektAddress || customer?.address || '';
+      const coverColor = (coverAccent && PDF_COLOR_OPTIONS[coverAccent]) || headerColor;
       coverPageHtml = buildCoverPageHtml({
         style: coverStyle,
         projectName: project?.name || '',
@@ -1536,8 +1541,8 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
         customerName,
         addressLine,
         dateLabel: formatDate(new Date().toISOString()),
-        accentColor: headerColor.color,
-        accentTextColor: headerColor.textColor,
+        accentColor: coverColor.color,
+        accentTextColor: coverColor.textColor,
         companyLogo,
         companyName,
         companyStreet,

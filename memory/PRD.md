@@ -514,3 +514,27 @@
   OK len=53211, Cover+Body enthalten. Temporaere Dev-Routen (dev-thumbs, dev-pdftest) wieder geloescht.
 - Web-Test-Tipp: Disclaimer laesst sich per localStorage aufmassprofi_settings
   (disclaimer_accepted_at + disclaimer_version='2026-06') ueberspringen.
+
+## Session Juni 2026 Teil 4 - Seitenzahlen, Deckblatt-Akzentfarbe, draw.tsx-Refactoring
+- PDF-Seitenzahlen: Neues Modul services/PdfExport.ts mit createPdfFile(html, opts):
+  printToFileAsync (A4, base64) -> pdf-lib stempelt "Seite X von Y" (8pt, grau, zentriert, y=14)
+  auf jede Seite -> neue Datei in cacheDirectory. Fallback auf Original-PDF bei Fehler.
+  WICHTIG: pdf-lib MUSS ueber require('pdf-lib/cjs') geladen werden - der ES-Build bricht in
+  Metro/Web mit "Cannot destructure __extends of tslib.default". pdf-lib ^1.17.1 installiert.
+  Alle PDF-Pfade umgestellt: projects/[id].tsx (4x + 2 printAsync-Fallbacks nutzen jetzt { uri }),
+  PdfPreviewModal (Print-Button), calculator/new.tsx, documents/view.tsx,
+  ReportPdfService.ts (mit nativen margins 36pt). pdf-lib-Logik in Node verifiziert.
+- Deckblatt-Akzentfarbe im PDF-Modal: PDF_COLOR_OPTIONS jetzt modulweit exportiert aus
+  ProjectPdfService. Neuer ctx-Param coverAccent (null = Einstellungs-Farbe). UI: "Farbe:"-Zeile
+  mit Auto-Chip + 6 Farbpunkten (blue/green/orange/red/gray/black, testID cover-accent-*),
+  persistiert global in aufmassprofi_pdf_cover_accent ('auto' = null). E2E auf Web verifiziert.
+- draw.tsx-Refactoring: 10722 -> 9718 Zeilen:
+  - src/sketch/sketchShared.ts: deepCloneElement, simplifyPath (+Douglas-Peucker), DrawElement,
+    DrawMode, FontFamily, FONT_FAMILIES, TOOL_SIZES_KEY.
+  - src/sketch/sketchSvg.ts: buildPreviewSvg(ctx) (~475 Zeilen SVG-Serialisierung); draw.tsx hat
+    duennen Wrapper generatePreviewSvg.
+  - Toter Code geloescht (~280 Zeilen): DraggableTotalBox, Mess-Numpad-Funktionen, bringToFront/
+    sendToBack, startCropMode, pickBackgroundImage/takeBackgroundPhoto/importImageFromFiles u.a.
+  - STOLPERFALLE behoben: Skript loeschte versehentlich canvasOverhead mit (klammerlose Einzeiler);
+    wiederhergestellt, draw-Route verifiziert OK.
+- Vorbestehend/ungeloest (Web-only): calculator/new auf Web wirft "svg height -200" Konsolen-Fehler.

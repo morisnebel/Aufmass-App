@@ -14,14 +14,18 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import ViewShot from 'react-native-view-shot';
 import { WebView } from 'react-native-webview';
 import { CoverStyle, COVER_STYLE_OPTIONS } from '../../../services/CoverPageTemplates';
+import { PDF_COLOR_OPTIONS } from '../../../services/ProjectPdfService';
+import { createPdfFile } from '../../../services/PdfExport';
 import { styles } from '../../styles/projectDetailStyles';
 
 const ACCENT = '#1976d2';
+
+// Auswahl für die Deckblatt-Akzentfarbe (kräftige Töne aus der PDF-Palette)
+const COVER_ACCENT_CHOICES = ['blue', 'green', 'orange', 'red', 'gray', 'black'] as const;
 
 // Mini-Vorschau (schematisch) für die drei Deckblatt-Vorlagen
 function StyleThumb({ style }: { style: CoverStyle }) {
@@ -109,6 +113,8 @@ interface PdfPreviewModalProps {
   onChangeCoverStyle: (s: CoverStyle) => void;
   coverPhotoId: string | null;
   onSelectCoverPhoto: (id: string) => void;
+  coverAccent: string | null;
+  onChangeCoverAccent: (accentId: string | null) => void;
   isSharingImage: boolean;
   onShareAsImage: () => void;
 }
@@ -122,12 +128,13 @@ export default function PdfPreviewModal(props: PdfPreviewModalProps) {
     coverSubtitle, onChangeCoverSubtitle,
     coverStyle, onChangeCoverStyle,
     coverPhotoId, onSelectCoverPhoto,
+    coverAccent, onChangeCoverAccent,
     isSharingImage, onShareAsImage,
   } = props;
 
   const handlePrint = async () => {
     try {
-      const { uri } = await Print.printToFileAsync({ html: pdfHtmlContent, width: 595, height: 842 });
+      const uri = await createPdfFile(pdfHtmlContent);
       await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
       console.error('Print error:', error);
@@ -253,6 +260,48 @@ export default function PdfPreviewModal(props: PdfPreviewModalProps) {
                     <Text style={{ fontSize: 12, fontWeight: '600', marginTop: 5, color: selected ? ACCENT : '#666' }}>
                       {opt.label}
                     </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {/* Akzentfarbe für das Deckblatt */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 }}>
+              <Text style={{ fontSize: 12, color: '#666', fontWeight: '600', marginRight: 2 }}>Farbe:</Text>
+              <TouchableOpacity
+                onPress={() => onChangeCoverAccent(null)}
+                style={{
+                  paddingHorizontal: 10,
+                  height: 28,
+                  borderRadius: 14,
+                  justifyContent: 'center',
+                  borderWidth: 2,
+                  borderColor: coverAccent === null ? ACCENT : '#ddd',
+                  backgroundColor: coverAccent === null ? '#e8f1fb' : '#f5f5f5',
+                }}
+                testID="cover-accent-auto"
+              >
+                <Text style={{ fontSize: 11, fontWeight: '600', color: coverAccent === null ? ACCENT : '#666' }}>Auto</Text>
+              </TouchableOpacity>
+              {COVER_ACCENT_CHOICES.map(key => {
+                const selected = coverAccent === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    onPress={() => onChangeCoverAccent(key)}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 14,
+                      backgroundColor: PDF_COLOR_OPTIONS[key].color,
+                      borderWidth: 2,
+                      borderColor: selected ? '#333' : '#fff',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      elevation: 1,
+                    }}
+                    testID={`cover-accent-${key}`}
+                  >
+                    {selected && <Ionicons name="checkmark" size={16} color="#fff" />}
                   </TouchableOpacity>
                 );
               })}

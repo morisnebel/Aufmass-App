@@ -436,3 +436,14 @@
   zurücksetzen/neu authentifizieren; ggf. alte/revoked Zertifikate unter developer.apple.com
   > Certificates aufräumen (Apple-Limit ~2-3 aktive Distribution-Certs); danach neuen Build starten.
   Falls keine Reset-Option in der UI: support@emergent.sh mit Screenshot + Job-ID + Build-Log.
+
+## Session 05.09. Teil 10 - Expo Go öffnet App nicht (Account-Mismatch)
+- Fehler auf iPad: "signed in to Expo CLI as 'morisnebel' / Expo Go as 'emergent-em-user-org_...' - accounts need to match".
+- URSACHE: app.json enthielt "owner": "morisnebel" + extra.eas.projectId (159413b4-...) vom persönlichen
+  Expo-Konto des Users -> Manifest war auf morisnebel gescoped, Expo Go ist mit Emergent-Konto angemeldet.
+- FIX: owner + extra.eas.projectId aus app.json entfernt (support_agent: Emergent verwaltet EAS-Builds selbst,
+  Felder nicht nötig). Manifest jetzt @anonymous/frontend-... , kein morisnebel mehr -> Expo Go kann öffnen.
+- FALLS der Store-Build dadurch je ein Problem meldet: Werte waren owner=morisnebel,
+  eas.projectId=159413b4-c5be-4afa-9038-b6ba91a4ea1c (hier dokumentiert zum Wiederherstellen).
+- User-Hinweis: Nach Fork sind alte QR-Codes/URLs ungültig -> immer aktuellen Preview-QR scannen,
+  alten Eintrag in Expo Go "Recently opened" löschen.

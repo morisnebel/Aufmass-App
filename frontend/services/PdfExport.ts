@@ -35,13 +35,16 @@ export interface CreatePdfOptions {
 
 // Erzeugt ein A4-PDF aus HTML inkl. Seitenzahlen; gibt die file://-URI zurück.
 // Fällt bei Fehlern in der Nachbearbeitung auf das Original-PDF zurück.
+// WICHTIG: iOS ignoriert CSS @page-Margins -> native Seitenränder setzen (gelten für ALLE Seiten,
+// sonst starten Fotos/Skizzen auf Folgeseiten direkt am Blattrand). 36pt ≈ 12,7mm.
 export async function createPdfFile(html: string, opts: CreatePdfOptions = {}): Promise<string> {
+  const margins = opts.margins ?? { left: 36, top: 36, right: 36, bottom: 36 };
   const { uri, base64 } = await Print.printToFileAsync({
     html,
     base64: true,
     width: 595,
     height: 842,
-    ...(opts.margins ? { margins: opts.margins } : {}),
+    margins,
   });
   if (!base64) return uri;
   try {

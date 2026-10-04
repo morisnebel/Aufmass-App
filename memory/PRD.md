@@ -597,3 +597,11 @@
   "Skizzen" wandert bei Ordnern VOR den ersten Header (sonst wie bisher im ersten Item).
   Nur aktiv, wenn mindestens eine Skizze einen Ordner hat (sonst Verhalten unveraendert).
   Runtime-verifiziert: Reihenfolge "Ohne Ordner" -> Ordner alphabetisch, 3 Header korrekt.
+
+## Session Juni 2026 Teil 9 - PDF-Seitenraender auf Folgeseiten
+- BUG: Fotos/Skizzen begannen im gedruckten PDF auf Folgeseiten direkt am Blattrand (0 Rand).
+  Ursache: iOS ignoriert CSS @page-Margins; nur Seite 1 hatte Abstand via body/.page-Padding.
+- FIX: services/PdfExport.ts createPdfFile setzt jetzt STANDARDMAESSIG native margins
+  36pt (12,7mm) auf allen Seiten (wie bereits beim Rapport-Export bewaehrt). Gilt fuer alle
+  Aufrufer (Projekt-PDF, Modal-Print, documents/view). Seitenzahl (y=14) liegt sauber im Rand.
+- Android unveraendert (nutzt @page CSS 15mm; margins-Option ist iOS-only).

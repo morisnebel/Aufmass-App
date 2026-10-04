@@ -4362,8 +4362,25 @@ export default function DrawSketchScreen() {
         const currentAngle = Math.atan2(locationY - centerY, locationX - centerX);
         const rotationDelta = ((currentAngle - startAngle) * 180 / Math.PI);
         const originalRotation = originalElement.rotation || 0;
-        
-        newEl.rotation = originalRotation + rotationDelta;
+
+        if (el.type === 'line' || el.type === 'arrow') {
+          // Maßlinien/Linien: Endpunkte DIREKT rotieren statt transform-rotate.
+          // Grund: react-native-svg rotiert Marker-Pfeilspitzen und den Maßtext NICHT mit,
+          // wenn nur die <Line> ein transform bekommt. Mit rotierten Koordinaten folgen
+          // Pfeilspitzen (orient=auto) und Textwinkel automatisch der neuen Richtung.
+          // Eine evtl. vorhandene Alt-Rotation wird dabei in die Koordinaten "eingebacken".
+          const rad = (currentAngle - startAngle) + (originalRotation * Math.PI / 180);
+          const rotPoint = (px: number, py: number) => ({
+            x: centerX + (px - centerX) * Math.cos(rad) - (py - centerY) * Math.sin(rad),
+            y: centerY + (px - centerX) * Math.sin(rad) + (py - centerY) * Math.cos(rad),
+          });
+          const rp1 = rotPoint(originalElement.data.x1, originalElement.data.y1);
+          const rp2 = rotPoint(originalElement.data.x2, originalElement.data.y2);
+          newEl.data = { ...el.data, x1: rp1.x, y1: rp1.y, x2: rp2.x, y2: rp2.y };
+          newEl.rotation = 0;
+        } else {
+          newEl.rotation = originalRotation + rotationDelta;
+        }
       } else if (dragMode === 'resize' && resizeHandle) {
         // Resize element
         if (el.type === 'circle' && resizeHandle === 'radius') {
@@ -5096,7 +5113,7 @@ export default function DrawSketchScreen() {
                 fontSize={element.data.fontSize || 14}
                 fontWeight="bold"
                 textAnchor="middle"
-                transform={`rotate(${angle} ${midX} ${midY})`}
+                transform={`rotate(${angle + (element.rotation || 0)} ${midX} ${midY})`}
               >
                 {text}
               </SvgText>

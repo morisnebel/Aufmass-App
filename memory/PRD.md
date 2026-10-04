@@ -571,3 +571,13 @@
   Skizzen-Karte -> Modal (TextInput + Chips vorhandener Ordner + Kein Ordner/Abbrechen/Speichern,
   testID sketch-folder-input/-save). Tipp-Hinweis unter "Neue Skizze"-Button.
   Speichern via SketchService.update(id, { folder }).
+
+## Session Juni 2026 Teil 7 - Masslinien-Rotation gefixt
+- BUG: Beim Rotieren einer Masslinie (type 'arrow') rotierte nur die Linie; Pfeilspitzen (SVG-Marker)
+  und Masstext blieben falsch. Ursache: react-native-svg rotiert Marker nicht mit, wenn nur die
+  <Line> ein transform-rotate bekommt; der Text nutzte nur den unrotierten Linienwinkel.
+- FIX (draw.tsx, rotate-Zweig ~Z4360): Fuer 'line' und 'arrow' werden die ENDPUNKTE direkt um das
+  Zentrum rotiert (rotation=0 gesetzt, Alt-Rotation wird eingebacken). Marker (orient=auto) und
+  Textwinkel folgen dadurch automatisch. Andere Typen weiterhin ueber element.rotation.
+- Zusaetzlich: arrow-Masstext-Transform beruecksichtigt jetzt element.rotation (Altbestaende).
+- draw-Route Smoke OK. Geste nativ vom User zu verifizieren.

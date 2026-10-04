@@ -614,3 +614,18 @@
   nur bei benannten Ordnern) -> Umbenennen-Modal (testID rename-folder-input/-save).
   saveRenameFolder aktualisiert ALLE Skizzen UND Fotos mit dem alten Namen via
   SketchService.update/PhotoService.update (leerer Name = Ordner aufloesen).
+
+## Session Juni 2026 Teil 11 - Ordner-Header nicht mehr vom Inhalt getrennt
+- BUG: Ordner-Ueberschriften standen im gedruckten PDF teils allein am Seitenende
+  (Skizze/Foto erst auf Folgeseite). Ursache: page-break-after: avoid wird von iOS ignoriert.
+- FIX (bewaehrtes Codebase-Muster "Ueberschrift ins Item einbetten"):
+  - Skizzen: folderHeading wird IN das sketch-item div eingebettet (hat page-break-inside: avoid);
+    h2 "Skizzen" wieder im ersten Item wie urspruenglich.
+  - Fotos: folderHeading + ERSTES Foto der Gruppe in gemeinsamen inline-block-Wrapper
+    (width 100%, page-break-inside: avoid).
+- Runtime-verifiziert: Header liegen innerhalb der unteilbaren Bloecke (sketch=OK, photo=OK).
+
+## Session Juni 2026 – Build-Vorbereitung
+- PDF-Seitenumbrüche (Ordner-Überschriften) vom User bestätigt: funktioniert.
+- app.json Versionen für Store-Upload erhöht: version 1.1.12, iOS buildNumber 122, Android versionCode 122.
+- Build-Erstellung erfolgt über den Emergent Publish-Button (Deployment-Panel).

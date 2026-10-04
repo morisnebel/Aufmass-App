@@ -532,10 +532,14 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
       const photoItems = sortedPhotos.map((photo, idx) => {
         const pf = photoFolderOf(photo);
         const prevPf = idx > 0 ? photoFolderOf(sortedPhotos[idx - 1]) : null;
-        const folderHeading = anyPhotoFolder && pf !== prevPf
-          ? `<div style="width: 100%; font-size: 14px; margin: 8px 0 4px 0; padding: 5px 10px; background: #f0f4f8; border-left: 4px solid #1976d2; border-radius: 4px; font-weight: 700; color: #333; page-break-after: avoid;">${pf || 'Ohne Ordner'}</div>`
-          : '';
-        return `${folderHeading}${generatePhotoHtml(photo)}`;
+        const itemHtml = generatePhotoHtml(photo);
+        if (anyPhotoFolder && pf !== prevPf) {
+          // Ordner-Überschrift zusammen mit dem ERSTEN Foto der Gruppe in einen
+          // unteilbaren Block packen, damit iOS sie nicht alleine ans Seitenende setzt
+          const folderHeading = `<div style="width: 100%; font-size: 14px; margin: 8px 0 4px 0; padding: 5px 10px; background: #f0f4f8; border-left: 4px solid #1976d2; border-radius: 4px; font-weight: 700; color: #333; box-sizing: border-box;">${pf || 'Ohne Ordner'}</div>`;
+          return `<div style="display: inline-block; width: 100%; page-break-inside: avoid; break-inside: avoid; vertical-align: top;">${folderHeading}${itemHtml}</div>`;
+        }
+        return itemHtml;
       }).join('');
       photosHtml = `<div class="${photosContainerClass}" style="font-size: 0;">${headingHtml}${photoItems}</div>`;
     }
@@ -630,18 +634,20 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
         ? `<div class="sketch-notes sketch-notes-filled">${noteParts.join('<br>')}</div>`
         : '';
       
-      // Ordner-Überschrift einfügen, wenn ein neuer Ordner beginnt
+      // Ordner-Überschrift einfügen, wenn ein neuer Ordner beginnt.
+      // WICHTIG: Überschrift wird INS Item eingebettet (page-break-inside: avoid),
+      // sonst trennt iOS die Überschrift von der Skizze auf verschiedene Seiten
+      // (page-break-after: avoid wird von iOS WebKit ignoriert).
       const sketchFolder = sketchFolderOf(sketch);
       const prevSketchFolder = index > 0 ? sketchFolderOf(sortedSketches[index - 1]) : null;
       const folderHeading = anySketchFolder && sketchFolder !== prevSketchFolder
-        ? `<div style="width: 100%; margin: 8px 0 4px 0; padding: 5px 10px; background: #f0f4f8; border-left: 4px solid #1976d2; border-radius: 4px; font-size: 11pt; font-weight: 700; color: #333; page-break-after: avoid;">${sketchFolder || 'Ohne Ordner'}</div>`
+        ? `<div style="width: 100%; margin: 8px 0 4px 0; padding: 5px 10px; background: #f0f4f8; border-left: 4px solid #1976d2; border-radius: 4px; font-size: 11pt; font-weight: 700; color: #333; box-sizing: border-box;">${sketchFolder || 'Ohne Ordner'}</div>`
         : '';
 
       return `
-        ${anySketchFolder && index === 0 ? `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>` : ''}
-        ${folderHeading}
         <div class="sketch-item ${sizeClass}">
-          ${!anySketchFolder && index === 0 ? `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>` : ''}
+          ${index === 0 ? `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>` : ''}
+          ${folderHeading}
           <p class="sketch-title">${sketchTitle}</p>
           ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
           ${notesHtml}

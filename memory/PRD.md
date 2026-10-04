@@ -476,3 +476,23 @@
   (Logo oben links, Firmendaten rechts, zentrierter Titel mit Akzentlinie, Titelbild, Kunde/Datum-Fusszeile).
 - Lint auf projects/[id].tsx: keine Fehler. App-Smoke-Test: lädt korrekt.
 - Status: Deckblatt-Feature VERIFIZIERT (Layout). Native PDF-Erzeugung (expo-print) kann der User auf dem Gerät prüfen.
+
+## Session Juni 2026 Teil 2 - Deckblatt A4-Fix, Untertitel, Vorlagen + Refactoring Schritt 1
+- A4-Fix Deckblatt: Ursache gefunden - expo-print nutzte Standardgröße US Letter (612x792),
+  dadurch passte das 255mm-Deckblatt nicht und die Fußzeile rutschte auf Seite 2.
+  Fix: Alle Print.printToFileAsync/printAsync-Aufrufe in projects/[id].tsx haben jetzt explizit width:595, height:842 (A4).
+- Neues Modul /app/frontend/services/CoverPageTemplates.ts:
+  - 3 Deckblatt-Vorlagen: classic (zentriert), modern (Farbband), minimal (dezent)
+  - Feste Seitenhöhe 255mm + overflow:hidden => garantiert 1 Seite; Logo hart begrenzt (17mm Wrapper),
+    Titelbild in fixem Container (90-100mm); Fußzeile absolut am Seitenende; Tabellen statt Flexbox (druckrobust).
+  - buildCoverPageHtml(opts) wird in projects/[id].tsx aufgerufen (ersetzt Inline-HTML).
+- Untertitel-Freitext: TextInput im PDF-Modal (testID cover-subtitle-input), pro Projekt persistiert
+  (aufmassprofi_pdf_cover_subtitle_<id>). Stil-Auswahl 3 Chips (testID cover-style-classic/modern/minimal),
+  global persistiert (aufmassprofi_pdf_cover_style). PDF-Preview-Regenerierung jetzt debounced (500ms).
+- Refactoring Schritt 1: StyleSheet-Blöcke ausgelagert (~4470 Zeilen):
+  - app/projects/[id].tsx (10509->8571) -> src/styles/projectDetailStyles.ts
+  - app/sketches/draw.tsx (12356->10723) -> src/styles/sketchDrawStyles.ts
+  - app/calculator/new.tsx (10326->9422) -> src/styles/calculatorStyles.ts
+  - Alle 3 Screens per Screenshot verifiziert (rendern korrekt).
+- Alle 3 Deckblatt-Vorlagen statisch mit A4-Maßen gerendert und visuell geprüft: passen auf 1 Seite.
+- Offen: User-Verifikation nativ (PDF mit Deckblatt auf iPad erzeugen).

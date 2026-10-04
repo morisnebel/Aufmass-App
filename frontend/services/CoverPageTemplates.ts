@@ -25,6 +25,8 @@ export interface CoverPageOptions {
   companyName?: string;
   companyStreet?: string;
   companyZipCity?: string;
+  companyPhone?: string;
+  companyEmail?: string;
   coverImage?: string | null;
 }
 
@@ -51,6 +53,8 @@ function companyBlockHtml(o: CoverPageOptions): string {
   if (o.companyName) lines.push(`<strong style="font-size: 11pt; color: #333;">${esc(o.companyName)}</strong>`);
   if (o.companyStreet) lines.push(esc(o.companyStreet));
   if (o.companyZipCity) lines.push(esc(o.companyZipCity));
+  if (o.companyPhone) lines.push(`Tel. ${esc(o.companyPhone)}`);
+  if (o.companyEmail) lines.push(esc(o.companyEmail));
   return lines.join('<br/>');
 }
 
@@ -130,7 +134,7 @@ function modernTemplate(o: CoverPageOptions): string {
         </td>
         <td style="background: #f5f7fa; border-left: 4px solid ${o.accentColor}; border-radius: 6px; padding: 10px 12px; font-size: 10pt; color: #444; line-height: 1.6; vertical-align: top;">
           <strong style="color: ${o.accentColor}; font-size: 8pt; letter-spacing: 1px;">ERSTELLT VON</strong><br/>
-          ${esc(o.companyName || '-')}${o.companyZipCity ? `<br/>${esc(o.companyZipCity)}` : ''}
+          ${esc(o.companyName || '-')}${o.companyZipCity ? `<br/>${esc(o.companyZipCity)}` : ''}${o.companyPhone ? `<br/>Tel. ${esc(o.companyPhone)}` : ''}${o.companyEmail ? `<br/>${esc(o.companyEmail)}` : ''}
         </td>
       </tr></table>
     </div>
@@ -155,7 +159,7 @@ function minimalTemplate(o: CoverPageOptions): string {
     <div style="position: absolute; bottom: 0; left: 0; right: 0; border-top: 1px solid #ddd; padding-top: 8px;">
       <table style="width: 100%; border-collapse: collapse; font-size: 9pt; color: #555;"><tr>
         <td style="line-height: 1.6;">${esc(o.customerName)}${o.addressLine ? ` &middot; ${esc(o.addressLine)}` : ''}</td>
-        <td style="text-align: right; color: #999;">${o.companyName ? esc(o.companyName) : ''}</td>
+        <td style="text-align: right; color: #999; line-height: 1.6;">${[o.companyName, o.companyPhone ? `Tel. ${o.companyPhone}` : '', o.companyEmail].filter(Boolean).map(esc).join(' &middot; ')}</td>
       </tr></table>
     </div>
   ${PAGE_CLOSE}`;

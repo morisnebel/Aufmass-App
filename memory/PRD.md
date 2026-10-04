@@ -496,3 +496,21 @@
   - Alle 3 Screens per Screenshot verifiziert (rendern korrekt).
 - Alle 3 Deckblatt-Vorlagen statisch mit A4-Maßen gerendert und visuell geprüft: passen auf 1 Seite.
 - Offen: User-Verifikation nativ (PDF mit Deckblatt auf iPad erzeugen).
+
+## Session Juni 2026 Teil 3 - Refactoring PDF + Modal, Deckblatt-Kontakt, Vorlagen-Vorschau
+- Refactoring Schritt 2:
+  - generatePdfHtml (~3160 Zeilen) ausgelagert nach services/ProjectPdfService.ts
+    (export generateProjectPdfHtml(ctx)). [id].tsx behaelt duennen Wrapper. 8571 -> 5219 Zeilen.
+    WICHTIG: require-Pfad des App-Icons im Service angepasst (../assets statt ../../assets).
+    settings als any gecastet (Settings-Typ kennt company-Felder nicht - vorbestehend).
+  - PDF-Vorschau-Modal ausgelagert nach src/components/project/PdfPreviewModal.tsx
+    (Props-basiert; Print/Sharing-Logik in der Komponente; nutzt styles aus projectDetailStyles).
+  - WebView-Import aus [id].tsx entfernt (nur noch im Modal gebraucht).
+- Deckblatt-Kontakt: companyPhone/companyEmail in CoverPageOptions; classic (Firmenblock oben rechts),
+  modern (ERSTELLT-VON-Box), minimal (Fusszeile rechts). Statisch verifiziert.
+- Vorlagen-Vorschau: StyleThumb-Minikomponente (schematische Mini-Seiten) in den 3 Auswahl-Chips.
+  E2E auf Web verifiziert (Auswahlwechsel funktioniert).
+- Runtime-Test: generateProjectPdfHtml im Web-Bundle mit Dummy-Daten ausgefuehrt ->
+  OK len=53211, Cover+Body enthalten. Temporaere Dev-Routen (dev-thumbs, dev-pdftest) wieder geloescht.
+- Web-Test-Tipp: Disclaimer laesst sich per localStorage aufmassprofi_settings
+  (disclaimer_accepted_at + disclaimer_version='2026-06') ueberspringen.

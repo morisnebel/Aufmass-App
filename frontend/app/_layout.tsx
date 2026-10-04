@@ -98,7 +98,7 @@ export default function RootLayout() {
         />
         <Stack.Screen 
           name="sketches/draw" 
-          options={{ title: t('screenTitles.drawSketch'), headerShown: false }} 
+          options={{ title: t('screenTitles.drawSketch'), headerShown: false, gestureEnabled: false, fullScreenGestureEnabled: false }} 
         />
         <Stack.Screen 
           name="sketches/new" 

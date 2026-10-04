@@ -447,3 +447,10 @@
   eas.projectId=159413b4-c5be-4afa-9038-b6ba91a4ea1c (hier dokumentiert zum Wiederherstellen).
 - User-Hinweis: Nach Fork sind alte QR-Codes/URLs ungültig -> immer aktuellen Preview-QR scannen,
   alten Eintrag in Expo Go "Recently opened" löschen.
+
+## Session 05.09. Teil 11 - Skizzen: Wisch-Geste komplett deaktiviert
+- User-Änderungswunsch (revidiert frühere Wahl "Geste mit Nachfrage"): Skizzen dürfen sich durch
+  Wischen GAR NICHT mehr schließen lassen; zurück nur über den Zurückpfeil.
+- FIX: app/_layout.tsx Stack.Screen "sketches/draw": gestureEnabled: false + fullScreenGestureEnabled: false.
+- usePreventRemove-Guard in draw.tsx bleibt als Sicherheitsnetz bestehen (greift z.B. bei
+  programmatischen Removals); Zurückpfeil speichert weiterhin automatisch (handleBackPress).

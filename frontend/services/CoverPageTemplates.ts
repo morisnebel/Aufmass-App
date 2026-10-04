@@ -36,8 +36,11 @@ const esc = (s: unknown): string =>
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-// Seiten-Container: feste Höhe, damit nichts auf Seite 2 rutscht
-const PAGE_OPEN = `<div style="position: relative; width: 100%; height: 255mm; box-sizing: border-box; overflow: hidden; page-break-after: always;">`;
+// Seiten-Container: fließendes Layout OHNE feste Höhe.
+// WICHTIG: iOS rendert CSS-mm im Druck nicht verlässlich (mm/pt/px-Interpretation variiert je Gerät),
+// feste Seitenhöhen + absolute Fußzeilen liefen daher auf Seite 2 über.
+// Lösung: Inhalt bewusst kompakt halten (< 1 Seite in jeder Interpretation), Seite endet per page-break.
+const PAGE_OPEN = `<div style="width: 100%; page-break-after: always;">`;
 const PAGE_CLOSE = `</div>`;
 
 // Logo immer hart begrenzen (Wrapper + img-Limits), damit große Logos das Layout nicht sprengen
@@ -81,15 +84,15 @@ function classicTemplate(o: CoverPageOptions): string {
         ${companyBlockHtml(o)}
       </td>
     </tr></table>
-    <div style="margin-top: 22mm; text-align: center;">
+    <div style="margin-top: 8mm; text-align: center;">
       <div style="font-size: 10pt; letter-spacing: 4px; color: ${o.accentColor}; text-transform: uppercase; font-weight: 600;">Aufmass-Dokumentation</div>
       <div style="font-size: 26pt; font-weight: 800; color: #222; margin-top: 6px;">${esc(o.projectName)}</div>
       ${o.subtitle ? `<div style="font-size: 13pt; color: #555; font-style: italic; margin-top: 4px;">${esc(o.subtitle)}</div>` : ''}
       ${metaLine(o) ? `<div style="font-size: 11pt; color: #666; margin-top: 6px;">${metaLine(o)}</div>` : ''}
       <div style="width: 70px; height: 4px; background: ${o.accentColor}; margin: 12px auto 0 auto; border-radius: 2px;"></div>
     </div>
-    ${coverImageHtml(o, 95)}
-    <div style="position: absolute; bottom: 0; left: 0; right: 0; border-top: 2px solid ${o.accentColor}; padding-top: 8px;">
+    ${coverImageHtml(o, 70)}
+    <div style="margin-top: 8mm; border-top: 2px solid ${o.accentColor}; padding-top: 8px; page-break-inside: avoid;">
       <table style="width: 100%; border-collapse: collapse; font-size: 10pt; color: #444;"><tr>
         <td style="vertical-align: bottom; line-height: 1.6;">
           <strong style="color: ${o.accentColor}; font-size: 8pt; letter-spacing: 1px;">KUNDE</strong><br/>
@@ -107,7 +110,7 @@ function classicTemplate(o: CoverPageOptions): string {
 // ===== Vorlage: Modern (Farbband, linksbündig) =====
 function modernTemplate(o: CoverPageOptions): string {
   return `${PAGE_OPEN}
-    <div style="background: ${o.accentColor}; border-radius: 12px; padding: 9mm 8mm; color: ${o.accentTextColor};">
+    <div style="background: ${o.accentColor}; border-radius: 12px; padding: 6mm 7mm; color: ${o.accentTextColor};">
       <table style="width: 100%; border-collapse: collapse;"><tr>
         <td style="vertical-align: top;">
           <div style="font-size: 9pt; letter-spacing: 3px; text-transform: uppercase; font-weight: 600; opacity: 0.85;">Aufmass-Dokumentation</div>
@@ -125,8 +128,8 @@ function modernTemplate(o: CoverPageOptions): string {
       <td>${metaLine(o)}</td>
       <td style="text-align: right;">${esc(o.dateLabel)}</td>
     </tr></table>
-    ${coverImageHtml(o, 100, 12)}
-    <div style="position: absolute; bottom: 0; left: 0; right: 0;">
+    ${coverImageHtml(o, 70, 12)}
+    <div style="margin-top: 8mm; page-break-inside: avoid;">
       <table style="width: 100%; border-collapse: separate; border-spacing: 6px 0;"><tr>
         <td style="width: 60%; background: #f5f7fa; border-left: 4px solid ${o.accentColor}; border-radius: 6px; padding: 10px 12px; font-size: 10pt; color: #444; line-height: 1.6; vertical-align: top;">
           <strong style="color: ${o.accentColor}; font-size: 8pt; letter-spacing: 1px;">KUNDE</strong><br/>
@@ -148,15 +151,15 @@ function minimalTemplate(o: CoverPageOptions): string {
       <td style="vertical-align: bottom; padding-bottom: 8px;">${o.companyLogo ? logoHtml(o.companyLogo, 12) : `<span style="font-size: 10pt; color: #333; font-weight: 600;">${esc(o.companyName || '')}</span>`}</td>
       <td style="vertical-align: bottom; text-align: right; font-size: 9pt; color: #888; padding-bottom: 8px;">${esc(o.dateLabel)}</td>
     </tr></table>
-    <div style="margin-top: 30mm;">
+    <div style="margin-top: 16mm;">
       <div style="font-size: 9pt; letter-spacing: 3px; color: #999; text-transform: uppercase;">Aufmass-Dokumentation</div>
       <div style="font-size: 24pt; font-weight: 700; color: #111; margin-top: 6px;">${esc(o.projectName)}</div>
       ${o.subtitle ? `<div style="font-size: 12pt; color: #777; font-style: italic; margin-top: 4px;">${esc(o.subtitle)}</div>` : ''}
       ${metaLine(o) ? `<div style="font-size: 10pt; color: #888; margin-top: 8px;">${metaLine(o)}</div>` : ''}
       <div style="width: 40px; height: 2px; background: #111; margin-top: 12px;"></div>
     </div>
-    ${coverImageHtml(o, 90, 4)}
-    <div style="position: absolute; bottom: 0; left: 0; right: 0; border-top: 1px solid #ddd; padding-top: 8px;">
+    ${coverImageHtml(o, 72, 4)}
+    <div style="margin-top: 10mm; border-top: 1px solid #ddd; padding-top: 8px; page-break-inside: avoid;">
       <table style="width: 100%; border-collapse: collapse; font-size: 9pt; color: #555;"><tr>
         <td style="line-height: 1.6;">${esc(o.customerName)}${o.addressLine ? ` &middot; ${esc(o.addressLine)}` : ''}</td>
         <td style="text-align: right; color: #999; line-height: 1.6;">${[o.companyName, o.companyPhone ? `Tel. ${o.companyPhone}` : '', o.companyEmail].filter(Boolean).map(esc).join(' &middot; ')}</td>

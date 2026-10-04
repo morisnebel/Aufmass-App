@@ -538,3 +538,14 @@
   - STOLPERFALLE behoben: Skript loeschte versehentlich canvasOverhead mit (klammerlose Einzeiler);
     wiederhergestellt, draw-Route verifiziert OK.
 - Vorbestehend/ungeloest (Web-only): calculator/new auf Web wirft "svg height -200" Konsolen-Fehler.
+
+## Session Juni 2026 Teil 5 - Deckblatt-Ueberlauf im Druck endgueltig behoben
+- ROOT CAUSE: Feste mm-Hoehen (height: 255mm) + absolute Fusszeile sind im iOS-Druck unzuverlaessig
+  (mm/pt/px-Interpretation variiert) -> Fusszeile lief erneut minimal auf Seite 2 ueber.
+- FIX: CoverPageTemplates auf fliessendes Layout umgestellt: KEINE feste Seitenhoehe mehr,
+  Fusszeile im Fluss (margin-top 8-12mm, page-break-inside: avoid), Titelbild max 70-72mm,
+  kompaktere Abstaende. Seite endet per page-break-after: always.
+- Empirisch verifiziert (Worst-Case 1px=1pt, Inhaltsbreite 482px, Budget ~728px):
+  classic 650px, modern 671px, minimal 621px -> alle sicher einseitig in JEDER Interpretation.
+- MERKE fuer künftige PDF-Layouts: niemals feste mm-Seitenhoehen/absolute Bottom-Footer verwenden;
+  Inhalte kompakt halten und Hoehe empirisch bei 482px Breite messen (< 700px Budget).

@@ -379,18 +379,25 @@ export default function ProjectDetailScreen() {
       return !prev;
     });
   };
-  // Skizzen-Ordner: Zuweisung per Long-Press auf die Skizzen-Karte
-  const [sketchFolderModal, setSketchFolderModal] = useState<{ visible: boolean; sketchId: string; value: string }>({ visible: false, sketchId: '', value: '' });
+  // Ordner-Zuweisung (Skizzen & Fotos) per Long-Press
+  const [sketchFolderModal, setSketchFolderModal] = useState<{ visible: boolean; kind: 'sketch' | 'photo'; itemId: string; value: string }>({ visible: false, kind: 'sketch', itemId: '', value: '' });
   const openSketchFolderModal = (sketch: any) => {
-    setSketchFolderModal({ visible: true, sketchId: sketch.id, value: ((sketch.folder || '') as string).trim() });
+    setSketchFolderModal({ visible: true, kind: 'sketch', itemId: sketch.id, value: ((sketch.folder || '') as string).trim() });
+  };
+  const openPhotoFolderModal = (photo: any) => {
+    setSketchFolderModal({ visible: true, kind: 'photo', itemId: photo.id, value: ((photo.folder || '') as string).trim() });
   };
   const saveSketchFolder = async (folder: string) => {
     try {
-      await SketchService.update(sketchFolderModal.sketchId, { folder: folder.trim() } as any);
-      setSketchFolderModal({ visible: false, sketchId: '', value: '' });
+      if (sketchFolderModal.kind === 'photo') {
+        await PhotoService.update(sketchFolderModal.itemId, { folder: folder.trim() } as any);
+      } else {
+        await SketchService.update(sketchFolderModal.itemId, { folder: folder.trim() } as any);
+      }
+      setSketchFolderModal({ visible: false, kind: 'sketch', itemId: '', value: '' });
       await loadProjectData();
     } catch (e) {
-      console.error('Skizzen-Ordner speichern fehlgeschlagen:', e);
+      console.error('Ordner speichern fehlgeschlagen:', e);
     }
   };
   const viewShotRef = useRef<ViewShot>(null);
@@ -2567,8 +2574,35 @@ export default function ProjectDetailScreen() {
               )}
             </View>
 
-            <View style={styles.photoGrid}>
-              {photos.map((photo) => (
+            {!isTabLoading && photos.length > 0 && (
+              <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', marginBottom: 6 }}>
+                Tipp: Foto gedrückt halten, um es einem Ordner zuzuordnen
+              </Text>
+            )}
+
+            {(() => {
+              const folderOf = (p: any) => ((p.folder || '') as string).trim();
+              const photoGroups: { name: string; items: typeof photos }[] = [];
+              [...photos]
+                .sort((a, b) => folderOf(a).localeCompare(folderOf(b)))
+                .forEach(p => {
+                  const gName = folderOf(p);
+                  const g = photoGroups.find(x => x.name === gName);
+                  if (g) g.items.push(p); else photoGroups.push({ name: gName, items: [p] });
+                });
+              const showPhotoFolderHeaders = photoGroups.length > 1 || (photoGroups.length === 1 && photoGroups[0].name !== '');
+              return photoGroups.map(group => (
+              <View key={group.name || '_none'}>
+              {showPhotoFolderHeaders && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 6, paddingHorizontal: 4 }}>
+                  <Ionicons name={group.name ? 'folder' : 'folder-open-outline'} size={18} color={group.name ? '#1976d2' : '#999'} />
+                  <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '700', color: group.name ? '#333' : '#999' }}>
+                    {group.name || 'Ohne Ordner'} ({group.items.length})
+                  </Text>
+                </View>
+              )}
+              <View style={styles.photoGrid}>
+              {group.items.map((photo) => (
                 <View key={photo.id} style={styles.photoItem}>
                   <TouchableOpacity
                     onPress={() => {
@@ -2578,6 +2612,10 @@ export default function ProjectDetailScreen() {
                         router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`);
                       }
                     }}
+                    onLongPress={() => {
+                      if (!photoSelectMode && !photoDeleteMode) openPhotoFolderModal(photo);
+                    }}
+                    delayLongPress={450}
                     style={{ flex: 1 }}
                   >
                     {(photo as any).annotations ? (() => {
@@ -2712,7 +2750,10 @@ export default function ProjectDetailScreen() {
                   )}
                 </View>
               ))}
-            </View>
+              </View>
+              </View>
+              ));
+            })()}
           </View>
         )}
 
@@ -5119,12 +5160,14 @@ export default function ProjectDetailScreen() {
       )}
 
       {/* Skizzen-Ordner Modal */}
-      <Modal visible={sketchFolderModal.visible} transparent animationType="fade" onRequestClose={() => setSketchFolderModal({ visible: false, sketchId: '', value: '' })}>
+      <Modal visible={sketchFolderModal.visible} transparent animationType="fade" onRequestClose={() => setSketchFolderModal({ visible: false, kind: 'sketch', itemId: '', value: '' })}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <Ionicons name="folder" size={22} color="#1976d2" />
-              <Text style={{ marginLeft: 8, fontSize: 17, fontWeight: '700', color: '#333' }}>Skizzen-Ordner</Text>
+              <Text style={{ marginLeft: 8, fontSize: 17, fontWeight: '700', color: '#333' }}>
+                {sketchFolderModal.kind === 'photo' ? 'Foto-Ordner' : 'Skizzen-Ordner'}
+              </Text>
             </View>
             <TextInput
               value={sketchFolderModal.value}
@@ -5135,7 +5178,8 @@ export default function ProjectDetailScreen() {
               testID="sketch-folder-input"
             />
             {(() => {
-              const existing = Array.from(new Set(sketches.map((s: any) => ((s.folder || '') as string).trim()).filter(Boolean))).sort();
+              const sourceItems: any[] = sketchFolderModal.kind === 'photo' ? photos : sketches;
+              const existing = Array.from(new Set(sourceItems.map((s: any) => ((s.folder || '') as string).trim()).filter(Boolean))).sort();
               if (existing.length === 0) return null;
               return (
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
@@ -5159,7 +5203,7 @@ export default function ProjectDetailScreen() {
                 <Text style={{ color: '#666', fontWeight: '600' }}>Kein Ordner</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => setSketchFolderModal({ visible: false, sketchId: '', value: '' })}
+                onPress={() => setSketchFolderModal({ visible: false, kind: 'sketch', itemId: '', value: '' })}
                 style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f5f5' }}
               >
                 <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>

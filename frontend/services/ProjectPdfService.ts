@@ -544,7 +544,14 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
       }
     } catch (_) {}
 
-    const sketchItems = await Promise.all(sketches.map(async (sketch, index) => {
+    // Skizzen nach Ordner gruppieren (nur wenn mindestens eine Skizze einen Ordner hat)
+    const sketchFolderOf = (s: any) => ((s.folder || '') as string).trim();
+    const anySketchFolder = sketches.some((s: any) => sketchFolderOf(s));
+    const sortedSketches = anySketchFolder
+      ? [...sketches].sort((a: any, b: any) => sketchFolderOf(a).localeCompare(sketchFolderOf(b)))
+      : sketches;
+
+    const sketchItems = await Promise.all(sortedSketches.map(async (sketch, index) => {
       // Read pdf_size and notes from sketch object or metadata
       let size = sketch.pdf_size || 'large';
       let sketchNotes = sketch.notes || '';
@@ -610,9 +617,18 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
         ? `<div class="sketch-notes sketch-notes-filled">${noteParts.join('<br>')}</div>`
         : '';
       
+      // Ordner-Überschrift einfügen, wenn ein neuer Ordner beginnt
+      const sketchFolder = sketchFolderOf(sketch);
+      const prevSketchFolder = index > 0 ? sketchFolderOf(sortedSketches[index - 1]) : null;
+      const folderHeading = anySketchFolder && sketchFolder !== prevSketchFolder
+        ? `<div style="width: 100%; margin: 8px 0 4px 0; padding: 5px 10px; background: #f0f4f8; border-left: 4px solid #1976d2; border-radius: 4px; font-size: 11pt; font-weight: 700; color: #333; page-break-after: avoid;">${sketchFolder || 'Ohne Ordner'}</div>`
+        : '';
+
       return `
+        ${anySketchFolder && index === 0 ? `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>` : ''}
+        ${folderHeading}
         <div class="sketch-item ${sizeClass}">
-          ${index === 0 ? `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>` : ''}
+          ${!anySketchFolder && index === 0 ? `<h2 class="sketch-inline-heading">${t('sketches.title')}</h2>` : ''}
           <p class="sketch-title">${sketchTitle}</p>
           ${sketch.sketch_data ? `<img src="${sketch.sketch_data}" alt="Skizze" />` : '<div class="sketch-placeholder">Skizze</div>'}
           ${notesHtml}

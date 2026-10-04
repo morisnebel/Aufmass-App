@@ -1095,6 +1095,7 @@ export interface Photo {
   annotations?: string;
   description?: string;
   pdf_size?: string;
+  folder?: string; // Ordner/Gebäudeteil zur Gruppierung
   created_at: string;
   updated_at: string;
 }

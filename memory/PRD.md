@@ -581,3 +581,19 @@
   Textwinkel folgen dadurch automatisch. Andere Typen weiterhin ueber element.rotation.
 - Zusaetzlich: arrow-Masstext-Transform beruecksichtigt jetzt element.rotation (Altbestaende).
 - draw-Route Smoke OK. Geste nativ vom User zu verifizieren.
+
+## Session Juni 2026 Teil 8 - Numpad-Doppeltipp-Fix, Foto-Ordner, Skizzen-Ordner im PDF
+- BUG-FIX Numpad "zweimal Hinzufuegen druecken": Modal-ScrollViews in draw.tsx hatten kein
+  keyboardShouldPersistTaps -> erster Tap blur-te nur das (vom Numpad staendig refokussierte)
+  TextInput. Fix: keyboardShouldPersistTaps="handled" auf allen 5 Modal-ScrollViews
+  (styles.modalScrollContent). Gilt fuer Masslinie/Text/Pointer/Edit-Modals.
+- Foto-Ordner: Photo.folder in LocalStorage. Foto-Grid gruppiert nach Ordnern mit Headern
+  (nur wenn Ordner existieren), Long-Press (450ms) auf Foto -> Ordner-Modal (nicht im
+  Auswahl-/Loesch-Modus). Bestehendes sketchFolderModal generalisiert: kind 'sketch'|'photo',
+  itemId; speichert via PhotoService.update bzw. SketchService.update; Chips je nach kind.
+  Tipp-Hinweis ueber dem Foto-Grid.
+- Skizzen-Ordner im PDF (ProjectPdfService): Skizzen werden nach folder sortiert; bei
+  Ordnerwechsel full-width Ordner-Header (grauer Balken, blauer Links-Rand). Hauptueberschrift
+  "Skizzen" wandert bei Ordnern VOR den ersten Header (sonst wie bisher im ersten Item).
+  Nur aktiv, wenn mindestens eine Skizze einen Ordner hat (sonst Verhalten unveraendert).
+  Runtime-verifiziert: Reihenfolge "Ohne Ordner" -> Ordner alphabetisch, 3 Header korrekt.

@@ -7952,7 +7952,7 @@ export default function DrawSketchScreen() {
       {/* Text Input Modal */}
       <Modal visible={showTextModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Text eingeben</Text>
               <TextInput
@@ -8083,7 +8083,7 @@ export default function DrawSketchScreen() {
       {/* Arrow Modal */}
       <Modal visible={showArrowModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Bemaßungspfeil</Text>
               <TextInput
@@ -8234,7 +8234,7 @@ export default function DrawSketchScreen() {
       {/* Edit Arrow Modal */}
       <Modal visible={showEditArrowModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Pfeil bearbeiten</Text>
               <TextInput
@@ -8458,7 +8458,7 @@ export default function DrawSketchScreen() {
       {/* Edit Pointer Modal */}
       <Modal visible={showEditPointerModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>{toolLabels.pointerName}-Pfeil bearbeiten</Text>
               <TextInput
@@ -8889,7 +8889,7 @@ export default function DrawSketchScreen() {
       {/* Edit Text Modal */}
       <Modal visible={showEditTextModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.modalScrollContent}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>{t('sketches.editText')}</Text>
               <TextInput

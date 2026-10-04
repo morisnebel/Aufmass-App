@@ -43,12 +43,12 @@ const esc = (s: unknown): string =>
 const PAGE_OPEN = `<div style="width: 100%; page-break-after: always;">`;
 const PAGE_CLOSE = `</div>`;
 
-// Logo immer hart begrenzen (Wrapper + img-Limits), damit große Logos das Layout nicht sprengen
-function logoHtml(logo: string | null | undefined, heightMm: number): string {
+// Logo-Grössen NUR in px mit max-width/max-height begrenzen:
+// mm-Masse und object-fit auf <img> werden vom iOS-Druck ignoriert (Logo wurde abgeschnitten).
+// Dieses px-Muster entspricht dem bewährten .company-logo im Hauptdokument.
+function logoHtml(logo: string | null | undefined, maxHeightPx: number): string {
   if (!logo) return '';
-  return `<div style="height: ${heightMm}mm; max-width: 60mm; overflow: hidden;">
-    <img src="${logo}" style="height: ${heightMm}mm; width: auto; max-width: 60mm; object-fit: contain; object-position: left top;" />
-  </div>`;
+  return `<img src="${logo}" style="max-height: ${maxHeightPx}px; max-width: 220px; width: auto; height: auto;" />`;
 }
 
 function companyBlockHtml(o: CoverPageOptions): string {
@@ -79,7 +79,7 @@ function metaLine(o: CoverPageOptions): string {
 function classicTemplate(o: CoverPageOptions): string {
   return `${PAGE_OPEN}
     <table style="width: 100%; border-collapse: collapse;"><tr>
-      <td style="vertical-align: top; width: 50%;">${logoHtml(o.companyLogo, 17)}</td>
+      <td style="vertical-align: top; width: 50%;">${logoHtml(o.companyLogo, 64)}</td>
       <td style="vertical-align: top; width: 50%; text-align: right; font-size: 9pt; color: #555; line-height: 1.5;">
         ${companyBlockHtml(o)}
       </td>
@@ -119,7 +119,7 @@ function modernTemplate(o: CoverPageOptions): string {
         </td>
         ${o.companyLogo ? `<td style="vertical-align: top; text-align: right; width: 40mm;">
           <div style="display: inline-block; background: #ffffff; border-radius: 8px; padding: 2mm;">
-            <img src="${o.companyLogo}" style="height: 13mm; width: auto; max-width: 34mm; object-fit: contain;" />
+            <img src="${o.companyLogo}" style="max-height: 48px; max-width: 128px; width: auto; height: auto;" />
           </div>
         </td>` : ''}
       </tr></table>
@@ -148,7 +148,7 @@ function modernTemplate(o: CoverPageOptions): string {
 function minimalTemplate(o: CoverPageOptions): string {
   return `${PAGE_OPEN}
     <table style="width: 100%; border-collapse: collapse; border-bottom: 1px solid #ddd;"><tr>
-      <td style="vertical-align: bottom; padding-bottom: 8px;">${o.companyLogo ? logoHtml(o.companyLogo, 12) : `<span style="font-size: 10pt; color: #333; font-weight: 600;">${esc(o.companyName || '')}</span>`}</td>
+      <td style="vertical-align: bottom; padding-bottom: 8px;">${o.companyLogo ? logoHtml(o.companyLogo, 45) : `<span style="font-size: 10pt; color: #333; font-weight: 600;">${esc(o.companyName || '')}</span>`}</td>
       <td style="vertical-align: bottom; text-align: right; font-size: 9pt; color: #888; padding-bottom: 8px;">${esc(o.dateLabel)}</td>
     </tr></table>
     <div style="margin-top: 16mm;">

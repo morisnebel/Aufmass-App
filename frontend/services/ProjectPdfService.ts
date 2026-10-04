@@ -38,6 +38,7 @@ export interface ProjectPdfContext {
   coverStyle: CoverStyle;
   coverSubtitle: string;
   coverAccent?: string | null; // Farb-ID aus PDF_COLOR_OPTIONS, null = Farbe aus Einstellungen
+  includeToc?: boolean; // Inhaltsverzeichnis-Seite einfügen
   showCalcDetailsPage: boolean;
 }
 
@@ -45,7 +46,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
   const {
     project, customer, roofs, photos, sketches, checklists,
     areaCalculations, imagemeterPhotos, remarks, t,
-    includeCoverPage, coverPhotoId, coverStyle, coverSubtitle, coverAccent,
+    includeCoverPage, coverPhotoId, coverStyle, coverSubtitle, coverAccent, includeToc,
     showCalcDetailsPage,
   } = ctx;
     // Debug: Log remarks status
@@ -1553,6 +1554,36 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
       });
     }
 
+    // Optionales Inhaltsverzeichnis (Kapitelübersicht mit Anzahl; echte Seitenzahlen sind
+    // bei fließendem HTML-Druck nicht vorab bestimmbar)
+    let tocHtml = '';
+    if (includeToc) {
+      const tocAccent = ((coverAccent && PDF_COLOR_OPTIONS[coverAccent]) || headerColor).color;
+      const chapters: { label: string; count: string }[] = [
+        { label: 'Projektübersicht', count: '' },
+        ...(roofs.length > 0 ? [{ label: 'Dachflächen', count: String(roofs.length) }] : []),
+        ...(photos.length > 0 ? [{ label: 'Fotos', count: String(photos.length) }] : []),
+        ...(sketches.length > 0 ? [{ label: 'Skizzen', count: String(sketches.length) }] : []),
+        ...(imagemeterPhotos.length > 0 ? [{ label: 'Bemaßte Fotos', count: String(imagemeterPhotos.length) }] : []),
+        ...(areaCalculations.length > 0 ? [{ label: 'Flächenberechnungen', count: String(areaCalculations.length) }] : []),
+        ...(checklists.length > 0 ? [{ label: 'Checklisten', count: String(checklists.length) }] : []),
+        ...((remarks || project?.remarks) ? [{ label: 'Bemerkungen', count: '' }] : []),
+      ];
+      const tocRows = chapters.map((c, i) => `
+        <tr>
+          <td style="width: 30px; padding: 9px 0; border-bottom: 1px solid #eee; color: ${tocAccent}; font-weight: 700;">${String(i + 1).padStart(2, '0')}</td>
+          <td style="padding: 9px 0; border-bottom: 1px solid #eee; color: #333;">${c.label}</td>
+          <td style="padding: 9px 0; border-bottom: 1px solid #eee; text-align: right; color: #888; font-size: 10pt;">${c.count}</td>
+        </tr>`).join('');
+      tocHtml = `
+        <div style="width: 100%; page-break-after: always;">
+          <div style="font-size: 10pt; letter-spacing: 3px; color: ${tocAccent}; text-transform: uppercase; font-weight: 600; margin-top: 6mm;">Inhalt</div>
+          <div style="font-size: 18pt; font-weight: 800; color: #222; margin-top: 4px; margin-bottom: 8mm;">Übersicht der Dokumentation</div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 12pt;">${tocRows}</table>
+        </div>
+      `;
+    }
+
     // Build complete HTML
     const html = `
       <!DOCTYPE html>
@@ -2948,6 +2979,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
       </head>
       <body>
         ${coverPageHtml}
+        ${tocHtml}
         <div class="page">
         <div class="header">
           <div class="header-top">

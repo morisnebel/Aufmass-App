@@ -549,3 +549,25 @@
   classic 650px, modern 671px, minimal 621px -> alle sicher einseitig in JEDER Interpretation.
 - MERKE fuer künftige PDF-Layouts: niemals feste mm-Seitenhoehen/absolute Bottom-Footer verwenden;
   Inhalte kompakt halten und Hoehe empirisch bei 482px Breite messen (< 700px Budget).
+
+## Session Juni 2026 Teil 6 - Logo-Fix, Rechner-Cleanup, PDF-TOC, Skizzen-Ordner
+- Deckblatt-Logo-Fix: mm-Masse + object-fit auf <img> werden vom iOS-Druck ignoriert (Logo wurde
+  auf 60mm gestreckt und abgeschnitten). Fix: logoHtml nutzt NUR px max-width/max-height
+  (max-height 64/45px, max-width 220px; modern-Chip 48/128px) - gleiches Muster wie bewaehrtes
+  .company-logo im Hauptdokument. Statisch verifiziert: 1024er-Logo rendert 64x64.
+- Rechner-Cleanup: calculator/new.tsx 9421 -> 9041 Zeilen. Toter Code geloescht (exportToPdf -292,
+  textNumpad-Funktionen, bgImage-States, isPolygonInsidePolygon etc.) + ungenutzte Imports.
+  HINWEIS: Der Rechner hatte KEINEN aktiven PDF-Export (exportToPdf war unreferenziert).
+  Vorbestehende Errors belassen: rules-of-hooks (useProjectPhotoAsBackground im Callback, Z~6633),
+  unescaped quotes (Z~8854/8891), svg height -200 Konsolen-Fehler auf Web.
+- PDF-Inhaltsverzeichnis: Toggle "Inhaltsverzeichnis" im PDF-Modal (testID toggle-toc, teal,
+  persistiert aufmassprofi_pdf_toc). Service ctx.includeToc -> tocHtml nach Deckblatt:
+  Kapitelliste (Projektuebersicht, Dachflaechen, Fotos, Skizzen, Bemasste Fotos,
+  Flaechenberechnungen, Checklisten, Bemerkungen) mit Anzahl rechts, Akzentfarbe folgt
+  coverAccent/Einstellungen. KEINE Seitenzahlen (bei fliessendem HTML nicht vorab bestimmbar).
+  Runtime-verifiziert (TOC OK im Web-Bundle).
+- Skizzen-Ordner: Sketch.folder (optional) in LocalStorage. Skizzen-Tab gruppiert sortiert nach
+  Ordner mit Ordner-Headern ("Ohne Ordner" zuerst). Zuweisung per LONG-PRESS (450ms) auf
+  Skizzen-Karte -> Modal (TextInput + Chips vorhandener Ordner + Kein Ordner/Abbrechen/Speichern,
+  testID sketch-folder-input/-save). Tipp-Hinweis unter "Neue Skizze"-Button.
+  Speichern via SketchService.update(id, { folder }).

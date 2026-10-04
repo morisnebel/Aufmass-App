@@ -791,6 +791,7 @@ export interface Sketch {
   name?: string;
   title?: string;
   notes?: string;
+  folder?: string; // Ordner/Gebäudeteil zur Gruppierung
   sketch_data?: string;
   metadata?: string;
   pdf_size?: string;

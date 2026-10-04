@@ -115,6 +115,8 @@ interface PdfPreviewModalProps {
   onSelectCoverPhoto: (id: string) => void;
   coverAccent: string | null;
   onChangeCoverAccent: (accentId: string | null) => void;
+  includeToc: boolean;
+  onToggleToc: () => void;
   isSharingImage: boolean;
   onShareAsImage: () => void;
 }
@@ -129,6 +131,7 @@ export default function PdfPreviewModal(props: PdfPreviewModalProps) {
     coverStyle, onChangeCoverStyle,
     coverPhotoId, onSelectCoverPhoto,
     coverAccent, onChangeCoverAccent,
+    includeToc, onToggleToc,
     isSharingImage, onShareAsImage,
   } = props;
 
@@ -215,6 +218,32 @@ export default function PdfPreviewModal(props: PdfPreviewModalProps) {
           />
           <Text style={{ marginLeft: 8, color: includeCoverPage ? '#fff' : '#666', fontWeight: '600', fontSize: 14 }}>
             Deckblatt mit Titelbild
+          </Text>
+        </TouchableOpacity>
+
+        {/* Toggle Inhaltsverzeichnis */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 8,
+            paddingHorizontal: 16,
+            backgroundColor: includeToc ? '#00897b' : '#e0e0e0',
+            marginHorizontal: 16,
+            marginBottom: 8,
+            borderRadius: 20,
+          }}
+          onPress={onToggleToc}
+          testID="toggle-toc"
+        >
+          <Ionicons
+            name={includeToc ? 'checkbox' : 'square-outline'}
+            size={20}
+            color={includeToc ? '#fff' : '#666'}
+          />
+          <Text style={{ marginLeft: 8, color: includeToc ? '#fff' : '#666', fontWeight: '600', fontSize: 14 }}>
+            Inhaltsverzeichnis
           </Text>
         </TouchableOpacity>
 

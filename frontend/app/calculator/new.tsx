@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   TouchableOpacity,
   Alert,
   Platform,
@@ -19,8 +18,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { styles } from '../../src/styles/calculatorStyles';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { createPdfFile } from '../../services/PdfExport';
-import * as Sharing from 'expo-sharing';
 import { useTranslation } from 'react-i18next';
 import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 import Svg, { 
@@ -31,9 +28,6 @@ import Svg, {
   G, 
   Text as SvgText,
   Polygon as SvgPolygon,
-  Defs,
-  Pattern,
-  Image as SvgImage,
   Polyline,
 } from 'react-native-svg';
 
@@ -104,7 +98,6 @@ const DeductionRectIcon = ({ size = 24, color = '#f44336' }: { size?: number; co
 );
 import { 
   AreaCalculationService, 
-  AreaCalculation, 
   AreaPolygon, 
   AreaPoint,
   AreaLine,
@@ -126,7 +119,6 @@ export default function AreaCalculatorEditor() {
   
   // Phone/Tablet detection
   const isPhone = Platform.OS === 'ios' ? !(Platform as any).isPad : true;
-  const { width: screenWidth } = Dimensions.get('window');
   
   // State
   const [projectId, setProjectId] = useState<string | undefined>(projectIdParam);
@@ -142,24 +134,14 @@ export default function AreaCalculatorEditor() {
   // === ZOOM & PAN ===
   const [zoomLevel, setZoomLevel] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
-  const [isPanning, setIsPanning] = useState(false);
-  const lastPanPosition = useRef({ x: 0, y: 0 });
   const lastPinchDistance = useRef<number | null>(null);
   const lastPinchCenter = useRef({ x: 0, y: 0 });
   const isPinching = useRef(false);
   
   // === BACKGROUND IMAGE ===
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [bgImageSize, setBgImageSize] = useState({ width: 500, height: 400 });
-  const [bgImagePosition, setBgImagePosition] = useState({ x: 0, y: 0 });
-  const [bgImageScale, setBgImageScale] = useState(1);
-  const [bgLockAspectRatio, setBgLockAspectRatio] = useState(true);
-  const [bgImageEditMode, setBgImageEditMode] = useState(false);
   const [showBgImageModal, setShowBgImageModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
-  const [draggingBgImage, setDraggingBgImage] = useState(false);
-  const [resizingBgImage, setResizingBgImage] = useState<'none' | 'nw' | 'ne' | 'sw' | 'se'>('none');
-  const bgImageDragStart = useRef({ x: 0, y: 0 });
   const bgImageOriginalSize = useRef({ width: 500, height: 400 });
   const [projectPhotos, setProjectPhotos] = useState<{ id: string; uri: string }[]>([]);
   
@@ -219,40 +201,7 @@ export default function AreaCalculatorEditor() {
   const [textNumpadMode, setTextNumpadMode] = useState<'numbers' | 'letters'>('letters');
   const [textNumpadCaps, setTextNumpadCaps] = useState(false);
   const [textNumpadTarget, setTextNumpadTarget] = useState<'newText' | 'editText' | 'memo' | 'scale'>('newText');
-  const textNumpadPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-  const textNumpadPanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        textNumpadPosition.setOffset({
-          x: (textNumpadPosition.x as any)._value || 0,
-          y: (textNumpadPosition.y as any)._value || 0,
-        });
-      },
-      onPanResponderMove: Animated.event(
-        [null, { dx: textNumpadPosition.x, dy: textNumpadPosition.y }],
-        { useNativeDriver: false }
-      ),
-      onPanResponderRelease: () => {
-        textNumpadPosition.flattenOffset();
-      },
-    })
-  ).current;
 
-  // Handler für Text-Numpad
-  const handleTextNumpadInput = (key: string) => {
-    const setter = textNumpadTarget === 'newText' ? setNewTextInput 
-                 : textNumpadTarget === 'editText' ? setEditTextInput 
-                 : setMemoText;
-    
-    if (key === 'C') {
-      setter('');
-    } else if (key === '⌫') {
-      setter((prev: string) => prev.slice(0, -1));
-    } else {
-      setter((prev: string) => prev + key);
-    }
-  };
 
   // PanResponder für verschiebbare Text-Modals
   const textModalPosition = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
@@ -275,11 +224,6 @@ export default function AreaCalculatorEditor() {
     })
   ).current;
 
-  // Reset Modal Position when opening
-  const resetTextModalPosition = () => {
-    textModalPosition.setValue({ x: 0, y: 0 });
-    textModalPosition.setOffset({ x: 0, y: 0 });
-  };
 
   // Parallel Modal - Draggable Position & Numpad
   const [showParallelNumpad, setShowParallelNumpad] = useState(false);
@@ -521,8 +465,6 @@ export default function AreaCalculatorEditor() {
   const [deductionRectStart, setDeductionRectStart] = useState<AreaPoint | null>(null);
   const [deductionRectEnd, setDeductionRectEnd] = useState<AreaPoint | null>(null);
   
-  // PDF Export state
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   
   // Drawing state
   const [mode, setMode] = useState<'select' | 'polygon' | 'deduction' | 'deduction_rect' | 'scale' | 'guideline' | 'parallel' | 'dimension' | 'annotation_rect' | 'annotation_circle' | 'annotation_arrow' | 'annotation_line' | 'annotation_text' | 'annotation_memo'>('polygon');
@@ -580,8 +522,6 @@ export default function AreaCalculatorEditor() {
   const [newShortcutCode, setNewShortcutCode] = useState('');
   const [newShortcutText, setNewShortcutText] = useState('');
   
-  // Loading
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Canvas dimensions
@@ -855,7 +795,6 @@ export default function AreaCalculatorEditor() {
   // Calculate results
   const calculateResults = () => {
     const mainPolygons = polygons.filter(p => p.type === 'main');
-    const deductionPolygons = polygons.filter(p => p.type === 'deduction');
     
     // Calculate areas using manual calculation if enabled
     let totalArea = 0;
@@ -910,13 +849,6 @@ export default function AreaCalculatorEditor() {
     return { totalArea, deductionArea: totalDeductions, netArea, linesByCategory };
   };
 
-  // Check if a polygon (deduction) is inside another polygon (main area)
-  const isPolygonInsidePolygon = (innerPolygon: AreaPolygon, outerPolygon: AreaPolygon): boolean => {
-    // Check if the center of the inner polygon is inside the outer polygon
-    const centerX = innerPolygon.points.reduce((sum, p) => sum + p.x, 0) / innerPolygon.points.length;
-    const centerY = innerPolygon.points.reduce((sum, p) => sum + p.y, 0) / innerPolygon.points.length;
-    return isPointInPolygon({ x: centerX, y: centerY }, outerPolygon.points);
-  };
 
   // Sutherland-Hodgman polygon clipping algorithm
   // Clips 'subjectPolygon' to 'clipPolygon' and returns the intersection
@@ -1154,16 +1086,6 @@ export default function AreaCalculatorEditor() {
     return { area: manualArea, hasManualValues: true, scaleFactor: areaScaleFactor };
   };
 
-  // Check if a polygon has any manual edge lengths
-  const polygonHasManualLengths = (polygonId: string, pointsLength: number): boolean => {
-    for (let i = 0; i < pointsLength; i++) {
-      const edgeKey = `${polygonId}-${i}`;
-      if (customEdgeLengths[edgeKey] !== undefined) {
-        return true;
-      }
-    }
-    return false;
-  };
 
   // Save calculation
   const saveCalculation = async (showAlert: boolean = true) => {
@@ -3287,13 +3209,6 @@ export default function AreaCalculatorEditor() {
     }
   }, [showBgImageModal]);
 
-  // Handle zoom
-  const handleZoom = (delta: number) => {
-    setZoomLevel(prev => {
-      const newZoom = Math.max(0.25, Math.min(4, prev + delta));
-      return newZoom;
-    });
-  };
 
   // Reset zoom and pan
   const resetView = () => {
@@ -3301,298 +3216,6 @@ export default function AreaCalculatorEditor() {
     setPanOffset({ x: 0, y: 0 });
   };
 
-  // Generate PDF and share
-  const exportToPdf = async () => {
-    if (isExportingPdf) return;
-    setIsExportingPdf(true);
-    
-    try {
-      // Calculate totals
-      const mainAreas = polygons.filter(p => p.type === 'main');
-      const deductionAreas = polygons.filter(p => p.type === 'deduction');
-      const grossArea = mainAreas.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
-      const deductionsTotal = deductionAreas.reduce((sum, p) => sum + calculatePolygonArea(p.points), 0);
-      const netArea = grossArea - deductionsTotal;
-      
-      // Get current date
-      const today = new Date();
-      const dateStr = today.toLocaleDateString('de-DE', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      });
-      
-      // Generate HTML for PDF
-      const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { 
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              padding: 40px;
-              color: #333;
-            }
-            .header { 
-              display: flex; 
-              justify-content: space-between; 
-              align-items: flex-start;
-              margin-bottom: 30px;
-              padding-bottom: 15px;
-              border-bottom: 2px solid #4CAF50;
-            }
-            .title { font-size: 24px; font-weight: bold; color: #333; }
-            .subtitle { font-size: 14px; color: #666; margin-top: 5px; }
-            .date { font-size: 12px; color: #888; }
-            
-            .result-box {
-              background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-              border-radius: 12px;
-              padding: 20px;
-              margin-bottom: 25px;
-              text-align: center;
-            }
-            .result-label { font-size: 14px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
-            .result-value { font-size: 42px; font-weight: bold; color: #2e7d32; margin: 10px 0; }
-            .result-unit { font-size: 18px; color: #4CAF50; }
-            
-            .calculation {
-              background: #f5f5f5;
-              border-radius: 8px;
-              padding: 15px;
-              margin-bottom: 25px;
-              font-family: monospace;
-              font-size: 14px;
-            }
-            .calc-row { margin: 5px 0; }
-            .calc-line { border-top: 1px solid #333; margin: 10px 0; }
-            .calc-result { font-weight: bold; color: #1976d2; }
-            
-            .section { margin-bottom: 25px; }
-            .section-title { 
-              font-size: 16px; 
-              font-weight: bold; 
-              color: #333; 
-              margin-bottom: 12px;
-              padding-bottom: 5px;
-              border-bottom: 1px solid #ddd;
-            }
-            
-            .area-card {
-              background: #fff;
-              border: 1px solid #e0e0e0;
-              border-radius: 8px;
-              padding: 12px;
-              margin-bottom: 10px;
-              border-left: 4px solid #4CAF50;
-            }
-            .area-card.deduction { border-left-color: #f44336; }
-            .area-header { display: flex; justify-content: space-between; }
-            .area-name { font-weight: 600; }
-            .area-value { font-weight: bold; }
-            .area-value.green { color: #4CAF50; }
-            .area-value.red { color: #f44336; }
-            
-            .line-item { 
-              display: flex; 
-              justify-content: space-between; 
-              padding: 5px 0;
-              font-size: 13px;
-            }
-            .line-category { 
-              display: flex; 
-              align-items: center; 
-            }
-            .color-dot {
-              width: 10px;
-              height: 10px;
-              border-radius: 50%;
-              margin-right: 8px;
-            }
-            .line-breakdown {
-              font-size: 11px;
-              color: #888;
-              margin-left: 18px;
-              padding-top: 2px;
-            }
-            
-            .footer {
-              margin-top: 40px;
-              padding-top: 15px;
-              border-top: 1px solid #ddd;
-              font-size: 10px;
-              color: #555;
-              text-align: center;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div>
-              <div class="title">${name || 'Flächenberechnung'}</div>
-              <div class="subtitle">Aufmaß-Dokumentation</div>
-            </div>
-            <div class="date">${dateStr}</div>
-          </div>
-          
-          <div class="result-box">
-            <div class="result-label">Netto-Fläche</div>
-            <div class="result-value">${netArea.toFixed(2)}</div>
-            <div class="result-unit">m²</div>
-          </div>
-          
-          <div class="calculation">
-            <div class="calc-row">Brutto-Fläche: ${grossArea.toFixed(2)} m²</div>
-            ${deductionsTotal > 0 ? `<div class="calc-row">− Abzüge: ${deductionsTotal.toFixed(2)} m²</div>` : ''}
-            <div class="calc-line"></div>
-            <div class="calc-row calc-result">= Netto: ${netArea.toFixed(2)} m²</div>
-          </div>
-          
-          ${mainAreas.length > 0 ? `
-          <div class="section">
-            <div class="section-title">Grundflächen</div>
-            ${mainAreas.map(polygon => {
-              const area = calculatePolygonArea(polygon.points);
-              const polygonLines = lines.filter(l => l.polygonId === polygon.id);
-              const categoryGroups: { [key: string]: number[] } = {};
-              polygonLines.forEach(line => {
-                if (polygon.points.length > line.pointIndex) {
-                  const point = polygon.points[line.pointIndex];
-                  const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
-                  const length = calculateLineLength(point, nextPoint);
-                  if (length > 0.01) {
-                    if (!categoryGroups[line.category]) categoryGroups[line.category] = [];
-                    categoryGroups[line.category].push(length);
-                  }
-                }
-              });
-              return `
-              <div class="area-card">
-                <div class="area-header">
-                  <span class="area-name">${polygon.name}</span>
-                  <span class="area-value green">+${area.toFixed(2)} m²</span>
-                </div>
-                ${Object.entries(categoryGroups).map(([cat, lengths]) => {
-                  const total = lengths.reduce((s, l) => s + l, 0);
-                  return `
-                  <div class="line-item">
-                    <span class="line-category">
-                      <span class="color-dot" style="background: ${getCategoryColor(cat)};"></span>
-                      ${cat}
-                    </span>
-                    <span>${total.toFixed(2)} m</span>
-                  </div>
-                  ${lengths.length > 1 ? `<div class="line-breakdown">${lengths.map(l => l.toFixed(2)).join(' + ')} = ${total.toFixed(2)} m</div>` : ''}
-                  `;
-                }).join('')}
-              </div>
-              `;
-            }).join('')}
-          </div>
-          ` : ''}
-          
-          ${deductionAreas.length > 0 ? `
-          <div class="section">
-            <div class="section-title">Abzugsflächen</div>
-            ${deductionAreas.map(polygon => {
-              const area = calculatePolygonArea(polygon.points);
-              const polygonLines = lines.filter(l => l.polygonId === polygon.id);
-              const categoryGroups: { [key: string]: number[] } = {};
-              polygonLines.forEach(line => {
-                if (polygon.points.length > line.pointIndex) {
-                  const point = polygon.points[line.pointIndex];
-                  const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
-                  const length = calculateLineLength(point, nextPoint);
-                  if (length > 0.01) {
-                    if (!categoryGroups[line.category]) categoryGroups[line.category] = [];
-                    categoryGroups[line.category].push(length);
-                  }
-                }
-              });
-              return `
-              <div class="area-card deduction">
-                <div class="area-header">
-                  <span class="area-name">${polygon.name}</span>
-                  <span class="area-value red">-${area.toFixed(2)} m²</span>
-                </div>
-                ${Object.entries(categoryGroups).map(([cat, lengths]) => {
-                  const total = lengths.reduce((s, l) => s + l, 0);
-                  return `
-                  <div class="line-item">
-                    <span class="line-category">
-                      <span class="color-dot" style="background: ${getCategoryColor(cat)};"></span>
-                      ${cat}
-                    </span>
-                    <span>${total.toFixed(2)} m</span>
-                  </div>
-                  ${lengths.length > 1 ? `<div class="line-breakdown">${lengths.map(l => l.toFixed(2)).join(' + ')} = ${total.toFixed(2)} m</div>` : ''}
-                  `;
-                }).join('')}
-              </div>
-              `;
-            }).join('')}
-          </div>
-          ` : ''}
-          
-          ${Object.keys(results.linesByCategory).length > 0 ? `
-          <div class="section">
-            <div class="section-title">Linien Gesamt</div>
-            ${Object.entries(results.linesByCategory).map(([category, totalLength]) => {
-              const categoryLines = lines.filter(l => l.category === category);
-              const individualLengths: number[] = [];
-              categoryLines.forEach(line => {
-                const polygon = polygons.find(p => p.id === line.polygonId);
-                if (polygon && polygon.points.length > line.pointIndex) {
-                  const point = polygon.points[line.pointIndex];
-                  const nextPoint = polygon.points[(line.pointIndex + 1) % polygon.points.length];
-                  const length = calculateLineLength(point, nextPoint);
-                  if (length > 0.01) individualLengths.push(length);
-                }
-              });
-              const displayName = formatCategoryWithShortcut(category);
-              return `
-              <div class="line-item">
-                <span class="line-category">
-                  <span class="color-dot" style="background: ${getCategoryColor(category)};"></span>
-                  ${displayName}
-                </span>
-                <span>${(totalLength as number).toFixed(2)} m</span>
-              </div>
-              ${individualLengths.length > 1 ? `<div class="line-breakdown">${individualLengths.map(l => l.toFixed(2)).join(' + ')} = ${(totalLength as number).toFixed(2)} m</div>` : ''}
-              `;
-            }).join('')}
-          </div>
-          ` : ''}
-          
-          <div class="footer">
-            Erstellt mit AufmassProfi • ${dateStr}
-          </div>
-        </body>
-        </html>
-      `;
-      
-      // Create PDF (A4 inkl. Seitenzahlen)
-      const uri = await createPdfFile(htmlContent);
-      
-      // Share PDF
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          UTI: 'com.adobe.pdf',
-        });
-      } else {
-        Alert.alert(t('common.error'), 'Teilen nicht verfügbar');
-      }
-      
-    } catch (error) {
-      console.error('PDF Export error:', error);
-      Alert.alert(t('common.error'), 'PDF konnte nicht erstellt werden');
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
 
   // Transform touch coordinates based on zoom and pan
   const transformCoordinates = (x: number, y: number): { x: number; y: number } => {

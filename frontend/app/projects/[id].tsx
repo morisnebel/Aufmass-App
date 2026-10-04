@@ -366,6 +366,33 @@ export default function ProjectDetailScreen() {
     setCoverAccent(accentId);
     AsyncStorage.setItem('aufmassprofi_pdf_cover_accent', accentId || 'auto').catch(() => {});
   };
+  // PDF: Inhaltsverzeichnis-Seite (global persistiert)
+  const [includeToc, setIncludeToc] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_pdf_toc')
+      .then(v => { if (v === '1') setIncludeToc(true); })
+      .catch(() => {});
+  }, []);
+  const toggleToc = () => {
+    setIncludeToc(prev => {
+      AsyncStorage.setItem('aufmassprofi_pdf_toc', prev ? '0' : '1').catch(() => {});
+      return !prev;
+    });
+  };
+  // Skizzen-Ordner: Zuweisung per Long-Press auf die Skizzen-Karte
+  const [sketchFolderModal, setSketchFolderModal] = useState<{ visible: boolean; sketchId: string; value: string }>({ visible: false, sketchId: '', value: '' });
+  const openSketchFolderModal = (sketch: any) => {
+    setSketchFolderModal({ visible: true, sketchId: sketch.id, value: ((sketch.folder || '') as string).trim() });
+  };
+  const saveSketchFolder = async (folder: string) => {
+    try {
+      await SketchService.update(sketchFolderModal.sketchId, { folder: folder.trim() } as any);
+      setSketchFolderModal({ visible: false, sketchId: '', value: '' });
+      await loadProjectData();
+    } catch (e) {
+      console.error('Skizzen-Ordner speichern fehlgeschlagen:', e);
+    }
+  };
   const viewShotRef = useRef<ViewShot>(null);
 
   // Checklist Image Preview Modal state
@@ -522,7 +549,7 @@ export default function ProjectDetailScreen() {
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [showCalcDetailsPage, includeCoverPage, coverPhotoId, coverStyle, coverSubtitle, coverAccent]);
+  }, [showCalcDetailsPage, includeCoverPage, coverPhotoId, coverStyle, coverSubtitle, coverAccent, includeToc]);
 
   // Use useFocusEffect to reload data when screen comes into focus
   useFocusEffect(
@@ -1435,7 +1462,7 @@ export default function ProjectDetailScreen() {
     return generateProjectPdfHtml({
       project, customer, roofs, photos, sketches, checklists,
       areaCalculations, imagemeterPhotos, remarks, t,
-      includeCoverPage, coverPhotoId, coverStyle, coverSubtitle, coverAccent,
+      includeCoverPage, coverPhotoId, coverStyle, coverSubtitle, coverAccent, includeToc,
       showCalcDetailsPage,
     });
   };
@@ -2699,12 +2726,22 @@ export default function ProjectDetailScreen() {
               <Text style={styles.addButtonText}>{t('sketches.newSketch')}</Text>
             </TouchableOpacity>
 
+            {!isTabLoading && sketches.length > 0 && (
+              <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', marginBottom: 6 }}>
+                Tipp: Skizze gedrückt halten, um sie einem Ordner zuzuordnen
+              </Text>
+            )}
+
             {isTabLoading ? (
               <View style={{ padding: 40, alignItems: 'center' }}>
                 <ActivityIndicator size="large" color="#1976d2" />
                 <Text style={{ marginTop: 12, fontSize: 15, color: '#666' }}>Skizzen werden geladen...</Text>
               </View>
-            ) : sketches.map((sketch) => {
+            ) : [...sketches]
+              .sort((a, b) =>
+                (((a as any).folder || '') as string).trim().localeCompare((((b as any).folder || '') as string).trim())
+                || (a.created_at || '').localeCompare(b.created_at || ''))
+              .map((sketch, sketchIdx, sortedSketches) => {
               // Extract SVG XML from base64 data URI if it's an SVG
               const getSvgXml = (dataUri: string): string | null => {
                 if (!dataUri) return null;
@@ -3040,10 +3077,27 @@ export default function ProjectDetailScreen() {
               const svgXml = getSvgXml(sketch.sketch_data);
               const isRegularImage = sketch.sketch_data && !sketch.sketch_data.startsWith('data:image/svg+xml');
 
+              const sketchFolder = (((sketch as any).folder || '') as string).trim();
+              const prevSketchFolder = sketchIdx > 0
+                ? ((((sortedSketches[sketchIdx - 1] as any).folder || '') as string).trim())
+                : null;
+              const showFolderHeader = sketchFolder !== prevSketchFolder;
+
               return (
-                <View key={sketch.id} style={styles.itemCard}>
+                <View key={sketch.id}>
+                  {showFolderHeader && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, marginBottom: 6, paddingHorizontal: 4 }}>
+                      <Ionicons name={sketchFolder ? 'folder' : 'folder-open-outline'} size={18} color={sketchFolder ? '#1976d2' : '#999'} />
+                      <Text style={{ marginLeft: 6, fontSize: 14, fontWeight: '700', color: sketchFolder ? '#333' : '#999' }}>
+                        {sketchFolder || 'Ohne Ordner'}
+                      </Text>
+                    </View>
+                  )}
+                <View style={styles.itemCard}>
                   <TouchableOpacity
                     onPress={() => router.push(`/sketches/draw?projectId=${id}&sketchId=${sketch.id}`)}
+                    onLongPress={() => openSketchFolderModal(sketch)}
+                    delayLongPress={450}
                     style={{ flex: 1 }}
                   >
                     <View style={styles.itemHeader}>
@@ -3115,6 +3169,7 @@ export default function ProjectDetailScreen() {
                   >
                     <Ionicons name="trash" size={20} color="#fff" />
                   </TouchableOpacity>
+                </View>
                 </View>
               );
             })
@@ -5063,6 +5118,64 @@ export default function ProjectDetailScreen() {
         </View>
       )}
 
+      {/* Skizzen-Ordner Modal */}
+      <Modal visible={sketchFolderModal.visible} transparent animationType="fade" onRequestClose={() => setSketchFolderModal({ visible: false, sketchId: '', value: '' })}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Ionicons name="folder" size={22} color="#1976d2" />
+              <Text style={{ marginLeft: 8, fontSize: 17, fontWeight: '700', color: '#333' }}>Skizzen-Ordner</Text>
+            </View>
+            <TextInput
+              value={sketchFolderModal.value}
+              onChangeText={txt => setSketchFolderModal(m => ({ ...m, value: txt }))}
+              placeholder='z.B. "Hauptdach", "Garage", "Anbau"'
+              placeholderTextColor="#999"
+              style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: '#333' }}
+              testID="sketch-folder-input"
+            />
+            {(() => {
+              const existing = Array.from(new Set(sketches.map((s: any) => ((s.folder || '') as string).trim()).filter(Boolean))).sort();
+              if (existing.length === 0) return null;
+              return (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+                  {existing.map(f => (
+                    <TouchableOpacity
+                      key={f}
+                      onPress={() => setSketchFolderModal(m => ({ ...m, value: f }))}
+                      style={{ backgroundColor: sketchFolderModal.value === f ? '#1976d2' : '#eef2f6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14 }}
+                    >
+                      <Text style={{ fontSize: 13, color: sketchFolderModal.value === f ? '#fff' : '#555' }}>{f}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              );
+            })()}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+              <TouchableOpacity
+                onPress={() => saveSketchFolder('')}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f5f5' }}
+              >
+                <Text style={{ color: '#666', fontWeight: '600' }}>Kein Ordner</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setSketchFolderModal({ visible: false, sketchId: '', value: '' })}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f5f5' }}
+              >
+                <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => saveSketchFolder(sketchFolderModal.value)}
+                style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: '#1976d2' }}
+                testID="sketch-folder-save"
+              >
+                <Text style={{ color: '#fff', fontWeight: '700' }}>Speichern</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* PDF Preview Modal */}
       <PdfPreviewModal
         visible={showPdfPreviewModal}
@@ -5083,6 +5196,8 @@ export default function ProjectDetailScreen() {
         onSelectCoverPhoto={setCoverPhotoId}
         coverAccent={coverAccent}
         onChangeCoverAccent={changeCoverAccent}
+        includeToc={includeToc}
+        onToggleToc={toggleToc}
         isSharingImage={isSharingImage}
         onShareAsImage={sharePreviewAsImage}
       />

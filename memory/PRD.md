@@ -642,3 +642,4 @@
 - Speicherlogik in savePhotosToStorage() extrahiert, von handleSave und Auto-Save gemeinsam genutzt. skipAutoSaveRef verhindert Doppel-Speichern nach explizitem "Foto speichern".
 - Getestet per Playwright auf Web-Preview: Foto waehlen -> Zurueck -> Foto gespeichert + Erfolgsmeldung.
 - Nachbesserung: native-stack unterstuetzt preventDefault in beforeRemove nicht (iOS-Warnung "removed natively but didnt get removed from JS state"). Neue Loesung: eigener headerLeft-Zurueck-Button in photos/new.tsx der erst speichert, dann router.back(); gestureEnabled false; beforeRemove nur noch als Fire-and-Forget-Sicherheitsnetz ohne preventDefault.
+- Build-Vorbereitung: app.json auf Version 1.1.13, iOS buildNumber 123, Android versionCode 123 erhoeht (enthaelt PDF-Druck-Fix + Foto-Auto-Speichern).

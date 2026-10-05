@@ -636,3 +636,8 @@
 - Fix in services/PdfExport.ts: prepareHtmlForPrint() injiziert beim Druck CSS-Zoom (523/770) nur auf iOS + deaktiviert -webkit-text-size-adjust (Font-Boosting). Design-Breite 770px -> .page-Inhalt 680px = exakt wie Vorschau.
 - Alle Druckpfade laufen zentral ueber createPdfFile() -> Fix gilt ueberall (Projekt-PDF, Berichte, Dokumente).
 - WICHTIG: Nur auf echtem iOS-Geraet (TestFlight/Build) verifizierbar, neuer Build noetig.
+
+## Foto Auto-Speichern beim Zurueck-Button
+- photos/new.tsx: beforeRemove-Listener speichert ausgewaehlte Fotos automatisch, wenn der Nutzer zurueck navigiert (Header-Back oder Wisch-Geste), statt sie zu verwerfen.
+- Speicherlogik in savePhotosToStorage() extrahiert, von handleSave und Auto-Save gemeinsam genutzt. skipAutoSaveRef verhindert Doppel-Speichern nach explizitem "Foto speichern".
+- Getestet per Playwright auf Web-Preview: Foto waehlen -> Zurueck -> Foto gespeichert + Erfolgsmeldung.

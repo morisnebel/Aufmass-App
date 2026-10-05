@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -29,10 +29,16 @@ interface SelectedPhoto {
 export default function NewPhotoScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const navigation = useNavigation();
   const { projectId } = useLocalSearchParams();
   const [selectedPhotos, setSelectedPhotos] = useState<SelectedPhoto[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingProgress, setSavingProgress] = useState(0);
+
+  // Für Auto-Speichern beim Zurück-Button: aktuelle Fotos + Status per Ref verfügbar halten
+  const photosRef = useRef<SelectedPhoto[]>([]);
+  photosRef.current = selectedPhotos;
+  const skipAutoSaveRef = useRef(false);
 
   const requestPermissions = async () => {
     if (Platform.OS !== 'web') {
@@ -223,6 +229,66 @@ export default function NewPhotoScreen() {
     ));
   };
 
+  // Fotos einzeln speichern (verhindert OOM bei vielen Bildern); gibt Anzahl gespeicherter Fotos zurück
+  const savePhotosToStorage = async (photos: SelectedPhoto[]): Promise<number> => {
+    const projId = Array.isArray(projectId) ? projectId[0] : projectId;
+    let savedCount = 0;
+    for (let i = 0; i < photos.length; i++) {
+      try {
+        const photo = photos[i];
+        await PhotoService.create({
+          project_id: projId || '',
+          image_data: photo.uri,
+          uri: photo.uri,
+          description: photo.description || undefined,
+        });
+        savedCount++;
+        setSavingProgress(savedCount);
+      } catch (photoError) {
+        console.error(`Error saving photo ${i + 1}:`, photoError);
+        // Einzelfehler nicht abbrechen — weiter mit nächstem Foto
+      }
+    }
+    return savedCount;
+  };
+
+  const showSavedMessage = (savedCount: number) => {
+    setTimeout(() => {
+      const message = savedCount === 1
+        ? 'Foto wurde hinzugefügt'
+        : `${savedCount} Fotos wurden hinzugefügt`;
+      if (Platform.OS === 'web') {
+        alert(message);
+      } else {
+        Alert.alert(t('common.success'), message);
+      }
+    }, 300);
+  };
+
+  // Auto-Speichern beim Zurück-Button / Wisch-Geste: ausgewählte Fotos nicht verwerfen
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
+      if (skipAutoSaveRef.current || photosRef.current.length === 0) {
+        return; // nichts zu speichern -> normal zurück
+      }
+      e.preventDefault();
+      skipAutoSaveRef.current = true;
+      setLoading(true);
+      setSavingProgress(0);
+      savePhotosToStorage(photosRef.current)
+        .then((savedCount) => {
+          navigation.dispatch(e.data.action);
+          if (savedCount > 0) showSavedMessage(savedCount);
+        })
+        .catch((error) => {
+          console.error('Error auto-saving photos:', error);
+          navigation.dispatch(e.data.action);
+        });
+    });
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation]);
+
   const handleSave = async () => {
     if (selectedPhotos.length === 0) {
       Alert.alert(t('common.error'), 'Bitte wählen Sie mindestens ein Foto aus');
@@ -232,43 +298,14 @@ export default function NewPhotoScreen() {
     setLoading(true);
     setSavingProgress(0);
     let savedCount = 0;
-    
-    try {
-      const projId = Array.isArray(projectId) ? projectId[0] : projectId;
-      
-      // Fotos einzeln speichern (verhindert OOM bei vielen Bildern)
-      for (let i = 0; i < selectedPhotos.length; i++) {
-        try {
-          const photo = selectedPhotos[i];
-          await PhotoService.create({
-            project_id: projId || '',
-            image_data: photo.uri,
-            uri: photo.uri,
-            description: photo.description || undefined,
-          });
-          savedCount++;
-          setSavingProgress(savedCount);
-          
-          // Speicher freigeben: Bereits gespeichertes Foto aus State entfernen
-          // Dies reduziert den RAM-Verbrauch bei vielen Bildern
-        } catch (photoError) {
-          console.error(`Error saving photo ${i + 1}:`, photoError);
-          // Einzelfehler nicht abbrechen — weiter mit nächstem Foto
-        }
-      }
 
+    try {
+      savedCount = await savePhotosToStorage(selectedPhotos);
+
+      skipAutoSaveRef.current = true;
       router.back();
-      
-      setTimeout(() => {
-        const message = savedCount === 1 
-          ? 'Foto wurde hinzugefügt' 
-          : `${savedCount} Fotos wurden hinzugefügt`;
-        if (Platform.OS === 'web') {
-          alert(message);
-        } else {
-          Alert.alert(t('common.success'), message);
-        }
-      }, 300);
+
+      showSavedMessage(savedCount);
     } catch (error) {
       console.error('Error saving photos:', error);
       if (Platform.OS === 'web') {

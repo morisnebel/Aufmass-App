@@ -629,3 +629,10 @@
 - PDF-Seitenumbrüche (Ordner-Überschriften) vom User bestätigt: funktioniert.
 - app.json Versionen für Store-Upload erhöht: version 1.1.12, iOS buildNumber 122, Android versionCode 122.
 - Build-Erstellung erfolgt über den Emergent Publish-Button (Deployment-Panel).
+
+## PDF-Druck-Fix (iOS)
+- Problem: Gedrucktes PDF hatte riesige, überlappende Schriften (Header), obwohl Vorschau korrekt war.
+- Ursache: iOS-Print-Formatter layoutet HTML mit Druckbereichs-Breite in Punkten (~523px), Design ist aber fuer 794px (210mm) ausgelegt.
+- Fix in services/PdfExport.ts: prepareHtmlForPrint() injiziert beim Druck CSS-Zoom (523/770) nur auf iOS + deaktiviert -webkit-text-size-adjust (Font-Boosting). Design-Breite 770px -> .page-Inhalt 680px = exakt wie Vorschau.
+- Alle Druckpfade laufen zentral ueber createPdfFile() -> Fix gilt ueberall (Projekt-PDF, Berichte, Dokumente).
+- WICHTIG: Nur auf echtem iOS-Geraet (TestFlight/Build) verifizierbar, neuer Build noetig.

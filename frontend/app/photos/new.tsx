@@ -265,25 +265,58 @@ export default function NewPhotoScreen() {
     }, 300);
   };
 
-  // Auto-Speichern beim Zurück-Button / Wisch-Geste: ausgewählte Fotos nicht verwerfen
-  useEffect(() => {
-    const unsubscribe = navigation.addListener('beforeRemove', (e: any) => {
-      if (skipAutoSaveRef.current || photosRef.current.length === 0) {
-        return; // nichts zu speichern -> normal zurück
-      }
-      e.preventDefault();
+  // Auto-Speichern beim Zurück: eigener Header-Back-Button (native-stack unterstützt
+  // das Abfangen über beforeRemove/preventDefault nicht -> Warnung auf iOS)
+  const handleBackPress = () => {
+    if (loading) return;
+    if (skipAutoSaveRef.current || photosRef.current.length === 0) {
       skipAutoSaveRef.current = true;
-      setLoading(true);
-      setSavingProgress(0);
+      router.back();
+      return;
+    }
+    skipAutoSaveRef.current = true;
+    setLoading(true);
+    setSavingProgress(0);
+    savePhotosToStorage(photosRef.current)
+      .then((savedCount) => {
+        router.back();
+        if (savedCount > 0) showSavedMessage(savedCount);
+      })
+      .catch((error) => {
+        console.error('Error auto-saving photos:', error);
+        router.back();
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    navigation.setOptions({
+      gestureEnabled: false,
+      headerLeft: ({ tintColor }: { tintColor?: string }) => (
+        <TouchableOpacity
+          onPress={handleBackPress}
+          style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4, paddingRight: 16 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="chevron-back" size={26} color={tintColor || '#fff'} />
+          <Text style={{ color: tintColor || '#fff', fontSize: 17 }}>Zurück</Text>
+        </TouchableOpacity>
+      ),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, loading]);
+
+  // Sicherheitsnetz (Android-Hardware-Back / Browser-Back): Fotos nicht verwerfen,
+  // sondern im Hintergrund speichern - OHNE preventDefault (native-stack-Limitierung)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('beforeRemove', () => {
+      if (skipAutoSaveRef.current || photosRef.current.length === 0) return;
+      skipAutoSaveRef.current = true;
       savePhotosToStorage(photosRef.current)
         .then((savedCount) => {
-          navigation.dispatch(e.data.action);
           if (savedCount > 0) showSavedMessage(savedCount);
         })
-        .catch((error) => {
-          console.error('Error auto-saving photos:', error);
-          navigation.dispatch(e.data.action);
-        });
+        .catch((error) => console.error('Error auto-saving photos:', error));
     });
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps

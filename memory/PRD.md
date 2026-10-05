@@ -641,3 +641,4 @@
 - photos/new.tsx: beforeRemove-Listener speichert ausgewaehlte Fotos automatisch, wenn der Nutzer zurueck navigiert (Header-Back oder Wisch-Geste), statt sie zu verwerfen.
 - Speicherlogik in savePhotosToStorage() extrahiert, von handleSave und Auto-Save gemeinsam genutzt. skipAutoSaveRef verhindert Doppel-Speichern nach explizitem "Foto speichern".
 - Getestet per Playwright auf Web-Preview: Foto waehlen -> Zurueck -> Foto gespeichert + Erfolgsmeldung.
+- Nachbesserung: native-stack unterstuetzt preventDefault in beforeRemove nicht (iOS-Warnung "removed natively but didnt get removed from JS state"). Neue Loesung: eigener headerLeft-Zurueck-Button in photos/new.tsx der erst speichert, dann router.back(); gestureEnabled false; beforeRemove nur noch als Fire-and-Forget-Sicherheitsnetz ohne preventDefault.

@@ -7,7 +7,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system/legacy';
+import { readTextFile } from '../utils/readTextFile';
 import { File, Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 import * as Sharing from 'expo-sharing';
@@ -289,7 +289,7 @@ export const BackupService = {
       throw new Error('Kein Backup ausgewählt.');
     }
     const fileUri = res.assets[0].uri;
-    const content = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' as any });
+    const content = await readTextFile(fileUri);
     let payload: BackupPayload;
     try {
       payload = JSON.parse(content);

@@ -22,6 +22,7 @@ import { ProjectService, CustomerService, RoofService, PhotoService, SketchServi
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
+import { readTextFile } from '../utils/readTextFile';
 import * as Sharing from 'expo-sharing';
 import { Features, AppName, getProStatus, loadProStatus } from '../services/FeatureFlags';
 import { BackupService } from '../services/BackupService';
@@ -437,8 +438,8 @@ export default function HomeScreen() {
       
       setLoading(true);
       
-      // Read file content
-      const content = await readAsStringAsync(file.uri);
+      // Read file content (Android-sicher: content://-URIs werden unterstützt)
+      const content = await readTextFile(file.uri);
       
       // Clean up content - remove truncation markers if present
       let cleanContent = content;

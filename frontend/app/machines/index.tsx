@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
+import { readTextFile } from '../../utils/readTextFile';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { MachineMasterService, MachineMaster, SettingsService, MachineCategoryService, MachineCategory, generateMachineNumber } from '../../services/LocalStorage';
@@ -446,7 +447,7 @@ export default function MachinesIndex() {
       });
       if (res.canceled || !res.assets || res.assets.length === 0) return;
       const fileUri = res.assets[0].uri;
-      const content = await FileSystem.readAsStringAsync(fileUri, { encoding: 'utf8' as any });
+      const content = await readTextFile(fileUri);
       let parsed: any;
       try { parsed = JSON.parse(content); } catch {
         Alert.alert('Fehler', 'Die Datei ist kein gültiges JSON.');

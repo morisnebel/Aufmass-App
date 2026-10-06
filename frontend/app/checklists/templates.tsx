@@ -18,8 +18,8 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
-import * as FileSystem from 'expo-file-system/legacy';
-import { copyAsync, deleteAsync, readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
+import { writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
+import { readTextFile } from '../../utils/readTextFile';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { Share } from 'react-native';
@@ -223,7 +223,7 @@ export default function ChecklistTemplatesScreen() {
         return;
       }
 
-      const fileContent = await readAsStringAsync(file.uri);
+      const fileContent = await readTextFile(file.uri);
       
       // Try to parse as JSON - the file might be a PDF with JSON content
       let importData;

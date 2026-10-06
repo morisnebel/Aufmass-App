@@ -23,6 +23,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
+import { readTextFile } from '../../utils/readTextFile';
 import { ReferenceService, ReferenceFolder, ReferencePhoto, ExternalFolder } from '../../services/ReferenceService';
 import { useTranslation } from 'react-i18next';
 
@@ -322,7 +323,7 @@ export default function ReferencesScreen() {
       
       if (!result.canceled && result.assets[0]) {
         const metadataUri = result.assets[0].uri;
-        const metadataContent = await FileSystem.readAsStringAsync(metadataUri);
+        const metadataContent = await readTextFile(metadataUri);
         const metadata = JSON.parse(metadataContent);
         
         if (!metadata.folder || !metadata.photos) {

@@ -119,8 +119,13 @@ export default function EmployeesIndex() {
       };
       const json = JSON.stringify(payload, null, 2);
       const date = new Date().toISOString().slice(0, 10);
+      // Android-sicherer Dateiname: Umlaute transliterieren, Rest auf ASCII beschränken
+      const safeName = (s: string) => s
+        .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue')
+        .replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue')
+        .replace(/ß/g, 'ss').replace(/[^a-zA-Z0-9-]/g, '_');
       const filename = toExport.length === 1
-        ? `Mitarbeiter_${toExport[0].name.replace(/[^a-zA-Z0-9äöüÄÖÜß-]/g, '_')}_${date}.json`
+        ? `Mitarbeiter_${safeName(toExport[0].name)}_${date}.json`
         : `Mitarbeiter_${toExport.length}_${date}.json`;
       const fileUri = `${(FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory}${filename}`;
       await FileSystem.writeAsStringAsync(fileUri, json, { encoding: 'utf8' as any });

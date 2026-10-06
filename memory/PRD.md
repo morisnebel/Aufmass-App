@@ -647,3 +647,4 @@
 - Android PDF-Druck: Chromium erzwingt page-break-inside:avoid strikt -> grosse Sektions-Wrapper sprangen komplett auf Folgeseiten (halbleere Seiten). Fix: Android-only CSS-Override in ProjectPdfService.ts (Wrapper duerfen umbrechen, nur photo-item/sketch-item + h2/h3/h4-Bindung geschuetzt). iOS unveraendert.
 - Eingabestift verbessert: draw.tsx Stift-Striche werden jetzt als quadratische Bezier-Kurven durch Mittelpunkte geglaettet (buildSmoothPath), Jitter-Filter 0.7px, Live-Update bei jedem Event statt jedem 3. Punkt. Per Playwright verifiziert (Q-Kurven im Pfad).
 - DateTimePicker onChange-Deprecation-Banner: nur Dev/Expo-Go-Warnung, nicht in Produktion sichtbar, nicht geaendert.
+- Einstellungen: "Vorschau Rapport-PDF" (Live-Vorschau im PDF-Layout/Kopfzeile-Bereich) wird in der Basis-Version ausgeblendet (nur bei isProUnlocked sichtbar), da Rapporte ein Pro-Feature sind. Per Playwright verifiziert.

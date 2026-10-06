@@ -789,35 +789,39 @@ export default function SettingsScreen() {
                     ))}
                   </View>
 
-                  {/* Live-Vorschau: Rapport-PDF Farben */}
-                  <Text style={styles.layoutSubLabel}>Vorschau Rapport-PDF</Text>
-                  {(() => {
-                    const sel = PDF_COLOR_OPTIONS.find(c => c.id === settings.pdf_header_section_color) || PDF_COLOR_OPTIONS[0];
-                    return (
-                      <View style={styles.rapportPreviewBox}>
-                        <View style={[styles.rapportPreviewHeader, { borderBottomColor: sel.color }]}>
-                          <Text style={[styles.rapportPreviewTitle, { color: sel.color }]}>Rapport</Text>
-                          <Text style={styles.rapportPreviewMeta}>Nr. 2026-001 · 05.09.2026</Text>
-                        </View>
-                        <View style={[styles.rapportPreviewInfoBox, { borderLeftColor: sel.color }]}>
-                          <Text style={[styles.rapportPreviewInfoTitle, { color: sel.color }]}>PROJEKT & KUNDE</Text>
-                          <Text style={styles.rapportPreviewInfoText}>Musterprojekt · Max Mustermann</Text>
-                        </View>
-                        <View style={[styles.rapportPreviewTableHeader, { backgroundColor: sel.color }]}>
-                          <Text style={[styles.rapportPreviewTableHeaderText, { color: sel.textColor }]}>Mitarbeiter</Text>
-                          <Text style={[styles.rapportPreviewTableHeaderText, { color: sel.textColor }]}>Stunden</Text>
-                        </View>
-                        <View style={styles.rapportPreviewTableRow}>
-                          <Text style={styles.rapportPreviewTableText}>M. Mustermann</Text>
-                          <Text style={styles.rapportPreviewTableText}>8:00 h</Text>
-                        </View>
-                        <View style={[styles.rapportPreviewTotalRow, { backgroundColor: sel.color + '1f', borderTopColor: sel.color }]}>
-                          <Text style={styles.rapportPreviewTableTextBold}>Gesamt</Text>
-                          <Text style={[styles.rapportPreviewTableTextBold, { color: sel.color }]}>8:00 h</Text>
-                        </View>
-                      </View>
-                    );
-                  })()}
+                  {/* Live-Vorschau: Rapport-PDF Farben (nur Pro - Rapporte sind ein Pro-Feature) */}
+                  {isProUnlocked && (
+                    <>
+                      <Text style={styles.layoutSubLabel}>Vorschau Rapport-PDF</Text>
+                      {(() => {
+                        const sel = PDF_COLOR_OPTIONS.find(c => c.id === settings.pdf_header_section_color) || PDF_COLOR_OPTIONS[0];
+                        return (
+                          <View style={styles.rapportPreviewBox}>
+                            <View style={[styles.rapportPreviewHeader, { borderBottomColor: sel.color }]}>
+                              <Text style={[styles.rapportPreviewTitle, { color: sel.color }]}>Rapport</Text>
+                              <Text style={styles.rapportPreviewMeta}>Nr. 2026-001 · 05.09.2026</Text>
+                            </View>
+                            <View style={[styles.rapportPreviewInfoBox, { borderLeftColor: sel.color }]}>
+                              <Text style={[styles.rapportPreviewInfoTitle, { color: sel.color }]}>PROJEKT & KUNDE</Text>
+                              <Text style={styles.rapportPreviewInfoText}>Musterprojekt · Max Mustermann</Text>
+                            </View>
+                            <View style={[styles.rapportPreviewTableHeader, { backgroundColor: sel.color }]}>
+                              <Text style={[styles.rapportPreviewTableHeaderText, { color: sel.textColor }]}>Mitarbeiter</Text>
+                              <Text style={[styles.rapportPreviewTableHeaderText, { color: sel.textColor }]}>Stunden</Text>
+                            </View>
+                            <View style={styles.rapportPreviewTableRow}>
+                              <Text style={styles.rapportPreviewTableText}>M. Mustermann</Text>
+                              <Text style={styles.rapportPreviewTableText}>8:00 h</Text>
+                            </View>
+                            <View style={[styles.rapportPreviewTotalRow, { backgroundColor: sel.color + '1f', borderTopColor: sel.color }]}>
+                              <Text style={styles.rapportPreviewTableTextBold}>Gesamt</Text>
+                              <Text style={[styles.rapportPreviewTableTextBold, { color: sel.color }]}>8:00 h</Text>
+                            </View>
+                          </View>
+                        );
+                      })()}
+                    </>
+                  )}
                 </>
               )}
               

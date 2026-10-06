@@ -3025,6 +3025,16 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
             page-break-inside: auto !important;
             break-inside: auto !important;
           }
+          /* KRITISCH: break-before:avoid auf den Containern erzeugt in Chromium eine
+             Umbruch-Kaskade (Fotos+Skizzen werden als ein Block behandelt und rutschen
+             komplett auf Folgeseiten). Daher auf Android deaktivieren. */
+          .sketches-container,
+          .photos-print-container,
+          .sketches-section .sketches-container,
+          .photos-section .photos-container {
+            page-break-before: auto !important;
+            break-before: auto !important;
+          }
           .photo-item, .sketch-item {
             page-break-inside: avoid !important;
             break-inside: avoid !important;

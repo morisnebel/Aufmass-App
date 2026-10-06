@@ -3010,6 +3010,30 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
             max-height: 80px;
             object-fit: contain;
           }
+          ${Platform.OS === 'android' ? `
+          /* Android (Chromium) erzwingt break-inside strikt: große Sektions-Wrapper
+             würden sonst komplett auf die nächste Seite springen und halbleere Seiten
+             hinterlassen ("auseinandergezogenes" Layout). Daher: Sektionen dürfen
+             umbrechen - nur einzelne Fotos/Skizzen und die Überschriften-Bindung
+             bleiben geschützt. */
+          .section-with-header,
+          .sketch-wrapper,
+          .photos-wrapper,
+          .remarks-section,
+          .roofs-section,
+          .pdf-category-section {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+          .photo-item, .sketch-item {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          h2, h3, h4 {
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          ` : ''}
         </style>
       </head>
       <body>

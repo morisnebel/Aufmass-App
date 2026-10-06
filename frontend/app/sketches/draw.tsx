@@ -104,8 +104,8 @@ export default function DrawSketchScreen() {
   const [currentPath, setCurrentPath] = useState('');
   // Ref für flüssigeres Zeichnen - speichert Pfaddaten ohne Re-Render
   const currentPathRef = useRef<string>('');
-  // Counter für Throttling - nur alle N Punkte den State aktualisieren
-  const drawPointCountRef = useRef<number>(0);
+  // Rohpunkte des aktuellen Stift-Strichs - Basis für geglättete Kurven (Eingabestift)
+  const currentPenPointsRef = useRef<{ x: number; y: number }[]>([]);
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
   const [tempElement, setTempElement] = useState<DrawElement | null>(null);
   
@@ -259,6 +259,27 @@ export default function DrawSketchScreen() {
     } else {
       Alert.alert(t('common.note'), t('sketches.noProjectSelected'));
     }
+  };
+
+  // Geglätteter Pfad für Stift-Striche: Quadratische Bézier-Kurven durch die
+  // Mittelpunkte der Rohpunkte -> deutlich flüssigeres Schriftbild mit dem Eingabestift
+  const buildSmoothPath = (pts: { x: number; y: number }[]): string => {
+    const r = (v: number) => Math.round(v * 10) / 10;
+    if (pts.length === 0) return '';
+    if (pts.length < 3) {
+      let d = `M ${r(pts[0].x)} ${r(pts[0].y)}`;
+      if (pts.length === 2) d += ` L ${r(pts[1].x)} ${r(pts[1].y)}`;
+      return d;
+    }
+    let d = `M ${r(pts[0].x)} ${r(pts[0].y)}`;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const mx = (pts[i].x + pts[i + 1].x) / 2;
+      const my = (pts[i].y + pts[i + 1].y) / 2;
+      d += ` Q ${r(pts[i].x)} ${r(pts[i].y)} ${r(mx)} ${r(my)}`;
+    }
+    const last = pts[pts.length - 1];
+    d += ` L ${r(last.x)} ${r(last.y)}`;
+    return d;
   };
 
   // Bildgröße ermitteln: Android kann RNImage.getSize nicht auf data:-URIs anwenden
@@ -2973,7 +2994,7 @@ export default function DrawSketchScreen() {
       // Initialisiere sowohl Ref (für Performance) als auch State (für Rendering)
       const pathStart = `M ${locationX} ${locationY}`;
       currentPathRef.current = pathStart;
-      drawPointCountRef.current = 0;
+      currentPenPointsRef.current = [{ x: locationX, y: locationY }];
       setCurrentPath(pathStart);
     } else if (drawMode === 'polygon') {
       // Start polygon drawing
@@ -3338,13 +3359,13 @@ export default function DrawSketchScreen() {
     if (drawMode === 'select' && dragMode && originalElement && dragStart) {
       handleSelectTouchMove(locationX, locationY);
     } else if (drawMode === 'pen' && currentPathRef.current) {
-      // Füge Punkt zum Ref hinzu (keine Re-Renders)
-      currentPathRef.current = `${currentPathRef.current} L ${locationX} ${locationY}`;
-      drawPointCountRef.current++;
-      
-      // Aktualisiere State nur alle 3 Punkte für visuelles Feedback
-      // Dies reduziert Re-Renders um ~66% bei gleichbleibender visueller Qualität
-      if (drawPointCountRef.current % 3 === 0) {
+      // Punkt aufnehmen (Mini-Jitter < 0.7px herausfiltern) und Pfad glätten
+      const pts = currentPenPointsRef.current;
+      const prev = pts[pts.length - 1];
+      if (!prev || Math.hypot(locationX - prev.x, locationY - prev.y) > 0.7) {
+        pts.push({ x: locationX, y: locationY });
+        currentPathRef.current = buildSmoothPath(pts);
+        // Live-Feedback bei jedem Event (Events kommen ohnehin max. 1x pro Frame)
         setCurrentPath(currentPathRef.current);
       }
     } else if (drawMode === 'select' && draggingLabelId) {
@@ -3426,6 +3447,7 @@ export default function DrawSketchScreen() {
       addToHistory([...elements, newElement]);
       // Refs und State zurücksetzen
       currentPathRef.current = '';
+      currentPenPointsRef.current = [];
       setCurrentPath('');
     } else if (drawMode === 'polygon' && currentPath && currentPath.length > 0) {
       // Close the polygon path by adding 'Z' and simplify lines

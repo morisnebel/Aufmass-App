@@ -197,7 +197,7 @@ export default function EditTemplateScreen() {
       // Für Logos: festes Seitenverhältnis (3:1)
       // Für Druck- und Vorschaubilder: kein festes Verhältnis, Originalbild behalten
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: type === 'logo', // Nur für Logos bearbeiten
         aspect: type === 'logo' ? [3, 1] : undefined,
         quality: 0.8,
@@ -250,7 +250,7 @@ export default function EditTemplateScreen() {
   const pickTemplateLogo = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [3, 1],
         quality: 0.7,

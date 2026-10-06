@@ -261,6 +261,25 @@ export default function DrawSketchScreen() {
     }
   };
 
+  // Bildgröße ermitteln: Android kann RNImage.getSize nicht auf data:-URIs anwenden
+  // ("Unsupported uri scheme for encoded image fetch") -> Fallback über ImageManipulator,
+  // der base64-Bilder auf allen Plattformen laden kann und die echten Maße liefert.
+  const getImageSize = (uri: string): Promise<{ width: number; height: number }> =>
+    new Promise((resolve, reject) => {
+      RNImage.getSize(
+        uri,
+        (w, h) => resolve({ width: w, height: h }),
+        async () => {
+          try {
+            const info = await ImageManipulator.manipulateAsync(uri, [], { compress: 1 });
+            resolve({ width: info.width, height: info.height });
+          } catch (e) {
+            reject(e);
+          }
+        }
+      );
+    });
+
   // Funktion um ein Projektfoto als Bild-Element einzufügen
   const insertProjectPhoto = (photo: any) => {
     const imageUri = photo.image_data || photo.uri;
@@ -270,9 +289,8 @@ export default function DrawSketchScreen() {
     }
     
     // Berechne korrektes Seitenverhältnis des Bildes
-    RNImage.getSize(
-      imageUri,
-      (imgWidth, imgHeight) => {
+    getImageSize(imageUri).then(
+      ({ width: imgWidth, height: imgHeight }) => {
         // Maximale Größe im Canvas
         const maxWidth = 400;
         const maxHeight = 300;
@@ -1558,9 +1576,8 @@ export default function DrawSketchScreen() {
       initialImageAdded.current = true;
       
       // Berechne korrektes Seitenverhältnis des Bildes
-      RNImage.getSize(
-        imageUri,
-        (imgWidth, imgHeight) => {
+      getImageSize(imageUri).then(
+        ({ width: imgWidth, height: imgHeight }) => {
           // Maximale Größe im Canvas (mit etwas Padding)
           const maxWidth = width - 40;
           const maxHeight = (height - 160) * 0.8;
@@ -2415,9 +2432,8 @@ export default function DrawSketchScreen() {
       setCropImageId(clickedImage.id);
       
       // Lade die Original-Bildgröße
-      RNImage.getSize(
-        clickedImage.data.uri,
-        (imgWidth, imgHeight) => {
+      getImageSize(clickedImage.data.uri).then(
+        ({ width: imgWidth, height: imgHeight }) => {
           setCropImageDimensions({ width: imgWidth, height: imgHeight });
           // Initiale Crop-Box = 80% des Bildes, zentriert
           const boxWidth = Math.min(imgWidth * 0.8, 280);
@@ -2643,7 +2659,7 @@ export default function DrawSketchScreen() {
   const insertImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.9,
       });

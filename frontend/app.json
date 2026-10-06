@@ -2,7 +2,7 @@
   "expo": {
     "name": "Aufmassprofi",
     "slug": "frontend",
-    "version": "1.1.13",
+    "version": "1.1.14",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.aufmassprofi.dach",
-      "buildNumber": "123",
+      "buildNumber": "124",
       "infoPlist": {
         "NSCameraUsageDescription": "Fotos für Aufmaße und Skizzen aufnehmen",
         "NSContactsUsageDescription": "Kunden als Kontakte speichern",
@@ -30,7 +30,7 @@
     },
     "android": {
       "package": "com.aufmassprofi.dach",
-      "versionCode": 123,
+      "versionCode": 124,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0a1628"
@@ -61,6 +61,7 @@
       "./plugins/withExcludeCloudKitAndroid",
       "./plugins/withExcludePdfThumbnailAndroid",
       "./plugins/withAndroidFullScreen",
+      "./plugins/withAsyncStorageDbSize",
       "@react-native-community/datetimepicker",
       "expo-localization",
       "expo-image",

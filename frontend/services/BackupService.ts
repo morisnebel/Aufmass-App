@@ -282,7 +282,9 @@ export const BackupService = {
   importFullBackup: async (mode: 'replace' | 'merge' = 'replace'): Promise<{ counts: any; created_at: string }> => {
     const res = await DocumentPicker.getDocumentAsync({
       type: '*/*',
-      copyToCacheDirectory: true,
+      // Android: content://-URI behalten (readTextFile kopiert selbst in den Cache);
+        // das Picker-eigene Kopieren schlaegt in Expo Go an den Berechtigungen fehl
+        copyToCacheDirectory: Platform.OS === "ios",
       multiple: false,
     });
     if (res.canceled || !res.assets || res.assets.length === 0) {

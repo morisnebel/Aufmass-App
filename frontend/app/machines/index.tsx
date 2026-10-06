@@ -442,7 +442,9 @@ export default function MachinesIndex() {
     try {
       const res = await DocumentPicker.getDocumentAsync({
         type: '*/*',
-        copyToCacheDirectory: true,
+        // Android: content://-URI behalten (readTextFile kopiert selbst in den Cache);
+        // das Picker-eigene Kopieren schlaegt in Expo Go an den Berechtigungen fehl
+        copyToCacheDirectory: Platform.OS === "ios",
         multiple: false,
       });
       if (res.canceled || !res.assets || res.assets.length === 0) return;

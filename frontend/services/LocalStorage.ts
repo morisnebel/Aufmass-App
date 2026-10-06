@@ -776,6 +776,12 @@ export const ProjectService = {
       await Promise.all(cleanupOps);
     }
     const photos = await getItems<Photo>(KEYS.PHOTOS);
+    // Separat gespeicherte Bilddaten der Projekt-Fotos mitlöschen (sonst bleibt
+    // der Speicher mit verwaisten photo_img_-Blobs gefüllt -> SQLITE_FULL)
+    const photosToDelete = photos.filter(p => p.project_id === id);
+    if (photosToDelete.length > 0) {
+      await AsyncStorage.multiRemove(photosToDelete.map(p => `photo_img_${p.id}`)).catch(() => {});
+    }
     await setItems(KEYS.PHOTOS, photos.filter(p => p.project_id !== id));
     const roofs = await getItems<Roof>(KEYS.ROOFS);
     await setItems(KEYS.ROOFS, roofs.filter(r => r.project_id !== id));
@@ -1168,6 +1174,43 @@ export const cleanupGhostPhotos = async (): Promise<number> => {
     return removed;
   } catch (e) {
     console.error('[cleanupGhostPhotos] Error:', e);
+    return 0;
+  }
+};
+
+// Entfernt verwaiste Speicher-Blobs (photo_img_/sketch_meta_/sketch_bg_/sketch_img_),
+// deren Foto/Skizze nicht mehr existiert. Wichtig: Gelöschte Projekte haben früher
+// ihre Bilddaten zurückgelassen -> Speicher blieb voll (SQLITE_FULL bei 6-MB-Limit).
+export const cleanupOrphanedStorage = async (): Promise<number> => {
+  try {
+    const [photos, sketches] = await Promise.all([
+      getItems<Photo>(KEYS.PHOTOS),
+      getItems<Sketch>(KEYS.SKETCHES),
+    ]);
+    const validPhotoIds = new Set(photos.map(p => p.id));
+    const validSketchIds = new Set(sketches.map(s => s.id));
+    const allKeys = await AsyncStorage.getAllKeys();
+    const toRemove: string[] = [];
+    for (const key of allKeys) {
+      if (key.startsWith('photo_img_')) {
+        if (!validPhotoIds.has(key.slice(10))) toRemove.push(key);
+      } else if (key.startsWith('sketch_meta_')) {
+        if (!validSketchIds.has(key.slice(12))) toRemove.push(key);
+      } else if (key.startsWith('sketch_bg_')) {
+        if (!validSketchIds.has(key.slice(10))) toRemove.push(key);
+      } else if (key.startsWith('sketch_img_')) {
+        // Format: sketch_img_<sketchId>_<elementId>; "new"-Keys nicht anfassen
+        const sketchId = key.slice(11).split('_')[0];
+        if (sketchId !== 'new' && !validSketchIds.has(sketchId)) toRemove.push(key);
+      }
+    }
+    if (toRemove.length > 0) {
+      await AsyncStorage.multiRemove(toRemove);
+      console.log(`[cleanupOrphanedStorage] ${toRemove.length} verwaiste Speicher-Einträge entfernt`);
+    }
+    return toRemove.length;
+  } catch (e) {
+    console.error('[cleanupOrphanedStorage] Error:', e);
     return 0;
   }
 };

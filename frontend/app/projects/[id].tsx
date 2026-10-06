@@ -21,7 +21,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, EmployeeMasterService, MaterialMasterService, MachineMasterService, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage, migrateChecklistImages } from '../../services/LocalStorage';
+import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, EmployeeMasterService, MaterialMasterService, MachineMasterService, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage, cleanupGhostPhotos, migrateChecklistImages } from '../../services/LocalStorage';
 import { PROJECT_STATUSES, getStatusMeta, normalizeStatus } from '../../src/constants/projectStatus';
 import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
 import { CoverStyle } from '../../services/CoverPageTemplates';
@@ -611,6 +611,8 @@ export default function ProjectDetailScreen() {
       
       // Migration: Foto-Bilddaten in separate Schlüssel verschieben (einmalig)
       await migratePhotoStorage();
+      // Geister-Fotos (Einträge ohne Bilddaten nach fehlgeschlagenem Import) entfernen
+      await cleanupGhostPhotos();
       // Migration: Checklisten-Bilder in separate Schlüssel verschieben (einmalig, OOM-Schutz)
       await migrateChecklistImages();
       

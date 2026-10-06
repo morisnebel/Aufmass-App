@@ -57,17 +57,18 @@ const storage = {
   },
 
   setItem: async (key: string, value: string): Promise<void> => {
-    try {
-      // Always save to local AsyncStorage first (for offline access)
-      await AsyncStorage.setItem(key, value);
-      
-      // Then sync to CloudKit on iOS
-      if (Platform.OS === 'ios' && CloudKitStorage) {
+    // Lokal speichern - Fehler (z.B. SQLITE_FULL) MÜSSEN propagieren,
+    // sonst entstehen Einträge ohne Bilddaten ("Geister-Fotos")
+    await AsyncStorage.setItem(key, value);
+
+    // Dann zu CloudKit syncen (iOS) - Sync-Fehler sind unkritisch
+    if (Platform.OS === 'ios' && CloudKitStorage) {
+      try {
         await CloudKitStorage.setItem(key, value);
+      } catch (error) {
+        console.log(`Error saving ${key} to CloudKit:`, error);
+        // Data is already in AsyncStorage, so we're safe
       }
-    } catch (error) {
-      console.log(`Error saving ${key} to CloudKit:`, error);
-      // Data is already in AsyncStorage, so we're safe
     }
   },
 
@@ -1136,6 +1137,38 @@ export const migratePhotoStorage = async (): Promise<void> => {
     await AsyncStorage.setItem(migrationKey, 'true');
   } catch (e) {
     console.error('[migratePhotoStorage] Error:', e);
+  }
+};
+
+// Entfernt "Geister-Fotos": Einträge ohne Bilddaten. Diese entstehen, wenn beim
+// Import/Speichern das Bild wegen vollem Speicher (SQLITE_FULL) nicht mehr
+// gespeichert werden konnte, der Metadaten-Eintrag aber angelegt wurde.
+export const cleanupGhostPhotos = async (): Promise<number> => {
+  try {
+    const photos = await getItems<Photo>(KEYS.PHOTOS);
+    const keep: Photo[] = [];
+    let removed = 0;
+    for (const photo of photos) {
+      const inline = photo.image_data || photo.uri || '';
+      if (inline.length > 100) {
+        keep.push(photo);
+        continue;
+      }
+      const stored = await storage.getItem(`photo_img_${photo.id}`);
+      if (stored && stored.length > 100) {
+        keep.push(photo);
+      } else {
+        removed++;
+      }
+    }
+    if (removed > 0) {
+      await setItems(KEYS.PHOTOS, keep);
+      console.log(`[cleanupGhostPhotos] ${removed} Foto-Einträge ohne Bilddaten entfernt`);
+    }
+    return removed;
+  } catch (e) {
+    console.error('[cleanupGhostPhotos] Error:', e);
+    return 0;
   }
 };
 

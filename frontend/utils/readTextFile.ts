@@ -3,8 +3,14 @@
 // readAsStringAsync ablehnt ("Unsupported scheme ... has been rejected").
 // Fallback: SAF-Reader, danach Kopie in den Cache.
 import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 
 export async function readTextFile(uri: string): Promise<string> {
+  if (Platform.OS === 'web') {
+    // Web: blob:/data:-URIs über fetch lesen (expo-file-system existiert dort nicht)
+    const res = await fetch(uri);
+    return await res.text();
+  }
   try {
     return await FileSystem.readAsStringAsync(uri, { encoding: 'utf8' as never });
   } catch (e) {

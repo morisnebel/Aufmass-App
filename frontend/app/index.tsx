@@ -460,102 +460,95 @@ export default function HomeScreen() {
         return;
       }
       
-      // Generate new IDs for imported data
-      const generateId = () => Date.now().toString(36) + Math.random().toString(36).substr(2);
-      const newProjectId = generateId();
-      const now = new Date().toISOString();
-      
-      // Import customer if exists
-      let newCustomerId = importData.project.customer_id;
-      if (importData.customer && importData.customer.name) {
-        // Always create a new customer for imports to avoid conflicts
-        const customerData = {
-          ...importData.customer,
-          id: undefined,
-          created_at: undefined,
-          updated_at: undefined,
+      // Import mit Einzelfehler-Toleranz: ein fehlgeschlagenes Foto bricht nicht
+      // den ganzen Import ab. Bei fatalem Fehler wird das halb importierte
+      // Projekt zurückgerollt (kein "Geister-Projekt").
+      let newProject: { id: string } | null = null;
+      let failedItems = 0;
+      let totalItems = 0;
+
+      try {
+        // Import customer if exists
+        let newCustomerId = importData.project.customer_id;
+        if (importData.customer && importData.customer.name) {
+          // Always create a new customer for imports to avoid conflicts
+          const customerData = {
+            ...importData.customer,
+            id: undefined,
+            created_at: undefined,
+            updated_at: undefined,
+          };
+          delete customerData.id;
+          const newCustomer = await CustomerService.create(customerData);
+          newCustomerId = newCustomer.id;
+        }
+
+        // Import project with new ID
+        const projectData = {
+          ...importData.project,
+          name: `${importData.project.name} (Import)`,
+          customer_id: newCustomerId,
         };
-        delete customerData.id;
-        const newCustomer = await CustomerService.create(customerData);
-        newCustomerId = newCustomer.id;
-      }
-      
-      // Import project with new ID
-      const projectData = {
-        ...importData.project,
-        name: `${importData.project.name} (Import)`,
-        customer_id: newCustomerId,
-      };
-      delete projectData.id;
-      delete projectData.created_at;
-      delete projectData.updated_at;
-      
-      const newProject = await ProjectService.create(projectData);
-      
-      // Import roofs
-      if (importData.roofs && importData.roofs.length > 0) {
-        for (const roof of importData.roofs) {
-          const roofData = { ...roof, project_id: newProject.id };
-          delete roofData.id;
-          delete roofData.created_at;
-          delete roofData.updated_at;
-          await RoofService.create(roofData);
+        delete projectData.id;
+        delete projectData.created_at;
+        delete projectData.updated_at;
+
+        newProject = await ProjectService.create(projectData);
+
+        const importList = async (items: unknown[] | undefined, createFn: (d: never) => Promise<unknown>) => {
+          if (!items || items.length === 0) return;
+          for (const item of items) {
+            totalItems++;
+            try {
+              const d: Record<string, unknown> = { ...(item as Record<string, unknown>), project_id: newProject!.id };
+              delete d.id;
+              delete d.created_at;
+              delete d.updated_at;
+              await createFn(d as never);
+            } catch (itemError) {
+              failedItems++;
+              console.error('Import-Element fehlgeschlagen:', itemError);
+            }
+          }
+        };
+
+        await importList(importData.roofs, (d) => RoofService.create(d));
+        await importList(importData.photos, (d) => PhotoService.create(d));
+        await importList(importData.sketches, (d) => SketchService.create(d));
+        await importList(importData.checklists, (d) => ChecklistService.create(d));
+        await importList(importData.reports, (d) => ReportService.create(d));
+      } catch (fatalError) {
+        // Rollback: halb importiertes Projekt samt Unterdaten entfernen
+        if (newProject?.id) {
+          try { await ProjectService.delete(newProject.id); } catch { /* ignorieren */ }
         }
+        throw fatalError;
       }
-      
-      // Import photos
-      if (importData.photos && importData.photos.length > 0) {
-        for (const photo of importData.photos) {
-          const photoData = { ...photo, project_id: newProject.id };
-          delete photoData.id;
-          delete photoData.created_at;
-          delete photoData.updated_at;
-          await PhotoService.create(photoData);
-        }
-      }
-      
-      // Import sketches
-      if (importData.sketches && importData.sketches.length > 0) {
-        for (const sketch of importData.sketches) {
-          const sketchData = { ...sketch, project_id: newProject.id };
-          delete sketchData.id;
-          delete sketchData.created_at;
-          delete sketchData.updated_at;
-          await SketchService.create(sketchData);
-        }
-      }
-      
-      // Import checklists
-      if (importData.checklists && importData.checklists.length > 0) {
-        for (const checklist of importData.checklists) {
-          const checklistData = { ...checklist, project_id: newProject.id };
-          delete checklistData.id;
-          delete checklistData.created_at;
-          delete checklistData.updated_at;
-          await ChecklistService.create(checklistData);
-        }
-      }
-      
-      // Import reports (Rapporte)
-      if (importData.reports && importData.reports.length > 0) {
-        for (const report of importData.reports) {
-          const reportData = { ...report, project_id: newProject.id };
-          delete reportData.id;
-          delete reportData.created_at;
-          delete reportData.updated_at;
-          await ReportService.create(reportData);
-        }
-      }
-      
+
       await loadData();
-      Alert.alert(t('common.success'), t('home.importSuccess', { name: importData.project.name }));
-      
+      if (failedItems > 0) {
+        Alert.alert(
+          'Teilweise importiert',
+          `Projekt "${importData.project.name}" wurde importiert, aber ${failedItems} von ${totalItems} Elementen (z.B. Fotos/Skizzen) konnten nicht übernommen werden.\n\nMöglicher Grund: Speicher-Limit. Bitte die installierte App (ab Version 1.1.14) verwenden – in Expo Go ist der Speicher auf 6 MB begrenzt.`
+        );
+      } else {
+        Alert.alert(t('common.success'), t('home.importSuccess', { name: importData.project.name }));
+      }
+
       // Navigate to the imported project
-      router.push(`/projects/${newProject.id}`);
-      
+      router.push(`/projects/${newProject!.id}`);
+
     } catch (error) {
       console.error('Error importing project:', error);
-      Alert.alert(t('common.error'), t('home.importFailed'));
+      const msg = String((error as Error)?.message || '');
+      if (msg.includes('SQLITE_FULL') || msg.includes('disk is full')) {
+        Alert.alert(
+          t('common.error'),
+          'Import fehlgeschlagen: Der App-Speicher ist voll (Android-Limit von 6 MB in Expo Go / älteren Builds).\n\nBitte den neuesten installierten Build (ab Version 1.1.14) verwenden – dort ist das Limit auf 512 MB erhöht.'
+        );
+      } else {
+        Alert.alert(t('common.error'), t('home.importFailed'));
+      }
     } finally {
       setLoading(false);
     }

@@ -97,8 +97,12 @@ export const addSyncListener = (callback: SyncCallback) => {
   if (Platform.OS === 'ios' && CloudKitStorage) {
     CloudKitStorage.addListener('change', ({ key, value }: { key: string; value: string }) => {
       console.log('CloudKit change received for:', key);
-      // Update local AsyncStorage
-      AsyncStorage.setItem(key, value);
+      // Update local AsyncStorage (null-Werte würden nativ crashen: -[NSNull length])
+      if (typeof value === 'string') {
+        AsyncStorage.setItem(key, value);
+      } else if (value === null || value === undefined) {
+        return;
+      }
       // Notify listeners
       try {
         const parsed = JSON.parse(value);
@@ -164,7 +168,7 @@ export const SyncService = {
       try {
         if (CloudKitStorage) {
           const cloudData = await CloudKitStorage.getItem(key);
-          if (cloudData) {
+          if (cloudData && typeof cloudData === 'string') {
             await AsyncStorage.setItem(key, cloudData);
           }
         }

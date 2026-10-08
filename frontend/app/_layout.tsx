@@ -1,3 +1,4 @@
+import '../utils/asyncStorageGuard'; // MUSS früh laufen: schützt vor nativen NSNull-Crashes
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

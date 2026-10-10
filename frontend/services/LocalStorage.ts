@@ -1197,7 +1197,8 @@ export const SketchService = {
   // Dupliziert eine Skizze inkl. aller ausgelagerten Daten-Keys (Vorschau,
   // Metadaten, Hintergrund, Elementbilder). Kopiert jeden großen String
   // EINZELN, damit nie mehrere Riesen-Strings gleichzeitig im Speicher liegen.
-  duplicate: async (id: string): Promise<Sketch | null> => {
+  // targetProjectId: optionales Zielprojekt (Einfügen aus der Zwischenablage)
+  duplicate: async (id: string, targetProjectId?: string): Promise<Sketch | null> => {
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const original = sketches.find(s => s.id === id);
     if (!original) return null;
@@ -1207,6 +1208,7 @@ export const SketchService = {
     const copy: Sketch = {
       ...original,
       id: newId,
+      project_id: targetProjectId || original.project_id,
       created_at: now,
       updated_at: now,
     };

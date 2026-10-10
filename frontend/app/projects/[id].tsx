@@ -216,6 +216,8 @@ export default function ProjectDetailScreen() {
   const [moveSketchModal, setMoveSketchModal] = useState<{ visible: boolean; sketchId: string; sketchTitle: string }>({ visible: false, sketchId: '', sketchTitle: '' });
   const [moveTargetProjects, setMoveTargetProjects] = useState<any[]>([]);
   const [isMovingSketch, setIsMovingSketch] = useState(false);
+  // Skizzen-Zwischenablage: gemerkte Skizze zum gezielten Einfügen in (andere) Projekte
+  const [sketchClipboard, setSketchClipboard] = useState<{ sketchId: string; title: string } | null>(null);
   
   // Photo gallery save state
   const [photoSelectMode, setPhotoSelectMode] = useState(false);
@@ -591,6 +593,7 @@ export default function ProjectDetailScreen() {
   useFocusEffect(
     useCallback(() => {
       loadProjectData();
+      loadSketchClipboard();
     }, [id])
   );
 
@@ -861,6 +864,68 @@ export default function ProjectDetailScreen() {
     );
   };
 
+  // ===== Skizzen-Zwischenablage (gezieltes Einfügen in andere Projekte) =====
+  const SKETCH_CLIPBOARD_KEY = 'aufmassprofi_sketch_clipboard';
+
+  // Zwischenablage laden + prüfen, ob die gemerkte Skizze noch existiert
+  const loadSketchClipboard = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(SKETCH_CLIPBOARD_KEY);
+      if (!raw) { setSketchClipboard(null); return; }
+      const clip = JSON.parse(raw);
+      if (!clip?.sketchId) { setSketchClipboard(null); return; }
+      const all = await SketchService.getAll();
+      if (!all.find((s: any) => s.id === clip.sketchId)) {
+        // Quelle wurde gelöscht → Zwischenablage aufräumen
+        await AsyncStorage.removeItem(SKETCH_CLIPBOARD_KEY);
+        setSketchClipboard(null);
+        return;
+      }
+      setSketchClipboard({ sketchId: clip.sketchId, title: clip.title || 'Skizze' });
+    } catch {
+      setSketchClipboard(null);
+    }
+  };
+
+  const clearSketchClipboard = async () => {
+    setSketchClipboard(null);
+    await AsyncStorage.removeItem(SKETCH_CLIPBOARD_KEY).catch(() => {});
+  };
+
+  // Gemerkte Skizze in DIESES Projekt einfügen (Zwischenablage wird danach geleert)
+  const handlePasteSketch = async () => {
+    if (!sketchClipboard || isDuplicatingSketch) return;
+    setIsDuplicatingSketch(true);
+    try {
+      const projectId = (Array.isArray(id) ? id[0] : id) as string;
+      const copy = await SketchService.duplicate(sketchClipboard.sketchId, projectId);
+      if (!copy) {
+        await clearSketchClipboard();
+        if (Platform.OS === 'web') alert('Die kopierte Skizze existiert nicht mehr.');
+        else Alert.alert('Einfügen nicht möglich', 'Die kopierte Skizze existiert nicht mehr.');
+        return;
+      }
+      await clearSketchClipboard();
+      await loadProjectData();
+      if (Platform.OS === 'web') {
+        alert(`„${copy.title || 'Skizze'}" wurde eingefügt.`);
+      } else {
+        Alert.alert('Skizze eingefügt', `„${copy.title || 'Skizze'}" wurde in dieses Projekt eingefügt.`, [
+          { text: 'OK', style: 'cancel' },
+          {
+            text: 'Jetzt bearbeiten',
+            onPress: () => router.push(`/sketches/draw?projectId=${projectId}&sketchId=${copy.id}`),
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error pasting sketch:', error);
+      Alert.alert('Fehler', 'Skizze konnte nicht eingefügt werden.');
+    } finally {
+      setIsDuplicatingSketch(false);
+    }
+  };
+
   // Skizze duplizieren (inkl. aller ausgelagerten Daten) und optional
   // direkt die Kopie zum Weiterbearbeiten öffnen
   const handleDuplicateSketch = async (sketchId: string) => {
@@ -868,18 +933,28 @@ export default function ProjectDetailScreen() {
     setIsDuplicatingSketch(true);
     try {
       const copy = await SketchService.duplicate(sketchId);
+      // Skizze zusätzlich merken: kann danach gezielt in einem anderen
+      // Projekt über „Skizze einfügen" eingefügt werden
+      const original = sketches.find((s: any) => s.id === sketchId);
+      const clipTitle = original?.title || (original as any)?.name || 'Skizze';
+      await AsyncStorage.setItem(SKETCH_CLIPBOARD_KEY, JSON.stringify({ sketchId, title: clipTitle })).catch(() => {});
+      setSketchClipboard({ sketchId, title: clipTitle });
       await loadProjectData();
       if (copy) {
         if (Platform.OS === 'web') {
-          alert('Skizze wurde dupliziert.');
+          alert('Skizze wurde dupliziert und gemerkt – über „Skizze einfügen" kannst du sie auch in anderen Projekten einfügen.');
         } else {
-          Alert.alert('Skizze dupliziert', 'Die Kopie wurde angelegt. Möchtest du sie jetzt bearbeiten?', [
-            { text: 'Später', style: 'cancel' },
-            {
-              text: 'Jetzt bearbeiten',
-              onPress: () => router.push(`/sketches/draw?projectId=${id}&sketchId=${copy.id}`),
-            },
-          ]);
+          Alert.alert(
+            'Skizze dupliziert',
+            'Die Kopie wurde angelegt. Die Skizze ist außerdem gemerkt – öffne ein anderes Projekt und tippe dort auf „Skizze einfügen".',
+            [
+              { text: 'Später', style: 'cancel' },
+              {
+                text: 'Jetzt bearbeiten',
+                onPress: () => router.push(`/sketches/draw?projectId=${id}&sketchId=${copy.id}`),
+              },
+            ]
+          );
         }
       }
     } catch (error) {
@@ -2846,6 +2921,31 @@ export default function ProjectDetailScreen() {
               <Ionicons name="add-circle" size={24} color="#1976d2" />
               <Text style={styles.addButtonText}>{t('sketches.newSketch')}</Text>
             </TouchableOpacity>
+
+            {/* Skizze aus der Zwischenablage einfügen */}
+            {sketchClipboard && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: -8, marginBottom: 12, gap: 8 }}>
+                <TouchableOpacity
+                  testID="sketch-paste"
+                  disabled={isDuplicatingSketch}
+                  onPress={handlePasteSketch}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#e8f5e9', borderWidth: 2, borderColor: '#16a34a', borderStyle: 'dashed', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 12 }}
+                >
+                  <Ionicons name="clipboard-outline" size={20} color="#16a34a" />
+                  <Text style={{ color: '#15803d', fontWeight: '700', fontSize: 14 }} numberOfLines={1}>
+                    Skizze einfügen: „{sketchClipboard.title}"
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="sketch-paste-clear"
+                  onPress={clearSketchClipboard}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ padding: 8, borderRadius: 16, backgroundColor: '#f1f5f9' }}
+                >
+                  <Ionicons name="close" size={18} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+            )}
 
             {!isTabLoading && sketches.length > 0 && (
               <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', marginBottom: 6 }}>

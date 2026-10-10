@@ -194,6 +194,25 @@ export default function BackupScreen() {
     );
   };
 
+  // Auto-Snapshot als Datei teilen (iCloud, Drive, E-Mail …)
+  const handleShareSnapshot = async (snap: Omit<AutoBackupSnapshot, 'data_json'>) => {
+    setBusy(true);
+    setBusyLabel('Backup-Datei wird erstellt…');
+    try {
+      const res = await BackupService.exportSnapshotToFile(snap.id);
+      Alert.alert(
+        '✅ Backup-Datei erstellt',
+        `Automatisches Backup vom ${fmtDate(snap.created_at)} (${fmtSize(res.sizeBytes)}) wurde als Datei geteilt.\n\nSpeichere es in iCloud Drive, Google Drive oder per E-Mail – es kann jederzeit über „Aus Datei wiederherstellen" eingelesen werden.`
+      );
+    } catch (e: any) {
+      console.error('[Snapshot-Share] Failed:', e);
+      Alert.alert('Fehler', 'Teilen fehlgeschlagen: ' + (e?.message || 'Unbekannter Fehler'));
+    } finally {
+      setBusy(false);
+      setBusyLabel('');
+    }
+  };
+
   const handleDeleteSnapshot = (snap: Omit<AutoBackupSnapshot, 'data_json'>) => {
     Alert.alert('Snapshot löschen?', `Snapshot vom ${fmtDate(snap.created_at)} unwiderruflich löschen?`, [
       { text: 'Abbrechen', style: 'cancel' },
@@ -319,6 +338,9 @@ export default function BackupScreen() {
                       {snap.counts.projects} Projekte · {snap.counts.photos} Fotos · {fmtSize(snap.size_bytes)}
                     </Text>
                   </View>
+                  <TouchableOpacity style={styles.snapAction} testID={`snap-share-${snap.id}`} onPress={() => handleShareSnapshot(snap)}>
+                    <Ionicons name="share-outline" size={20} color="#16a34a" />
+                  </TouchableOpacity>
                   <TouchableOpacity style={styles.snapAction} onPress={() => handleRestoreSnapshot(snap)}>
                     <Ionicons name="refresh-outline" size={20} color="#0891b2" />
                   </TouchableOpacity>

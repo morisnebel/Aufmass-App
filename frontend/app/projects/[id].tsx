@@ -213,9 +213,12 @@ export default function ProjectDetailScreen() {
   const [sketchToDelete, setSketchToDelete] = useState<string | null>(null);
   const [isDeletingSketch, setIsDeletingSketch] = useState(false);
   const [isDuplicatingSketch, setIsDuplicatingSketch] = useState(false);
-  const [moveSketchModal, setMoveSketchModal] = useState<{ visible: boolean; sketchId: string; sketchTitle: string }>({ visible: false, sketchId: '', sketchTitle: '' });
+  const [moveSketchModal, setMoveSketchModal] = useState<{ visible: boolean; sketchIds: string[]; mode: 'move' | 'copy'; label: string }>({ visible: false, sketchIds: [], mode: 'move', label: '' });
   const [moveTargetProjects, setMoveTargetProjects] = useState<any[]>([]);
   const [isMovingSketch, setIsMovingSketch] = useState(false);
+  // Mehrfach-Auswahl von Skizzen (gesammelt verschieben/kopieren)
+  const [sketchSelectMode, setSketchSelectMode] = useState(false);
+  const [selectedSketches, setSelectedSketches] = useState<string[]>([]);
   // Skizzen-Zwischenablage: gemerkte Skizze zum gezielten Einfügen in (andere) Projekte
   const [sketchClipboard, setSketchClipboard] = useState<{ sketchId: string; title: string } | null>(null);
   
@@ -965,8 +968,9 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  // Skizze in ein anderes Projekt verschieben: Zielauswahl-Modal öffnen
-  const openMoveSketchModal = async (sketch: any) => {
+  // Skizze(n) verschieben/kopieren: Zielauswahl-Modal öffnen
+  const openTransferModal = async (sketchIds: string[], mode: 'move' | 'copy', label: string) => {
+    if (sketchIds.length === 0) return;
     try {
       const all = await ProjectService.getAll();
       const targets = all
@@ -974,37 +978,62 @@ export default function ProjectDetailScreen() {
         .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
       if (targets.length === 0) {
         if (Platform.OS === 'web') alert('Kein anderes Projekt vorhanden.');
-        else Alert.alert('Verschieben nicht möglich', 'Es gibt kein anderes Projekt, in das die Skizze verschoben werden könnte.');
+        else Alert.alert('Nicht möglich', 'Es gibt kein anderes Projekt, in das die Skizzen übertragen werden könnten.');
         return;
       }
       setMoveTargetProjects(targets);
-      setMoveSketchModal({ visible: true, sketchId: sketch.id, sketchTitle: sketch.title || sketch.name || 'Skizze' });
+      setMoveSketchModal({ visible: true, sketchIds, mode, label });
     } catch (error) {
-      console.error('Error loading projects for move:', error);
+      console.error('Error loading projects for transfer:', error);
     }
   };
 
-  const moveSketchToProject = async (targetProject: any) => {
+  const toggleSketchSelection = (sketchId: string) => {
+    setSelectedSketches(prev =>
+      prev.includes(sketchId) ? prev.filter(sid => sid !== sketchId) : [...prev, sketchId]
+    );
+  };
+
+  const exitSketchSelectMode = () => {
+    setSketchSelectMode(false);
+    setSelectedSketches([]);
+  };
+
+  const transferSketchesToProject = async (targetProject: any) => {
     if (isMovingSketch) return;
     setIsMovingSketch(true);
     try {
-      // Alle ausgelagerten Daten-Keys (Vorschau, Metadaten, Bilder) hängen an der
-      // Skizzen-ID und bleiben beim Verschieben unverändert gültig.
-      await SketchService.update(moveSketchModal.sketchId, { project_id: targetProject.id } as any);
-      const movedTitle = moveSketchModal.sketchTitle;
-      setMoveSketchModal({ visible: false, sketchId: '', sketchTitle: '' });
+      const { sketchIds, mode } = moveSketchModal;
+      let done = 0;
+      for (const sid of sketchIds) {
+        try {
+          if (mode === 'move') {
+            await SketchService.update(sid, { project_id: targetProject.id } as any);
+          } else {
+            // Alle ausgelagerten Daten-Keys werden von duplicate() mitkopiert
+            await SketchService.duplicate(sid, targetProject.id);
+          }
+          done++;
+        } catch (e) {
+          console.error('[Transfer] Skizze fehlgeschlagen:', sid, e);
+        }
+      }
+      setMoveSketchModal({ visible: false, sketchIds: [], mode: 'move', label: '' });
+      exitSketchSelectMode();
       await loadProjectData();
+      const verb = mode === 'move' ? 'verschoben' : 'kopiert';
+      const what = done === 1 ? '1 Skizze' : `${done} Skizzen`;
       if (Platform.OS === 'web') {
-        alert(`„${movedTitle}" wurde nach „${targetProject.name}" verschoben.`);
+        alert(`${what} nach „${targetProject.name}" ${verb}.`);
       } else {
-        Alert.alert('Skizze verschoben', `„${movedTitle}" ist jetzt im Projekt „${targetProject.name}".`, [
+        Alert.alert(`Skizzen ${verb}`, `${what} ${done === 1 ? 'ist' : 'sind'} jetzt im Projekt „${targetProject.name}".`, [
           { text: 'OK', style: 'cancel' },
           { text: 'Projekt öffnen', onPress: () => router.push(`/projects/${targetProject.id}`) },
         ]);
       }
     } catch (error) {
-      console.error('Error moving sketch:', error);
-      Alert.alert('Fehler', 'Skizze konnte nicht verschoben werden.');
+      console.error('Error transferring sketches:', error);
+      Alert.alert('Fehler', 'Skizzen konnten nicht übertragen werden.');
     } finally {
       setIsMovingSketch(false);
     }
@@ -2947,6 +2976,54 @@ export default function ProjectDetailScreen() {
               </View>
             )}
 
+            {/* Mehrfach-Auswahl: Umschalter + Aktionsleiste */}
+            {!isTabLoading && sketches.length > 1 && !sketchSelectMode && (
+              <TouchableOpacity
+                testID="sketch-select-toggle"
+                onPress={() => setSketchSelectMode(true)}
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginHorizontal: 16, marginTop: -8, marginBottom: 12, paddingVertical: 9, borderRadius: 10, backgroundColor: '#f1f5f9' }}
+              >
+                <Ionicons name="checkbox-outline" size={18} color="#475569" />
+                <Text style={{ color: '#475569', fontWeight: '700', fontSize: 13 }}>Mehrere auswählen</Text>
+              </TouchableOpacity>
+            )}
+            {sketchSelectMode && (
+              <View style={{ marginHorizontal: 16, marginTop: -8, marginBottom: 12, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', padding: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#0f172a', textAlign: 'center', marginBottom: 8 }}>
+                  {selectedSketches.length === 0
+                    ? 'Skizzen antippen, um sie auszuwählen'
+                    : `${selectedSketches.length} ${selectedSketches.length === 1 ? 'Skizze' : 'Skizzen'} ausgewählt`}
+                </Text>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity
+                    testID="sketch-multi-move"
+                    disabled={selectedSketches.length === 0}
+                    onPress={() => openTransferModal(selectedSketches, 'move', `${selectedSketches.length} Skizzen`)}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: selectedSketches.length === 0 ? '#e2e8f0' : '#607d8b' }}
+                  >
+                    <Ionicons name="arrow-redo-outline" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Verschieben</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="sketch-multi-copy"
+                    disabled={selectedSketches.length === 0}
+                    onPress={() => openTransferModal(selectedSketches, 'copy', `${selectedSketches.length} Skizzen`)}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: selectedSketches.length === 0 ? '#e2e8f0' : '#1976d2' }}
+                  >
+                    <Ionicons name="copy-outline" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Kopieren</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="sketch-select-cancel"
+                    onPress={exitSketchSelectMode}
+                    style={{ paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#f1f5f9' }}
+                  >
+                    <Text style={{ color: '#64748b', fontWeight: '700', fontSize: 13 }}>Abbrechen</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
             {!isTabLoading && sketches.length > 0 && (
               <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', marginBottom: 6 }}>
                 Tipp: Skizze gedrückt halten, um sie einem Ordner zuzuordnen
@@ -3319,10 +3396,17 @@ export default function ProjectDetailScreen() {
                       {!!sketchFolder && <Ionicons name="pencil" size={13} color="#bbb" style={{ marginLeft: 6 }} />}
                     </TouchableOpacity>
                   )}
-                <View style={styles.itemCard}>
+                <View style={[styles.itemCard, sketchSelectMode && selectedSketches.includes(sketch.id) && { borderWidth: 2, borderColor: '#16a34a' }]}>
                   <TouchableOpacity
-                    onPress={() => router.push(`/sketches/draw?projectId=${id}&sketchId=${sketch.id}`)}
-                    onLongPress={() => openSketchFolderModal(sketch)}
+                    testID={`sketch-card-${sketch.id}`}
+                    onPress={() => {
+                      if (sketchSelectMode) {
+                        toggleSketchSelection(sketch.id);
+                        return;
+                      }
+                      router.push(`/sketches/draw?projectId=${id}&sketchId=${sketch.id}`);
+                    }}
+                    onLongPress={() => { if (!sketchSelectMode) openSketchFolderModal(sketch); }}
                     delayLongPress={450}
                     style={{ flex: 1 }}
                   >
@@ -3385,11 +3469,14 @@ export default function ProjectDetailScreen() {
                     
                   </TouchableOpacity>
                   
+                  {/* Aktions-Buttons (im Auswahlmodus ausgeblendet) */}
+                  {!sketchSelectMode && (
+                    <>
                   {/* Move Button */}
                   <TouchableOpacity
                     style={styles.sketchMoveButton}
                     testID={`sketch-move-${sketch.id}`}
-                    onPress={() => openMoveSketchModal(sketch)}
+                    onPress={() => openTransferModal([sketch.id], 'move', sketch.title || (sketch as any).name || 'Skizze')}
                   >
                     <Ionicons name="arrow-redo-outline" size={20} color="#fff" />
                   </TouchableOpacity>
@@ -3414,6 +3501,19 @@ export default function ProjectDetailScreen() {
                   >
                     <Ionicons name="trash" size={20} color="#fff" />
                   </TouchableOpacity>
+                    </>
+                  )}
+
+                  {/* Auswahl-Indikator im Mehrfach-Auswahlmodus */}
+                  {sketchSelectMode && (
+                    <View style={{ position: 'absolute', top: 10, right: 10, zIndex: 10 }} pointerEvents="none">
+                      <Ionicons
+                        name={selectedSketches.includes(sketch.id) ? 'checkmark-circle' : 'ellipse-outline'}
+                        size={28}
+                        color={selectedSketches.includes(sketch.id) ? '#16a34a' : '#94a3b8'}
+                      />
+                    </View>
+                  )}
                 </View>
                 </View>
               );
@@ -5462,18 +5562,20 @@ export default function ProjectDetailScreen() {
         </View>
       </Modal>
 
-      {/* Skizze-verschieben Modal */}
-      <Modal visible={moveSketchModal.visible} transparent animationType="fade" onRequestClose={() => setMoveSketchModal({ visible: false, sketchId: '', sketchTitle: '' })}>
+      {/* Skizze(n)-übertragen Modal */}
+      <Modal visible={moveSketchModal.visible} transparent animationType="fade" onRequestClose={() => setMoveSketchModal({ visible: false, sketchIds: [], mode: 'move', label: '' })}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18, maxHeight: '75%' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-              <Ionicons name="arrow-redo-outline" size={22} color="#1976d2" />
+              <Ionicons name={moveSketchModal.mode === 'move' ? 'arrow-redo-outline' : 'copy-outline'} size={22} color="#1976d2" />
               <Text style={{ marginLeft: 8, fontSize: 17, fontWeight: '700', color: '#333' }} numberOfLines={1}>
-                Skizze verschieben
+                {moveSketchModal.sketchIds.length > 1
+                  ? (moveSketchModal.mode === 'move' ? 'Skizzen verschieben' : 'Skizzen kopieren')
+                  : (moveSketchModal.mode === 'move' ? 'Skizze verschieben' : 'Skizze kopieren')}
               </Text>
             </View>
             <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }} numberOfLines={2}>
-              „{moveSketchModal.sketchTitle}" in welches Projekt verschieben?
+              „{moveSketchModal.label}" in welches Projekt {moveSketchModal.mode === 'move' ? 'verschieben' : 'kopieren'}?
             </Text>
             <ScrollView style={{ maxHeight: 360 }}>
               {moveTargetProjects.map((p: any) => (
@@ -5481,7 +5583,7 @@ export default function ProjectDetailScreen() {
                   key={p.id}
                   testID={`move-target-${p.id}`}
                   disabled={isMovingSketch}
-                  onPress={() => moveSketchToProject(p)}
+                  onPress={() => transferSketchesToProject(p)}
                   style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
                 >
                   <Ionicons name="folder-outline" size={20} color="#1976d2" />
@@ -5496,7 +5598,7 @@ export default function ProjectDetailScreen() {
               ))}
             </ScrollView>
             <TouchableOpacity
-              onPress={() => setMoveSketchModal({ visible: false, sketchId: '', sketchTitle: '' })}
+              onPress={() => setMoveSketchModal({ visible: false, sketchIds: [], mode: 'move', label: '' })}
               style={{ marginTop: 14, paddingVertical: 11, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f5f5' }}
             >
               <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>

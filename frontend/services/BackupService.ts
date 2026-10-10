@@ -145,94 +145,106 @@ const countItems = (data: Record<string, any>) => {
 // ============ OPTION A: Manuelles Export/Import ============
 let exportInFlight: Promise<{ uri: string; sizeBytes: number }> | null = null;
 
+// Schreibt ein Backup (Header + Key/Value-Paare) gestreamt in eine Datei und
+// öffnet nativ den Share-Dialog (Web: Browser-Download). Speicherschonend:
+// Es wird NIE ein einziger riesiger JSON-String gebaut oder an das native
+// Modul übergeben (verhindert Hermes-/Native-OOM-Crashes bei großen Daten).
+const streamBackupToFile = async (
+  filename: string,
+  header: string,
+  keys: string[],
+  valueFor: (key: string) => Promise<string | null>,
+): Promise<{ uri: string; sizeBytes: number }> => {
+  let fileUri: string;
+  let sizeBytes = 0;
+
+  if (Platform.OS === 'web') {
+    // Web: Backup als Browser-Download anbieten
+    const parts: string[] = [];
+    for (const key of keys) {
+      try {
+        const valueJson = await valueFor(key);
+        if (valueJson != null) parts.push(`${JSON.stringify(key)}:${valueJson}`);
+      } catch (e) { console.warn('[Backup] Skipping key', key, e); }
+    }
+    const json = `${header}${parts.join(',')}}}`;
+    sizeBytes = json.length;
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    fileUri = filename;
+  } else {
+    // Nativ: gestreamtes Schreiben in max. 512-KB-Chunks
+    const file = new File(Paths.cache, filename);
+    try { if (file.exists) file.delete(); } catch {}
+    file.create();
+    const handle = file.open();
+    const encoder = new TextEncoder();
+    const CHUNK = 512 * 1024;
+    const writeStr = (s: string) => {
+      for (let i = 0; i < s.length; i += CHUNK) {
+        const bytes = encoder.encode(s.slice(i, i + CHUNK));
+        handle.writeBytes(bytes);
+        sizeBytes += bytes.length;
+      }
+    };
+    try {
+      writeStr(header);
+      let firstEntry = true;
+      // Pipeline: nächsten Key bereits laden, während der aktuelle geschrieben wird
+      let pending: Promise<string | null> | null = keys.length > 0 ? valueFor(keys[0]).catch(() => null) : null;
+      for (let i = 0; i < keys.length; i++) {
+        const valueJson = pending ? await pending : null;
+        pending = i + 1 < keys.length ? valueFor(keys[i + 1]).catch(() => null) : null;
+        if (valueJson == null) continue;
+        writeStr(`${firstEntry ? '' : ','}${JSON.stringify(keys[i])}:`);
+        writeStr(valueJson);
+        firstEntry = false;
+      }
+      writeStr('}}');
+    } finally {
+      handle.close();
+    }
+    fileUri = file.uri;
+  }
+
+  const canShare = Platform.OS !== 'web' && await Sharing.isAvailableAsync();
+  if (canShare) {
+    await Sharing.shareAsync(fileUri, {
+      mimeType: 'application/json',
+      dialogTitle: 'Aufmaßprofi-Backup speichern',
+      UTI: 'public.json',
+    });
+  }
+  return { uri: fileUri, sizeBytes };
+};
+
+// JSON-sicherer Rohwert (Strings ohne JSON-Syntax werden gequotet)
+const asJsonValue = (raw: string | null): string | null => {
+  if (raw == null) return null;
+  const first = raw.trimStart().charAt(0);
+  return (first === '{' || first === '[' || first === '"') ? raw : JSON.stringify(raw);
+};
+
 const doExportFullBackup = async (): Promise<{ uri: string; sizeBytes: number }> => {
-    // Speicherschonend: Backup wird in Chunks direkt in die Datei gestreamt.
-    // Es wird NIE ein einziger riesiger JSON-String gebaut oder an das native
-    // Modul übergeben (verhindert Hermes-/Native-OOM-Crashes bei großen Daten).
     const date = new Date().toISOString().slice(0, 10);
     const filename = `Aufmassprofi_Backup_${date}.json`;
     const header = `{"type":"aufmassprofi-full-backup","version":1,"created_at":${JSON.stringify(new Date().toISOString())},"data":{`;
-
-    const rawValueFor = async (key: string): Promise<string | null> => {
-      const raw = await AsyncStorage.getItem(key);
-      if (raw == null) return null;
-      const first = raw.trimStart().charAt(0);
-      return (first === '{' || first === '[' || first === '"') ? raw : JSON.stringify(raw);
-    };
-
-    let fileUri: string;
-    let sizeBytes = 0;
     const allKeys = await getAllBackupKeys();
-
-    if (Platform.OS === 'web') {
-      // Web: Backup als Browser-Download anbieten
-      const parts: string[] = [];
-      for (const key of allKeys) {
-        try {
-          const valueJson = await rawValueFor(key);
-          if (valueJson != null) parts.push(`${JSON.stringify(key)}:${valueJson}`);
-        } catch (e) { console.warn('[Backup] Skipping key', key, e); }
-      }
-      const json = `${header}${parts.join(',')}}}`;
-      sizeBytes = json.length;
-      const blob = new Blob([json], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      fileUri = filename;
-    } else {
-      // Nativ: gestreamtes Schreiben in max. 512-KB-Chunks
-      const file = new File(Paths.cache, filename);
-      try { if (file.exists) file.delete(); } catch {}
-      file.create();
-      const handle = file.open();
-      const encoder = new TextEncoder();
-      const CHUNK = 512 * 1024;
-      const writeStr = (s: string) => {
-        for (let i = 0; i < s.length; i += CHUNK) {
-          const bytes = encoder.encode(s.slice(i, i + CHUNK));
-          handle.writeBytes(bytes);
-          sizeBytes += bytes.length;
-        }
-      };
-      try {
-        writeStr(header);
-        let firstEntry = true;
-        // Pipeline: nächsten Key bereits laden, während der aktuelle geschrieben wird
-        let pending: Promise<string | null> | null = allKeys.length > 0 ? rawValueFor(allKeys[0]).catch(() => null) : null;
-        for (let i = 0; i < allKeys.length; i++) {
-          const valueJson = pending ? await pending : null;
-          pending = i + 1 < allKeys.length ? rawValueFor(allKeys[i + 1]).catch(() => null) : null;
-          if (valueJson == null) continue;
-          writeStr(`${firstEntry ? '' : ','}${JSON.stringify(allKeys[i])}:`);
-          writeStr(valueJson);
-          firstEntry = false;
-        }
-        writeStr('}}');
-      } finally {
-        handle.close();
-      }
-      fileUri = file.uri;
-    }
-
-    const canShare = Platform.OS !== 'web' && await Sharing.isAvailableAsync();
-    if (canShare) {
-      await Sharing.shareAsync(fileUri, {
-        mimeType: 'application/json',
-        dialogTitle: 'Aufmaßprofi-Backup speichern',
-        UTI: 'public.json',
-      });
-    }
+    const result = await streamBackupToFile(filename, header, allKeys, async (key) =>
+      asJsonValue(await AsyncStorage.getItem(key))
+    );
     // Zeitstempel des letzten Datei-Backups merken (für Erinnerungsbanner)
     try {
       await AsyncStorage.setItem('aufmassprofi_last_file_backup', new Date().toISOString());
     } catch {}
-    return { uri: fileUri, sizeBytes };
+    return result;
 };
 
 export const BackupService = {
@@ -409,6 +421,26 @@ export const BackupService = {
     } catch {
       return [];
     }
+  },
+
+  /**
+   * Teilt einen Auto-Snapshot als Backup-Datei (gleiches Format wie das
+   * manuelle Datei-Backup – kann über "Aus Datei wiederherstellen" eingelesen
+   * werden). So landet ein automatisches Backup direkt in iCloud/Drive/E-Mail.
+   */
+  exportSnapshotToFile: async (snapshotId: string): Promise<{ uri: string; sizeBytes: number }> => {
+    const rawIdx = await AsyncStorage.getItem(AUTO_BACKUP_INDEX_KEY);
+    const index: AutoBackupSnapshot[] = rawIdx ? JSON.parse(rawIdx) : [];
+    const snap = index.find(s => s.id === snapshotId);
+    if (!snap || !snap.keys || snap.keys.length === 0) {
+      throw new Error('Snapshot nicht gefunden oder zu alt zum Teilen.');
+    }
+    const stamp = snap.created_at.slice(0, 16).replace('T', '_').replace(':', '-');
+    const filename = `Aufmassprofi_Backup_${stamp}.json`;
+    const header = `{"type":"aufmassprofi-full-backup","version":1,"created_at":${JSON.stringify(snap.created_at)},"data":{`;
+    return streamBackupToFile(filename, header, snap.keys, async (key) =>
+      asJsonValue(await AsyncStorage.getItem(snapDataKey(snap.id, key)))
+    );
   },
 
   /**

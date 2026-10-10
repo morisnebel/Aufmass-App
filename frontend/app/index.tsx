@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, ChecklistService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber, cleanupOrphanedStorage } from '../services/LocalStorage';
+import { ProjectService, CustomerService, ChecklistService, PhotoService, SketchService, ReportService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber, cleanupOrphanedStorage } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import { exportProjectsToFile, importProjectsFromFile, askExportPhotoChoice, askDuplicateAction } from '../utils/projectTransfer';
 import * as Sharing from 'expo-sharing';
@@ -50,7 +50,9 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [activeFilter, setActiveFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'status'>('date_desc');
+  const [sortBy, setSortBy] = useState<'edited_desc' | 'date_desc' | 'date_asc' | 'name_asc' | 'name_desc' | 'status'>('date_desc');
+  // Letzte Bearbeitung je Projekt (inkl. Fotos/Skizzen/Checklisten/Berichte)
+  const [lastActivity, setLastActivity] = useState<Record<string, string>>({});
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   
   // Letzten Filter aus AsyncStorage laden
@@ -58,6 +60,12 @@ export default function HomeScreen() {
     AsyncStorage.getItem('lastActiveFilter').then(saved => {
       if (saved && ['all', ...PROJECT_STATUSES.map(s => s.key)].includes(saved)) {
         setActiveFilter(saved);
+      }
+    }).catch(() => {});
+    // Gespeicherte Sortierung wiederherstellen
+    AsyncStorage.getItem('aufmassprofi_sort_by').then(saved => {
+      if (saved && ['edited_desc', 'date_desc', 'date_asc', 'name_asc', 'name_desc', 'status'].includes(saved)) {
+        setSortBy(saved as typeof sortBy);
       }
     }).catch(() => {});
     // Verwaiste Bild-Blobs gelöschter Projekte entfernen (gibt Speicher frei,
@@ -103,6 +111,29 @@ export default function HomeScreen() {
       // Offene Aufgaben (unerledigte Checklisten-Punkte) für das Dashboard zählen
       try {
         const allChecklists = await ChecklistService.getAll();
+
+        // Letzte Bearbeitung je Projekt ermitteln (für Sortierung "Zuletzt bearbeitet"):
+        // Projekt-updated_at allein reicht nicht, da neue Fotos/Skizzen es nicht ändern
+        try {
+          const [allPhotos, allSketches, allReports] = await Promise.all([
+            PhotoService.getAll(),
+            SketchService.getAll(),
+            ReportService.getAll(),
+          ]);
+          const activity: Record<string, string> = {};
+          const touch = (pid?: string, ts?: string) => {
+            if (pid && ts && (!activity[pid] || ts > activity[pid])) activity[pid] = ts;
+          };
+          projectsData.forEach((p: Project) => touch(p.id, p.updated_at));
+          allChecklists.forEach((c: any) => touch(c.project_id, c.updated_at));
+          allPhotos.forEach((p: any) => touch(p.project_id, p.updated_at));
+          allSketches.forEach((s: any) => touch(s.project_id, s.updated_at));
+          allReports.forEach((r: any) => touch(r.project_id, r.updated_at));
+          setLastActivity(activity);
+        } catch (e) {
+          console.error('Error computing last activity:', e);
+        }
+
         const activeIds = new Set(
           projectsData
             .filter((p: Project) => !['archiviert', 'fertig', 'abgebrochen'].includes(normalizeStatus(p.status)))
@@ -538,19 +569,23 @@ export default function HomeScreen() {
     );
   };
 
-  // Sortierung ändern
+  // Sortierung ändern (Auswahl wird dauerhaft gespeichert)
   const changeSortOrder = () => {
     const sortOptions = [
-      { key: 'date_desc', labelKey: 'home.sortNewest' },
-      { key: 'date_asc', labelKey: 'home.sortOldest' },
-      { key: 'name_asc', labelKey: 'home.sortNameAZ' },
-      { key: 'name_desc', labelKey: 'home.sortNameZA' },
-      { key: 'status', labelKey: 'home.sortByStatus' },
+      { key: 'edited_desc', label: t('home.sortLastEdited', 'Zuletzt bearbeitet zuerst') },
+      { key: 'date_desc', label: t('home.sortNewest') },
+      { key: 'date_asc', label: t('home.sortOldest') },
+      { key: 'name_asc', label: t('home.sortNameAZ') },
+      { key: 'name_desc', label: t('home.sortNameZA') },
+      { key: 'status', label: t('home.sortByStatus') },
     ];
     
     const buttons = sortOptions.map(option => ({
-      text: t(option.labelKey) + (sortBy === option.key ? ' ✓' : ''),
-      onPress: () => setSortBy(option.key as typeof sortBy),
+      text: option.label + (sortBy === option.key ? ' ✓' : ''),
+      onPress: () => {
+        setSortBy(option.key as typeof sortBy);
+        AsyncStorage.setItem('aufmassprofi_sort_by', option.key).catch(() => {});
+      },
       style: sortBy === option.key ? 'cancel' : 'default' as const,
     }));
     buttons.push({ text: t('common.cancel'), onPress: () => {}, style: 'cancel' as const });
@@ -561,6 +596,7 @@ export default function HomeScreen() {
   // Sortier-Label
   const getSortLabel = () => {
     switch (sortBy) {
+      case 'edited_desc': return t('home.lastEditedLabel', 'Bearbeitet');
       case 'date_desc': return t('home.newestLabel');
       case 'date_asc': return t('home.oldestLabel');
       case 'name_asc': return 'A-Z';
@@ -597,6 +633,12 @@ export default function HomeScreen() {
     return true;
   }).sort((a, b) => {
     switch (sortBy) {
+      case 'edited_desc': {
+        // Zuletzt bearbeitet zuerst (inkl. Fotos/Skizzen/Checklisten/Berichte)
+        const aTs = lastActivity[a.id] || a.updated_at || a.created_at || '';
+        const bTs = lastActivity[b.id] || b.updated_at || b.created_at || '';
+        return bTs.localeCompare(aTs);
+      }
       case 'date_desc':
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       case 'date_asc':

@@ -279,7 +279,9 @@ export const loadAllProjectDataFast = async (projectId: string): Promise<{
     }
   }
   
-  const sketches = (allData.get(KEYS.SKETCHES) || []).filter((s: any) => s.project_id === projectId);
+  let sketches = (allData.get(KEYS.SKETCHES) || []).filter((s: any) => s.project_id === projectId);
+  // Ausgelagerte Vorschauen (sketch_prev_${id}) wiederherstellen
+  sketches = await restoreSketchPreviews(sketches);
   
   // Skizzen-Notizen und pdf_size aus separatem Storage laden (sketch_meta_${id})
   // Notizen werden dort gespeichert und sind möglicherweise nicht im Hauptobjekt vorhanden
@@ -826,6 +828,7 @@ export const ProjectService = {
     for (const sketch of sketchesToDelete) {
       cleanupOps.push(AsyncStorage.removeItem(`sketch_meta_${sketch.id}`));
       cleanupOps.push(AsyncStorage.removeItem(`sketch_bg_${sketch.id}`));
+      cleanupOps.push(AsyncStorage.removeItem(`sketch_prev_${sketch.id}`));
       // Clean up separately stored image elements
       try {
         const metaStr = await AsyncStorage.getItem(`sketch_meta_${sketch.id}`);
@@ -902,6 +905,60 @@ const externalizeSketchImages = (meta: any, sketchId: string, saveOps: Promise<a
   return out;
 };
 
+// Vorschauen (sketch_data) über dieser Größe werden in eigene Keys ausgelagert,
+// damit das Haupt-Array klein bleibt (sonst schlagen Schreibvorgänge bei vielen
+// Skizzen fehl und Skizzen gehen verloren - siehe Import-Bug Build 128).
+const SKETCH_PREVIEW_THRESHOLD = 50000;
+
+// Ausgelagerte Vorschauen für eine Skizzen-Liste wiederherstellen (eine multiGet-Abfrage)
+export const restoreSketchPreviews = async (sketches: Sketch[]): Promise<Sketch[]> => {
+  const stored = sketches.filter(s => s.sketch_data === '__stored__');
+  if (stored.length === 0) return sketches;
+  try {
+    const pairs = await AsyncStorage.multiGet(stored.map(s => `sketch_prev_${s.id}`));
+    const map = new Map(pairs);
+    return sketches.map(s =>
+      s.sketch_data === '__stored__'
+        ? { ...s, sketch_data: map.get(`sketch_prev_${s.id}`) || undefined }
+        : s
+    );
+  } catch {
+    return sketches;
+  }
+};
+
+// Einmalige Migration: große Inline-Vorschauen aus dem Haupt-Array auslagern.
+// Läuft bei jedem App-Start (billig, wenn nichts zu tun ist).
+export const migrateSketchPreviews = async (): Promise<number> => {
+  try {
+    const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    let migrated = 0;
+    for (const s of sketches) {
+      if (
+        typeof s.sketch_data === 'string' &&
+        s.sketch_data !== '__stored__' &&
+        s.sketch_data.length > SKETCH_PREVIEW_THRESHOLD
+      ) {
+        try {
+          await AsyncStorage.setItem(`sketch_prev_${s.id}`, s.sketch_data);
+          (s as any).sketch_data = '__stored__';
+          migrated++;
+        } catch (e) {
+          console.warn('[migrateSketchPreviews] Auslagern fehlgeschlagen:', s.id, e);
+        }
+      }
+    }
+    if (migrated > 0) {
+      await setItems(KEYS.SKETCHES, sketches);
+      console.log(`[migrateSketchPreviews] ${migrated} Skizzen-Vorschauen ausgelagert`);
+    }
+    return migrated;
+  } catch (e) {
+    console.error('[migrateSketchPreviews] Fehler:', e);
+    return 0;
+  }
+};
+
 export const SketchService = {
   getAll: async (): Promise<Sketch[]> => {
     return getItems<Sketch>(KEYS.SKETCHES);
@@ -909,7 +966,12 @@ export const SketchService = {
 
   getById: async (id: string): Promise<Sketch | null> => {
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
-    return sketches.find(s => s.id === id) || null;
+    const sketch = sketches.find(s => s.id === id) || null;
+    if (sketch && sketch.sketch_data === '__stored__') {
+      const prev = await AsyncStorage.getItem(`sketch_prev_${id}`).catch(() => null);
+      return { ...sketch, sketch_data: prev || undefined };
+    }
+    return sketch;
   },
 
   getByProjectId: async (projectId: string): Promise<Sketch[]> => {
@@ -921,7 +983,7 @@ export const SketchService = {
   // (metadata + backgroundImage aus den optimierten Keys). Beim Import
   // splittet create() die Daten automatisch wieder auf.
   getByProjectIdWithData: async (projectId: string): Promise<Sketch[]> => {
-    const sketches = await SketchService.getByProjectId(projectId);
+    const sketches = await restoreSketchPreviews(await SketchService.getByProjectId(projectId));
     return Promise.all(sketches.map(async (s) => {
       try {
         const { metadata, backgroundImage } = await SketchService.loadSketchData(s.id);
@@ -1058,10 +1120,20 @@ export const SketchService = {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
-    sketches.push(lightSketch);
 
     // Save lightweight array + heavy data in parallel
-    const saveOps: Promise<any>[] = [setItems(KEYS.SKETCHES, sketches)];
+    const saveOps: Promise<any>[] = [];
+
+    // Vorschau (sketch_data) auslagern: kann mehrere MB gross sein (eingebettetes
+    // Hintergrundbild). Im Haupt-Array wuerde das Array sonst auf zig MB wachsen
+    // und der Schreibvorgang auf dem Geraet fehlschlagen (Skizzen gehen verloren).
+    if (typeof lightSketch.sketch_data === 'string' && lightSketch.sketch_data.length > SKETCH_PREVIEW_THRESHOLD) {
+      saveOps.push(AsyncStorage.setItem(`sketch_prev_${id}`, lightSketch.sketch_data));
+      lightSketch.sketch_data = '__stored__';
+    }
+
+    sketches.push(lightSketch);
+    saveOps.push(setItems(KEYS.SKETCHES, sketches));
     if (heavyMetadata) {
       try {
         const meta = JSON.parse(heavyMetadata);
@@ -1091,10 +1163,17 @@ export const SketchService = {
     const lightData = { ...data };
     delete lightData.metadata; // Don't store metadata in main array
 
-    sketches[index] = { ...sketches[index], ...lightData, updated_at: new Date().toISOString() };
-
     // Save lightweight array + heavy data in parallel
-    const saveOps: Promise<any>[] = [setItems(KEYS.SKETCHES, sketches)];
+    const saveOps: Promise<any>[] = [];
+
+    // Vorschau (sketch_data) auslagern (siehe create)
+    if (typeof lightData.sketch_data === 'string' && lightData.sketch_data.length > SKETCH_PREVIEW_THRESHOLD) {
+      saveOps.push(AsyncStorage.setItem(`sketch_prev_${id}`, lightData.sketch_data));
+      lightData.sketch_data = '__stored__';
+    }
+
+    sketches[index] = { ...sketches[index], ...lightData, updated_at: new Date().toISOString() };
+    saveOps.push(setItems(KEYS.SKETCHES, sketches));
     if (heavyMetadata) {
       try {
         const meta = JSON.parse(heavyMetadata);
@@ -1124,6 +1203,7 @@ export const SketchService = {
       setItems(KEYS.SKETCHES, filtered),
       AsyncStorage.removeItem(`sketch_meta_${id}`),
       AsyncStorage.removeItem(`sketch_bg_${id}`),
+      AsyncStorage.removeItem(`sketch_prev_${id}`),
     ]);
     return true;
   },
@@ -1290,6 +1370,8 @@ export const cleanupOrphanedStorage = async (): Promise<number> => {
         if (!validSketchIds.has(key.slice(12))) toRemove.push(key);
       } else if (key.startsWith('sketch_bg_')) {
         if (!validSketchIds.has(key.slice(10))) toRemove.push(key);
+      } else if (key.startsWith('sketch_prev_')) {
+        if (!validSketchIds.has(key.slice(12))) toRemove.push(key);
       } else if (key.startsWith('sketch_img_')) {
         // Format: sketch_img_<sketchId>_<elementId>; "new"-Keys nicht anfassen
         const sketchId = key.slice(11).split('_')[0];

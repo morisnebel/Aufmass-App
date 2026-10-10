@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, ChecklistService, PhotoService, SketchService, ReportService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber, cleanupOrphanedStorage } from '../services/LocalStorage';
+import { ProjectService, CustomerService, ChecklistService, PhotoService, SketchService, ReportService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber, cleanupOrphanedStorage, migrateSketchPreviews } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import { exportProjectsToFile, importProjectsFromFile, askExportPhotoChoice, askDuplicateAction } from '../utils/projectTransfer';
 import * as Sharing from 'expo-sharing';
@@ -70,10 +70,11 @@ export default function HomeScreen() {
     }).catch(() => {});
     // Verwaiste Bild-Blobs gelöschter Projekte entfernen (gibt Speicher frei,
     // sonst SQLITE_FULL obwohl alle Projekte gelöscht wurden)
-    // Papierkorb: abgelaufene Projekte (>30 Tage) endgültig löschen,
+    // Papierkorb leeren (>30 Tage), dann große Skizzen-Vorschauen auslagern,
     // danach verwaiste Speicher-Blobs aufräumen
     ProjectService.purgeExpiredTrash()
       .catch(() => {})
+      .then(() => migrateSketchPreviews().catch(() => {}))
       .then(() => cleanupOrphanedStorage().catch(() => {}));
   }, []);
 

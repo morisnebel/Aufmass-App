@@ -225,6 +225,10 @@ const writeProjectLines = async (projectId: string, w: LineWriter, includePhotos
 
       const light: any = { ...s };
       delete light.metadata;
+      // Ausgelagerte Vorschau für den Export wieder einbetten (Datei bleibt in sich vollständig)
+      if (light.sketch_data === '__stored__') {
+        light.sketch_data = (await AsyncStorage.getItem(`sketch_prev_${s.id}`)) || undefined;
+      }
       w.write(JSON.stringify({ type: 'sketch', data: light, metadata: meta }));
 
       // Hintergrundbild (aus Legacy-Metadaten oder separatem Key)
@@ -379,6 +383,8 @@ interface ImportState {
   counters: { photo: number; sketch: number; checklist: number; report: number };
   itemTotals: { photo: number | null; sketch: number | null; checklist: number | null; report: number | null };
   exportDate: string | null; // aus der Header-Zeile (für Duplikat-Zeitvergleich)
+  importedPhotoCount: number;  // über alle Projekte (für End-Verifikation)
+  importedSketchCount: number;
   options: ImportOptions;
 }
 
@@ -560,6 +566,7 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
         state.counters.photo++;
         state.itemsDone++;
         emitProgress(state, `Foto ${state.counters.photo}${state.itemTotals.photo ? ` von ${state.itemTotals.photo}` : ''}`);
+        state.importedPhotoCount++;
         const img = rec.image || '';
         await PhotoService.create({
           ...stripSystemFields(rec.data),
@@ -574,6 +581,7 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
         state.counters.sketch++;
         state.itemsDone++;
         emitProgress(state, `Skizze ${state.counters.sketch}${state.itemTotals.sketch ? ` von ${state.itemTotals.sketch}` : ''}`);
+        state.importedSketchCount++;
         const origId = rec.data?.id;
         const light = stripSystemFields({ ...rec.data, project_id: projectId });
         delete light.metadata;
@@ -612,6 +620,7 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
         state.counters.sketch++;
         state.itemsDone++;
         emitProgress(state, `Skizze ${state.counters.sketch}${state.itemTotals.sketch ? ` von ${state.itemTotals.sketch}` : ''}`);
+        state.importedSketchCount++;
         await SketchService.create({ ...stripSystemFields(rec.data), project_id: projectId });
         break;
       }
@@ -741,6 +750,8 @@ export const importProjectsFromFile = async (
     counters: { photo: 0, sketch: 0, checklist: 0, report: 0 },
     itemTotals: { photo: null, sketch: null, checklist: null, report: null },
     exportDate: null,
+    importedPhotoCount: 0,
+    importedSketchCount: 0,
     options,
   };
 
@@ -820,6 +831,25 @@ export const importProjectsFromFile = async (
     ) {
       throw new Error('IMPORT_INVALID');
     }
+
+    // End-Verifikation: Wurden alle Skizzen/Fotos wirklich gespeichert?
+    // Schützt vor stillschweigend fehlgeschlagenen Schreibvorgängen.
+    try {
+      const createdIds = new Set(state.createdProjectIds);
+      const [allSketches, allPhotos] = await Promise.all([
+        SketchService.getAll(),
+        PhotoService.getAll(),
+      ]);
+      const actualSketches = allSketches.filter((s: any) => createdIds.has(s.project_id)).length;
+      const actualPhotos = allPhotos.filter((p: any) => createdIds.has(p.project_id)).length;
+      const missing =
+        Math.max(0, state.importedSketchCount - actualSketches) +
+        Math.max(0, state.importedPhotoCount - actualPhotos);
+      if (missing > 0) {
+        console.error(`[Import] Verifikation: ${missing} Elemente wurden nicht gespeichert!`);
+        state.failedItems = Math.max(state.failedItems, missing);
+      }
+    } catch { /* Verifikation ist best-effort */ }
 
     return {
       importedProjects: state.importedProjects,

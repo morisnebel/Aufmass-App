@@ -62,7 +62,11 @@ export default function HomeScreen() {
     }).catch(() => {});
     // Verwaiste Bild-Blobs gelöschter Projekte entfernen (gibt Speicher frei,
     // sonst SQLITE_FULL obwohl alle Projekte gelöscht wurden)
-    cleanupOrphanedStorage().catch(() => {});
+    // Papierkorb: abgelaufene Projekte (>30 Tage) endgültig löschen,
+    // danach verwaiste Speicher-Blobs aufräumen
+    ProjectService.purgeExpiredTrash()
+      .catch(() => {})
+      .then(() => cleanupOrphanedStorage().catch(() => {}));
   }, []);
 
   // Filter-Änderung speichern
@@ -328,12 +332,15 @@ export default function HomeScreen() {
             setIsProcessing(true);
             try {
               for (const projectId of selectedProjects) {
-                await ProjectService.delete(projectId);
+                await ProjectService.moveToTrash(projectId);
               }
               await loadData();
               setSelectionMode(false);
               setSelectedProjects(new Set());
-              Alert.alert(t('common.success'), t('home.deletedCount', { count: selectedProjects.size }));
+              Alert.alert(
+                t('common.success'),
+                `${t('home.deletedCount', { count: selectedProjects.size })}\n\nTipp: 30 Tage wiederherstellbar unter Einstellungen → Papierkorb.`
+              );
             } catch (error) {
               console.error('Delete error:', error);
               Alert.alert(t('common.error'), t('home.deleteFailed'));
@@ -492,7 +499,7 @@ export default function HomeScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await ProjectService.delete(projectId);
+              await ProjectService.moveToTrash(projectId);
               loadData();
             } catch (error) {
               console.error('Error deleting project:', error);

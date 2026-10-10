@@ -1846,6 +1846,10 @@ export default function ProjectDetailScreen() {
       setIsGeneratingPdf(true);
       const { uri } = await exportProjectsToFile([project.id], { includePhotos });
 
+      // Export-Verlauf lokal aktualisieren (Anzeige "Zuletzt exportiert")
+      const exportedAt = new Date().toISOString();
+      setProject(prev => (prev ? { ...prev, last_exported_at: exportedAt } : prev));
+
       // Hide loader BEFORE opening share dialog to prevent stuck overlay
       setIsGeneratingPdf(false);
 
@@ -1897,6 +1901,16 @@ export default function ProjectDetailScreen() {
         </TouchableOpacity>
         )}
       </View>
+
+      {/* Export-Verlauf: wann wurde dieses Projekt zuletzt exportiert */}
+      {Features.showProjektExport && !!project.last_exported_at && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 4, backgroundColor: '#f0f7ff' }}>
+          <Ionicons name="cloud-done-outline" size={13} color="#64748b" />
+          <Text style={{ fontSize: 12, color: '#64748b' }}>
+            Zuletzt exportiert: {new Date(project.last_exported_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}, {new Date(project.last_exported_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+          </Text>
+        </View>
+      )}
 
       {/* Modern Colorful Tabs */}
       <View style={styles.tabsContainer}>

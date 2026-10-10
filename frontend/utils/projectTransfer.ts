@@ -294,6 +294,8 @@ export const exportProjectsToFile = async (
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    // Export-Zeitpunkt am Projekt vermerken (Export-Verlauf)
+    await ProjectService.setLastExported(projectIds, new Date().toISOString()).catch(() => {});
     return { uri: fileName, sizeBytes: content.length, fileName };
   }
 
@@ -322,6 +324,8 @@ export const exportProjectsToFile = async (
   } finally {
     handle.close();
   }
+  // Export-Zeitpunkt am Projekt vermerken (Export-Verlauf)
+  await ProjectService.setLastExported(projectIds, new Date().toISOString()).catch(() => {});
   return { uri: file.uri, sizeBytes, fileName };
 };
 
@@ -344,10 +348,16 @@ export interface ImportProgress {
   fraction: number | null;       // 0..1 innerhalb des Projekts, null = unbestimmt
 }
 
+export interface DuplicateInfo {
+  projectName: string;
+  fileExportedAt: string | null;  // Wann die Import-Datei exportiert wurde
+  deviceChangedAt: string | null; // Letzte Datenänderung auf diesem Gerät
+}
+
 export interface ImportOptions {
   onProgress?: (p: ImportProgress) => void;
   // Wird gerufen, wenn das Projekt bereits auf dem Gerät existiert
-  onDuplicate?: (projectName: string) => Promise<'update' | 'copy' | 'skip'>;
+  onDuplicate?: (info: DuplicateInfo) => Promise<'update' | 'copy' | 'skip'>;
 }
 
 interface ImportState {
@@ -368,8 +378,34 @@ interface ImportState {
   itemsTotal: number | null;
   counters: { photo: number; sketch: number; checklist: number; report: number };
   itemTotals: { photo: number | null; sketch: number | null; checklist: number | null; report: number | null };
+  exportDate: string | null; // aus der Header-Zeile (für Duplikat-Zeitvergleich)
   options: ImportOptions;
 }
+
+// Letzte Datenänderung eines Projekts auf DIESEM Gerät ermitteln
+// (Projekt-updated_at allein reicht nicht: neue Fotos/Skizzen ändern es nicht)
+const getDeviceLastChange = async (
+  projectId: string,
+  projectUpdatedAt?: string
+): Promise<string | null> => {
+  let latest: string | null = projectUpdatedAt || null;
+  const consider = (ts?: string) => {
+    if (ts && (!latest || ts > latest)) latest = ts;
+  };
+  try {
+    const [photos, sketches, checklists, reports] = await Promise.all([
+      PhotoService.getAll(),
+      SketchService.getAll(),
+      ChecklistService.getAll(),
+      ReportService.getByProjectId(projectId),
+    ]);
+    for (const p of photos) if ((p as any).project_id === projectId) consider((p as any).updated_at);
+    for (const s of sketches) if ((s as any).project_id === projectId) consider((s as any).updated_at);
+    for (const c of checklists) if ((c as any).project_id === projectId) consider((c as any).updated_at);
+    for (const r of reports || []) consider((r as any).updated_at);
+  } catch { /* Bestmöglicher Wert reicht */ }
+  return latest;
+};
 
 const emitProgress = (state: ImportState, label: string) => {
   state.options.onProgress?.({
@@ -386,6 +422,9 @@ const stripSystemFields = (obj: any): any => {
   delete d.id;
   delete d.created_at;
   delete d.updated_at;
+  // Geräte-spezifische Felder nicht mit importieren
+  delete d.last_exported_at;
+  delete d.deleted_at;
   return d;
 };
 
@@ -395,8 +434,9 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
   if (!rec || typeof rec !== 'object') return;
 
   if (rec.format === FORMAT_TAG) {
-    // Header-Zeile: Projektanzahl für die Fortschrittsanzeige übernehmen
+    // Header-Zeile: Projektanzahl + Export-Zeitpunkt übernehmen
     if (typeof rec.projectCount === 'number') state.projectCount = rec.projectCount;
+    if (typeof rec.exportDate === 'string') state.exportDate = rec.exportDate;
     return;
   }
 
@@ -431,7 +471,11 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
           (p: any) => p.origin_id === fileOrigin || p.id === fileOrigin
         ) || null;
         if (existing) {
-          const choice = await state.options.onDuplicate(rec.project?.name || '');
+          const choice = await state.options.onDuplicate({
+            projectName: rec.project?.name || '',
+            fileExportedAt: state.exportDate || rec.exportDate || rec.project?.updated_at || null,
+            deviceChangedAt: await getDeviceLastChange(existing.id, existing.updated_at),
+          });
           if (choice === 'skip') {
             state.skipChildren = true;
             state.skippedProjects.push(rec.project?.name || '');
@@ -452,8 +496,9 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
       }
 
       if (action === 'update' && existing) {
-        // Komplett ersetzen: alten Stand (inkl. Fotos/Skizzen/Berichte) löschen
-        await ProjectService.delete(existing.id);
+        // Komplett ersetzen: alter Stand wandert in den Papierkorb
+        // (30 Tage wiederherstellbar als Sicherheitsnetz)
+        await ProjectService.moveToTrash(existing.id);
       }
 
       const projectData = stripSystemFields({
@@ -594,6 +639,7 @@ const importLegacyPayload = async (importData: any, state: ImportState): Promise
         project: bundle.project,
         customer: bundle.customer,
         roofs: bundle.roofs,
+        exportDate: bundle.exportDate || importData.exportDate || null,
         counts: {
           photos: bundle.photos?.length || 0,
           sketches: bundle.sketches?.length || 0,
@@ -694,6 +740,7 @@ export const importProjectsFromFile = async (
     itemsTotal: null,
     counters: { photo: 0, sketch: 0, checklist: 0, report: 0 },
     itemTotals: { photo: null, sketch: null, checklist: null, report: null },
+    exportDate: null,
     options,
   };
 
@@ -816,12 +863,38 @@ export const askExportPhotoChoice = (): Promise<boolean | null> =>
   });
 
 // Fragt beim Import, wie mit einem bereits vorhandenen Projekt umgegangen werden soll.
-export const askDuplicateAction = (projectName: string): Promise<'update' | 'copy' | 'skip'> =>
-  new Promise((resolve) => {
+// Zeigt an, welcher Stand neuer ist (Datei-Export vs. letzte Änderung auf dem Gerät).
+export const askDuplicateAction = (info: DuplicateInfo): Promise<'update' | 'copy' | 'skip'> => {
+  const fmt = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}, ${d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+  };
+  let compare = '';
+  if (info.fileExportedAt && info.deviceChangedAt) {
+    const fileT = new Date(info.fileExportedAt).getTime();
+    const devT = new Date(info.deviceChangedAt).getTime();
+    const sameish = Math.abs(fileT - devT) < 60 * 1000; // < 1 Minute = praktisch gleich
+    compare =
+      `\n\n📄 Datei exportiert: ${fmt(info.fileExportedAt)}` +
+      `\n📱 Gerät zuletzt geändert: ${fmt(info.deviceChangedAt)}`;
+    if (sameish) {
+      compare += '\n→ Beide Stände sind praktisch gleich aktuell.';
+    } else if (fileT > devT) {
+      compare += '\n→ Die Datei ist NEUER als der Stand auf diesem Gerät.';
+    } else {
+      compare += '\n\n⚠️ Achtung: Der Stand auf DIESEM GERÄT ist neuer als die Datei! Beim Aktualisieren gehen die neueren Änderungen in den Papierkorb.';
+    }
+  }
+  const message =
+    `„${info.projectName}" existiert bereits auf diesem Gerät.${compare}` +
+    `\n\nBeim Aktualisieren wandert der alte Stand für 30 Tage in den Papierkorb.` +
+    `\n\nWie möchten Sie fortfahren?`;
+
+  return new Promise((resolve) => {
     if (Platform.OS === 'web') {
       resolve(
         window.confirm(
-          `Projekt "${projectName}" existiert bereits auf diesem Gerät.\n\nOK = Aktualisieren (vorhandenes Projekt ersetzen)\nAbbrechen = Als Kopie importieren`
+          `Projekt "${info.projectName}" existiert bereits auf diesem Gerät.${compare}\n\nOK = Aktualisieren (vorhandenes Projekt ersetzen)\nAbbrechen = Als Kopie importieren`
         )
           ? 'update'
           : 'copy'
@@ -830,7 +903,7 @@ export const askDuplicateAction = (projectName: string): Promise<'update' | 'cop
     }
     Alert.alert(
       'Projekt bereits vorhanden',
-      `„${projectName}" existiert bereits auf diesem Gerät.\n\nWie möchten Sie fortfahren?`,
+      message,
       [
         { text: 'Aktualisieren (ersetzen)', onPress: () => resolve('update') },
         { text: 'Als Kopie importieren', onPress: () => resolve('copy') },
@@ -839,3 +912,4 @@ export const askDuplicateAction = (projectName: string): Promise<'update' | 'cop
       { cancelable: false }
     );
   });
+};

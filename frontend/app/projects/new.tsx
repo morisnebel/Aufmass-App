@@ -1020,6 +1020,7 @@ export default function NewProjectScreen() {
           </View>
 
           <TouchableOpacity
+            testID="project-save"
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSave}
             disabled={loading}
@@ -1309,6 +1310,7 @@ export default function NewProjectScreen() {
                 <Text style={styles.cancelButtonText}>Abbrechen</Text>
               </TouchableOpacity>
               <TouchableOpacity
+                testID="inline-customer-save"
                 style={[styles.modalButton, styles.saveButton, creatingCustomer && styles.buttonDisabled]}
                 onPress={handleCreateCustomer}
                 disabled={creatingCustomer}

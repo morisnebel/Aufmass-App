@@ -678,6 +678,10 @@ export interface Project {
   // Ursprungs-ID für Export/Import-Synchronisation: Duplikat-Erkennung über
   // Geräte hinweg (bleibt über Export/Import-Ketten erhalten)
   origin_id?: string;
+  // Zeitpunkt des letzten Projekt-Exports (nur auf diesem Gerät relevant)
+  last_exported_at?: string;
+  // Papierkorb: gesetzt = Projekt ist gelöscht/ersetzt, 30 Tage wiederherstellbar
+  deleted_at?: string;
   // Notizen/Bemerkungen zum Projekt
   remarks?: string;
   // Projektart (Überschrift für PDF)
@@ -710,8 +714,10 @@ export interface Project {
 }
 
 export const ProjectService = {
+  // Aktive Projekte (ohne Papierkorb)
   getAll: async (): Promise<Project[]> => {
-    return getItems<Project>(KEYS.PROJECTS);
+    const projects = await getItems<Project>(KEYS.PROJECTS);
+    return projects.filter(p => !p.deleted_at);
   },
 
   getById: async (id: string): Promise<Project | null> => {
@@ -721,7 +727,65 @@ export const ProjectService = {
 
   getByCustomerId: async (customerId: string): Promise<Project[]> => {
     const projects = await getItems<Project>(KEYS.PROJECTS);
-    return projects.filter(p => p.customer_id === customerId);
+    return projects.filter(p => p.customer_id === customerId && !p.deleted_at);
+  },
+
+  // Felder setzen OHNE updated_at anzufassen (für Export-Verlauf & Papierkorb,
+  // damit der Sync-Zeitvergleich beim Import nicht verfälscht wird)
+  setFieldsRaw: async (id: string, fields: Partial<Project>): Promise<void> => {
+    const projects = await getItems<Project>(KEYS.PROJECTS);
+    const index = projects.findIndex(p => p.id === id);
+    if (index === -1) return;
+    projects[index] = { ...projects[index], ...fields };
+    await setItems(KEYS.PROJECTS, projects);
+  },
+
+  // Export-Zeitpunkt für mehrere Projekte in EINEM Schreibvorgang merken
+  setLastExported: async (ids: string[], iso: string): Promise<void> => {
+    const projects = await getItems<Project>(KEYS.PROJECTS);
+    let changed = false;
+    for (const id of ids) {
+      const index = projects.findIndex(p => p.id === id);
+      if (index !== -1) {
+        projects[index] = { ...projects[index], last_exported_at: iso };
+        changed = true;
+      }
+    }
+    if (changed) await setItems(KEYS.PROJECTS, projects);
+  },
+
+  // ---- Papierkorb ----
+  getTrashed: async (): Promise<Project[]> => {
+    const projects = await getItems<Project>(KEYS.PROJECTS);
+    return projects
+      .filter(p => !!p.deleted_at)
+      .sort((a, b) => (b.deleted_at || '').localeCompare(a.deleted_at || ''));
+  },
+
+  moveToTrash: async (id: string): Promise<void> => {
+    await ProjectService.setFieldsRaw(id, { deleted_at: new Date().toISOString() });
+  },
+
+  restoreFromTrash: async (id: string): Promise<void> => {
+    await ProjectService.setFieldsRaw(id, { deleted_at: undefined });
+  },
+
+  // Endgültig löschen, was länger als `days` Tage im Papierkorb liegt
+  purgeExpiredTrash: async (days: number = 30): Promise<number> => {
+    const trashed = await ProjectService.getTrashed();
+    let purged = 0;
+    for (const p of trashed) {
+      const age = Date.now() - new Date(p.deleted_at!).getTime();
+      if (age > days * 24 * 60 * 60 * 1000) {
+        try {
+          await ProjectService.delete(p.id);
+          purged++;
+        } catch (e) {
+          console.warn('[Papierkorb] Endgültiges Löschen fehlgeschlagen:', p.id, e);
+        }
+      }
+    }
+    return purged;
   },
 
   create: async (data: Omit<Project, 'id' | 'created_at' | 'updated_at'>): Promise<Project> => {

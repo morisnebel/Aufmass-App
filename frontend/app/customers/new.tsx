@@ -699,6 +699,7 @@ export default function NewCustomerScreen() {
           </View>
 
           <TouchableOpacity
+            testID="customer-save"
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSave}
             disabled={loading}

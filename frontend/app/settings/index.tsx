@@ -1059,6 +1059,21 @@ export default function SettingsScreen() {
               </View>
               <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
             </TouchableOpacity>
+            <TouchableOpacity
+              testID="settings-trash"
+              style={legalStyles.navRow}
+              onPress={() => router.push('/trash')}
+              activeOpacity={0.7}
+            >
+              <View style={[legalStyles.navIcon, { backgroundColor: '#f1f5f9' }]}>
+                <Ionicons name="trash-outline" size={18} color="#64748b" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Papierkorb</Text>
+                <Text style={legalStyles.navSub}>Gelöschte Projekte 30 Tage wiederherstellen</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
           </View>
 
           {/* ===== Rechtliches & Datenschutz ===== */}

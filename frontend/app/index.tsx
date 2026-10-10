@@ -277,6 +277,31 @@ export default function HomeScreen() {
     setSelectedProjects(new Set());
   };
   
+  // Schnell-Export direkt von der Projektkarte (ohne das Projekt zu öffnen)
+  const quickExportProject = async (projectId: string) => {
+    try {
+      // Abfrage: Fotos mit exportieren oder weglassen (kleinere Datei)?
+      const includePhotos = await askExportPhotoChoice();
+      if (includePhotos === null) return;
+
+      setIsProcessing(true);
+      const { uri } = await exportProjectsToFile([projectId], { includePhotos });
+      setIsProcessing(false);
+
+      // Web: Datei wurde bereits als Browser-Download ausgeliefert
+      if (Platform.OS !== 'web') {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/json',
+          dialogTitle: t('projects.saveProject2', 'Projekt exportieren'),
+        });
+      }
+    } catch (error) {
+      console.error('Quick export error:', error);
+      setIsProcessing(false);
+      Alert.alert(t('common.error'), t('home.exportFailed'));
+    }
+  };
+
   // Export selected projects
   // Speicherschonender Streaming-Export (verhindert OOM bei großen Projekten)
   const exportSelectedProjects = async () => {
@@ -771,6 +796,15 @@ export default function HomeScreen() {
             {!selectionMode && <Ionicons name="chevron-down" size={14} color={statusColor} />}
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            {!selectionMode && Features.showProjektExport && (
+              <TouchableOpacity
+                onPress={() => quickExportProject(item.id)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                testID={`quick-export-${item.id}`}
+              >
+                <Ionicons name="cloud-upload-outline" size={18} color="#94a3b8" />
+              </TouchableOpacity>
+            )}
             {!selectionMode && (
               <TouchableOpacity
                 onPress={() => confirmDuplicateProject(item)}

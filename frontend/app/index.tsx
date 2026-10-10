@@ -85,7 +85,6 @@ export default function HomeScreen() {
   // Multi-Select Mode
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
-  const [openTasks, setOpenTasks] = useState<{ items: number; projects: number }>({ items: 0, projects: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
   // Fortschrittsanzeige für Projekt-Import (Balken + Zähler statt Ladekreis)
   const [importProgress, setImportProgress] = useState<{ title: string; label: string; fraction: number | null } | null>(null);
@@ -108,56 +107,27 @@ export default function HomeScreen() {
 
       setProjects(projectsData);
 
-      // Offene Aufgaben (unerledigte Checklisten-Punkte) für das Dashboard zählen
+      // Letzte Bearbeitung je Projekt ermitteln (für Sortierung "Zuletzt bearbeitet"):
+      // Projekt-updated_at allein reicht nicht, da neue Fotos/Skizzen es nicht ändern
       try {
-        const allChecklists = await ChecklistService.getAll();
-
-        // Letzte Bearbeitung je Projekt ermitteln (für Sortierung "Zuletzt bearbeitet"):
-        // Projekt-updated_at allein reicht nicht, da neue Fotos/Skizzen es nicht ändern
-        try {
-          const [allPhotos, allSketches, allReports] = await Promise.all([
-            PhotoService.getAll(),
-            SketchService.getAll(),
-            ReportService.getAll(),
-          ]);
-          const activity: Record<string, string> = {};
-          const touch = (pid?: string, ts?: string) => {
-            if (pid && ts && (!activity[pid] || ts > activity[pid])) activity[pid] = ts;
-          };
-          projectsData.forEach((p: Project) => touch(p.id, p.updated_at));
-          allChecklists.forEach((c: any) => touch(c.project_id, c.updated_at));
-          allPhotos.forEach((p: any) => touch(p.project_id, p.updated_at));
-          allSketches.forEach((s: any) => touch(s.project_id, s.updated_at));
-          allReports.forEach((r: any) => touch(r.project_id, r.updated_at));
-          setLastActivity(activity);
-        } catch (e) {
-          console.error('Error computing last activity:', e);
-        }
-
-        const activeIds = new Set(
-          projectsData
-            .filter((p: Project) => !['archiviert', 'fertig', 'abgebrochen'].includes(normalizeStatus(p.status)))
-            .map((p: Project) => p.id)
-        );
-        const countOpen = (items: any[]): number =>
-          (items || []).reduce(
-            (sum: number, it: any) =>
-              sum + (it && !it.checked ? 1 : 0) + (it?.subItems ? countOpen(it.subItems) : 0),
-            0
-          );
-        let openItems = 0;
-        const projSet = new Set<string>();
-        for (const cl of allChecklists) {
-          if (!activeIds.has(cl.project_id)) continue;
-          const c = countOpen(cl.items as any[]);
-          if (c > 0) {
-            openItems += c;
-            projSet.add(cl.project_id);
-          }
-        }
-        setOpenTasks({ items: openItems, projects: projSet.size });
+        const [allChecklists, allPhotos, allSketches, allReports] = await Promise.all([
+          ChecklistService.getAll(),
+          PhotoService.getAll(),
+          SketchService.getAll(),
+          ReportService.getAll(),
+        ]);
+        const activity: Record<string, string> = {};
+        const touch = (pid?: string, ts?: string) => {
+          if (pid && ts && (!activity[pid] || ts > activity[pid])) activity[pid] = ts;
+        };
+        projectsData.forEach((p: Project) => touch(p.id, p.updated_at));
+        allChecklists.forEach((c: any) => touch(c.project_id, c.updated_at));
+        allPhotos.forEach((p: any) => touch(p.project_id, p.updated_at));
+        allSketches.forEach((s: any) => touch(s.project_id, s.updated_at));
+        allReports.forEach((r: any) => touch(r.project_id, r.updated_at));
+        setLastActivity(activity);
       } catch (e) {
-        console.error('Error counting open tasks:', e);
+        console.error('Error computing last activity:', e);
       }
       
       const customerMap: { [key: string]: Customer } = {};
@@ -1159,14 +1129,6 @@ export default function HomeScreen() {
               );
             })}
           </ScrollView>
-          {openTasks.items > 0 && (
-            <View style={styles.dashboardTasksRow}>
-              <Ionicons name="checkbox-outline" size={15} color="#f57c00" />
-              <Text style={styles.dashboardTasksText}>
-                {openTasks.items} offene Aufgabe{openTasks.items !== 1 ? 'n' : ''} in {openTasks.projects} Projekt{openTasks.projects !== 1 ? 'en' : ''}
-              </Text>
-            </View>
-          )}
         </View>
       )}
 
@@ -1560,20 +1522,6 @@ const styles = StyleSheet.create({
   dashboardChipLabel: {
     fontSize: 12,
     fontWeight: '600',
-  },
-  dashboardTasksRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-  },
-  dashboardTasksText: {
-    fontSize: 12,
-    color: '#555',
-    fontWeight: '500',
   },
   filterScrollContent: {
     flexDirection: 'row',

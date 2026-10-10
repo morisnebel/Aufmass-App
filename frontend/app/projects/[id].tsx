@@ -37,7 +37,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy';
-import { exportProjectsToFile } from '../../utils/projectTransfer';
+import { exportProjectsToFile, askExportPhotoChoice } from '../../utils/projectTransfer';
 import { SvgXml } from 'react-native-svg';
 import Svg, { Path as SvgPath, Text as SvgText, Image as SvgImage } from 'react-native-svg';
 
@@ -1839,8 +1839,12 @@ export default function ProjectDetailScreen() {
   const exportProjectFile = async () => {
     if (!project?.id) return;
     try {
+      // Abfrage: Fotos mit exportieren oder weglassen (kleinere Datei)?
+      const includePhotos = await askExportPhotoChoice();
+      if (includePhotos === null) return;
+
       setIsGeneratingPdf(true);
-      const { uri } = await exportProjectsToFile([project.id]);
+      const { uri } = await exportProjectsToFile([project.id], { includePhotos });
 
       // Hide loader BEFORE opening share dialog to prevent stuck overlay
       setIsGeneratingPdf(false);
@@ -1887,7 +1891,7 @@ export default function ProjectDetailScreen() {
         </TouchableOpacity>
         {/* Projekt exportieren - nur in Pro Version */}
         {Features.showProjektExport && (
-        <TouchableOpacity style={styles.actionButton} onPress={exportProjectFile}>
+        <TouchableOpacity testID="project-export" style={styles.actionButton} onPress={exportProjectFile}>
           <Ionicons name="cloud-upload" size={20} color="#1976d2" />
           <Text style={styles.actionButtonText}>{t('projects.exportProject')}</Text>
         </TouchableOpacity>

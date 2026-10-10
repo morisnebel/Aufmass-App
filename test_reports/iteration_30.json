@@ -1,0 +1,40 @@
+{
+  "summary": "E2E Playwright run on mobile viewport 390x844 against https://image-render-test.preview.emergentagent.com (preview 200 OK) covering the 3 new offline-sync features. ALL 5 TESTS PASS: (1a) Export MIT FOTOS – project-export fires window.confirm 'Fotos mit exportieren? OK=Mit Fotos / Abbrechen=Ohne Fotos'; accepting the dialog produces a Blob download 'Frisch__Import_.aufmass' with header + project line containing counts:{photos:0,sketches:0,checklists:0,reports:0} and origin_id 'fresh-xyz-123' preserved. (1b) Export OHNE FOTOS – dismissing the same confirm also downloads; both files are structurally identical (counts.photos=0, no 'type':'photo' lines) because the source project has no photos – the photos:0 path is exercised. (2) Duplicate UPDATE – re-importing the exported file triggers window.confirm 'Projekt \"Frisch (Import)\" existiert bereits …'; accepting leaves the project count at 1 (existing replaced, no '(Import)' suffix added). (3) Duplicate COPY – same dialog dismissed on the second re-import; project count goes 1→2 and the new card appears as 'Frisch (Import) (Import)' (suffix appended as expected for the copy path). (4) Import progress overlay – the white card titled 'Projekt wird importiert' was observed via page.wait_for_selector during the import of fresh.aufmass. (5) Fresh import no dialog – importing /tmp/fresh.aufmass against an empty DB creates 'Frisch (Import)' with ZERO duplicate dialogs seen in the dialog log. Deprecated packages detected: none new (shadow* props + props.pointerEvents warnings are pre-existing React Native Web deprecations, not expo-av/expo-barcode-scanner/expo-background-fetch).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Settings → Pro unlock", "issues": ["The 'Erweitert...' / 'Freischalten' / 'Code eingeben...' flow is still hardcoded German even when the UI language is English (settings/index.tsx lines ~1189, 1209, 1217, 1244). Low priority."]},
+      {"screen": "Export dialog", "issues": ["Both export files reuse the same filename 'Frisch__Import_.aufmass' regardless of includePhotos – consider appending a suffix like '_ohne_fotos' so the user can tell them apart in the Downloads folder. Low priority."]}
+    ],
+    "react_native_issues": [
+      {"component": "RN Web deprecations", "issue": "Pre-existing console warnings 'shadow* style props are deprecated. Use boxShadow' and 'props.pointerEvents is deprecated. Use style.pointerEvents' – not blocking, flagged in earlier iterations."}
+    ]
+  },
+  "test_report_links": [
+    "/tmp/test_downloads/export_with_photos.aufmass",
+    "/tmp/test_downloads/export_without_photos.aufmass",
+    "/tmp/test_downloads/progress.png",
+    "/tmp/test_downloads/test3_final.png",
+    "/tmp/fresh.aufmass"
+  ],
+  "action_items": [
+    "Consider i18n of the Expertenmodus modal strings in settings/index.tsx (Erweitert..., Code eingeben..., Freischalten, Abbrechen) so EN users see consistent English copy.",
+    "Optional: differentiate the exported filename when includePhotos=false (e.g. append '_ohne_fotos') so repeated exports don't overwrite each other in the browser Downloads folder.",
+    "No functional fixes required – all three new features (progress overlay, export photo choice, duplicate detection update/copy) behave exactly as specified by the review request."
+  ],
+  "critical_code_review_comments": [
+    "projectTransfer.ts writeProjectLines emits counts object on every project line (lines 146-157) ✓ and photoMetas is empty when includePhotos=false so no 'type':\"photo\" lines are written ✓.",
+    "askExportPhotoChoice on web uses window.confirm with the exact 'Fotos mit exportieren?' message, OK→true (with photos), Cancel→false (without) – confirmed live.",
+    "askDuplicateAction on web uses window.confirm with 'existiert bereits', OK→'update', Cancel→'copy' – confirmed live; the update path deletes the existing project before recreating it (projectTransfer.ts line 454), and the copy path keeps the '(Import)' suffix (line 460).",
+    "origin_id persistence (projectTransfer.ts lines 424 + 462) correctly identifies the same project across export/import cycles so TEST 2 and TEST 3 both fire the duplicate dialog."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (offline app)", "frontend": "5/5 e2e scenarios pass"},
+  "seed_data_creation": "Re-used /tmp/fresh.aufmass (v2 NDJSON header + 'Frisch' project) from iteration 29. Live-exported /tmp/test_downloads/export_with_photos.aufmass and export_without_photos.aufmass as part of TEST 1a/1b and reused them for TEST 2/3.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preview was 200 OK at test time. Full E2E ran in multiple browser-automation sessions because localStorage does NOT persist between separate `mcp_browser_automation` calls (each call spawns a fresh context). To run all 5 tests end-to-end in a single pass, chain them in ONE script: disclaimer scroll-and-accept (dispatch scroll on inner RN ScrollView) → Settings → scroll to bottom → tap 'Erweitert...' → fill 'Code eingeben...' with PROFI2024 → tap 'Freischalten' → go_back → tap home-import with /tmp/fresh.aufmass → auto-nav lands on project-detail where testID 'project-export' is available → run export with/without photos (page.on('dialog', accept|dismiss)) → go_back → re-import the just-exported file twice (accept then dismiss) to exercise TEST 2 + TEST 3. The duplicate confirm message always contains the literal string 'existiert bereits' so you can key off that; the export confirm contains 'Fotos mit exportieren'. The import success Alert.alert does NOT surface as a native browser dialog on web (the RN Alert polyfill renders a custom overlay), so the page.on('dialog') hook only sees the window.confirm from askExportPhotoChoice / askDuplicateAction.",
+  "rca_of_issue": "No bugs reproduced. The 3 new features work as designed on web: progress overlay renders, export dialog correctly branches on OK/Cancel, duplicate detection via origin_id correctly branches between update (count unchanged, same name) and copy (count +1, '(Import)' suffix appended)."
+}

@@ -20,7 +20,7 @@ import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ProjectService, CustomerService, ChecklistService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber, cleanupOrphanedStorage } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
-import { exportProjectsToFile, importProjectsFromFile } from '../utils/projectTransfer';
+import { exportProjectsToFile, importProjectsFromFile, askExportPhotoChoice, askDuplicateAction } from '../utils/projectTransfer';
 import * as Sharing from 'expo-sharing';
 import { Features, AppName, getProStatus, loadProStatus, updateFeatures } from '../services/FeatureFlags';
 import { BackupService } from '../services/BackupService';
@@ -75,6 +75,8 @@ export default function HomeScreen() {
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [openTasks, setOpenTasks] = useState<{ items: number; projects: number }>({ items: 0, projects: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
+  // Fortschrittsanzeige für Projekt-Import (Balken + Zähler statt Ladekreis)
+  const [importProgress, setImportProgress] = useState<{ title: string; label: string; fraction: number | null } | null>(null);
   // Pro-Banner: Ausgeliehene Maschinen, Inspektionen, TÜV & niedriger Lagerbestand
   const [loanedMachines, setLoanedMachines] = useState<MachineMaster[]>([]);
   const [inspectionMachines, setInspectionMachines] = useState<MachineMaster[]>([]);
@@ -278,9 +280,13 @@ export default function HomeScreen() {
       return;
     }
     
+    // Abfrage: Fotos mit exportieren oder weglassen (kleinere Datei)?
+    const includePhotos = await askExportPhotoChoice();
+    if (includePhotos === null) return;
+
     setIsProcessing(true);
     try {
-      const { uri } = await exportProjectsToFile([...selectedProjects]);
+      const { uri } = await exportProjectsToFile([...selectedProjects], { includePhotos });
       
       setIsProcessing(false);
       
@@ -406,26 +412,53 @@ export default function HomeScreen() {
         return;
       }
       
-      setLoading(true);
-      
-      const summary = await importProjectsFromFile(file.uri);
+      setImportProgress({ title: file.name || '', label: 'Datei wird gelesen…', fraction: null });
+
+      const summary = await importProjectsFromFile(file.uri, {
+        onProgress: (p) => setImportProgress({
+          title: p.projectCount && p.projectCount > 1
+            ? `Projekt ${p.projectIndex} von ${p.projectCount}: ${p.projectName}`
+            : p.projectName,
+          label: p.label,
+          fraction: p.fraction,
+        }),
+        onDuplicate: askDuplicateAction,
+      });
+      setImportProgress(null);
 
       await loadData();
-      const firstName = summary.importedProjects[0]?.name || '';
+      const created = summary.importedProjects;
+      const updated = summary.updatedProjects;
+      const allNew = [...created, ...updated];
+      const firstName = allNew[0]?.name || '';
       if (summary.failedItems > 0) {
         Alert.alert(
           'Teilweise importiert',
-          `${summary.importedProjects.length > 1 ? `${summary.importedProjects.length} Projekte wurden` : `Projekt "${firstName}" wurde`} importiert, aber ${summary.failedItems} von ${summary.totalItems} Elementen (z.B. Fotos/Skizzen) konnten nicht übernommen werden.\n\nMöglicher Grund: Speicher-Limit. Bitte die installierte App (ab Version 1.1.14) verwenden – in Expo Go ist der Speicher auf 6 MB begrenzt.`
+          `${allNew.length > 1 ? `${allNew.length} Projekte wurden` : `Projekt "${firstName}" wurde`} importiert, aber ${summary.failedItems} von ${summary.totalItems} Elementen (z.B. Fotos/Skizzen) konnten nicht übernommen werden.\n\nMöglicher Grund: Speicher-Limit. Bitte die installierte App (ab Version 1.1.14) verwenden – in Expo Go ist der Speicher auf 6 MB begrenzt.`
         );
-      } else if (summary.importedProjects.length > 1) {
-        Alert.alert(t('common.success'), `${summary.importedProjects.length} Projekte wurden erfolgreich importiert.`);
+      } else if (allNew.length === 0 && summary.skippedProjects.length > 0) {
+        Alert.alert(t('common.note'), 'Import übersprungen – das Projekt ist bereits auf diesem Gerät vorhanden.');
       } else {
-        Alert.alert(t('common.success'), t('home.importSuccess', { name: firstName }));
+        const parts: string[] = [];
+        if (created.length > 0) {
+          parts.push(created.length === 1
+            ? t('home.importSuccess', { name: created[0].name })
+            : `${created.length} Projekte wurden erfolgreich importiert.`);
+        }
+        if (updated.length > 0) {
+          parts.push(updated.length === 1
+            ? `Projekt "${updated[0].name}" wurde aktualisiert.`
+            : `${updated.length} Projekte wurden aktualisiert.`);
+        }
+        if (summary.skippedProjects.length > 0) {
+          parts.push(`${summary.skippedProjects.length} Projekt(e) übersprungen.`);
+        }
+        Alert.alert(t('common.success'), parts.join('\n'));
       }
 
-      // Navigate to the imported project (nur bei Einzel-Import)
-      if (summary.importedProjects.length === 1) {
-        router.push(`/projects/${summary.importedProjects[0].id}`);
+      // Navigate to the imported project (nur bei genau einem Projekt)
+      if (allNew.length === 1) {
+        router.push(`/projects/${allNew[0].id}`);
       }
 
     } catch (error) {
@@ -444,7 +477,7 @@ export default function HomeScreen() {
         Alert.alert(t('common.error'), t('home.importFailed'));
       }
     } finally {
-      setLoading(false);
+      setImportProgress(null);
     }
   };
 
@@ -650,6 +683,7 @@ export default function HomeScreen() {
     
     return (
       <TouchableOpacity
+        testID={`project-card-${item.id}`}
         style={[styles.projectCard, isSelected && styles.projectCardSelected]}
         onPress={() => {
           if (selectionMode) {
@@ -1125,6 +1159,7 @@ export default function HomeScreen() {
       <View style={styles.actionButtons}>
         {/* Primary action - Neues Projekt */}
         <TouchableOpacity
+          testID="home-new-project"
           style={styles.primaryButton}
           onPress={() => router.push('/projects/new')}
         >
@@ -1230,6 +1265,7 @@ export default function HomeScreen() {
           {/* Import Button - nur in Pro Version */}
           {Features.showImportButton && (
           <TouchableOpacity
+            testID="home-import"
             style={[styles.utilityButton, styles.importUtilityButton]}
             onPress={importProjectFile}
           >
@@ -1241,6 +1277,7 @@ export default function HomeScreen() {
           {/* Verschieben Button - nur in Pro Version */}
           {Features.showVerschiebenButton && (
           <TouchableOpacity
+            testID="home-select-toggle"
             style={[styles.utilityButton, selectionMode && styles.utilityButtonActive]}
             onPress={toggleSelectionMode}
           >
@@ -1320,6 +1357,33 @@ export default function HomeScreen() {
         <View style={styles.processingOverlay}>
           <ActivityIndicator size="large" color="#fff" />
           <Text style={styles.processingText}>{t('common.loading')}</Text>
+        </View>
+      )}
+
+      {/* Import-Fortschritt (Balken + Zähler) */}
+      {importProgress && (
+        <View style={styles.processingOverlay}>
+          <View style={styles.importProgressCard}>
+            <Text style={styles.importProgressTitle}>Projekt wird importiert</Text>
+            {!!importProgress.title && (
+              <Text style={styles.importProgressProject} numberOfLines={1}>
+                {importProgress.title}
+              </Text>
+            )}
+            {importProgress.fraction !== null ? (
+              <View style={styles.importProgressBarTrack}>
+                <View
+                  style={[
+                    styles.importProgressBarFill,
+                    { width: `${Math.round(Math.min(1, importProgress.fraction) * 100)}%` },
+                  ]}
+                />
+              </View>
+            ) : (
+              <ActivityIndicator size="small" color="#1976d2" style={styles.importProgressSpinner} />
+            )}
+            <Text style={styles.importProgressLabel}>{importProgress.label}</Text>
+          </View>
         </View>
       )}
 
@@ -1638,6 +1702,48 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 12,
     fontWeight: '500',
+  },
+  importProgressCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    width: '82%',
+    maxWidth: 420,
+    alignItems: 'center',
+  },
+  importProgressTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#333',
+  },
+  importProgressProject: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 6,
+    maxWidth: '100%',
+  },
+  importProgressBarTrack: {
+    width: '100%',
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#e0e0e0',
+    marginTop: 18,
+    overflow: 'hidden',
+  },
+  importProgressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: '#1976d2',
+  },
+  importProgressSpinner: {
+    marginTop: 18,
+  },
+  importProgressLabel: {
+    fontSize: 14,
+    color: '#1976d2',
+    fontWeight: '600',
+    marginTop: 10,
   },
   // Legacy styles kept for compatibility
   buttonRow: {

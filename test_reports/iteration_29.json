@@ -1,0 +1,31 @@
+{
+  "summary": "Attempted e2e Playwright tests for 3 new features (export photo-choice, duplicate detection update/copy, import progress overlay) on mobile viewport 390x844. Fresh browser session hit the Disclaimer modal gate: the accept checkbox is disabled until the modal's ScrollView emits scrollEndReached, so clicking the label does nothing until scrolled. I scripted a programmatic scroll on the modal ScrollView and successfully dismissed the disclaimer, but the SyncTest project creation step then needed a specific placeholder-targeted input (first `input` is the hidden Home search box). After fixing selectors, the preview URL (image-render-test.preview.emergentagent.com) returned Cloudflare 502 Bad Gateway, aborting the actual export/import test runs. CODE REVIEW of the 3 new features (projectTransfer.ts, app/index.tsx, app/projects/[id].tsx) is CLEAN: askExportPhotoChoice uses window.confirm with the required 'Fotos mit exportieren' message (web branch: OK→true, Cancel→false); askDuplicateAction uses window.confirm with the required 'existiert bereits' message (OK→'update', Cancel→'copy'); writeProjectLines emits a counts object on every project line and photoMetas is empty when includePhotos=false (so no 'type':'photo' lines + counts.photos:0); processRecord resets per-project counters and emits 'Foto N von X' labels; importProgress overlay in index.tsx renders a white card titled 'Projekt wird importiert' with a determinate bar when fraction!=null, falling back to spinner otherwise; origin_id is persisted on both update and copy paths. Logic matches the review request on all 5 flows.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Disclaimer gate", "issues": ["Checkbox TouchableOpacity requires scrollEndReached before accepting – automated tests must dispatch a scroll event on the inner ScrollView. No testID on 'App starten', checkbox row or scroll container, so Playwright is forced into brittle text + computed-style selectors."]},
+      {"screen": "Project detail / Home", "issues": ["'Projekt exportieren', 'Import', 'Select', 'Freischalten', 'App starten' and the disclaimer checkbox still lack testID attributes (also flagged in iteration_27/28). Please add stable testIDs to unblock future runs."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/tmp/test_downloads/"],
+  "action_items": [
+    "Add testID to Disclaimer checkbox row, 'App starten' button and the modal ScrollView so tests can bypass the scrollEndReached gate without JS scroll hacks.",
+    "Add testID to Home: Import button, Select button, New Project button, SyncTest-style project cards. Add testID to Project detail: 'Projekt exportieren' action.",
+    "RE-RUN end-to-end verification once the 502 preview outage clears – all code paths look correct; a successful roundtrip should cover TEST 1a/1b (export photo choice + file content), TEST 2 (duplicate 'existiert bereits' dialog + update replaces, no new (Import) suffix), TEST 3 (dismiss → copy with (Import) suffix) and TEST 5 (fresh file imports without duplicate dialog)."
+  ],
+  "critical_code_review_comments": [
+    "projectTransfer.ts writeProjectLines correctly emits counts object (lines 146-157) and respects includePhotos (lines 141-143). Good.",
+    "askDuplicateAction web branch returns 'update' on OK and 'copy' on Cancel; matches review request semantics (lines 820-828).",
+    "Home importProgress overlay (index.tsx 1360-1384) correctly uses determinate bar when fraction!=null and shows the 'Foto N von X' label."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "code review PASS; e2e BLOCKED by 502 preview outage"},
+  "seed_data_creation": "Created /tmp/fresh.aufmass (v2 NDJSON header + Frisch project) for regression TEST 5.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Preview URL at test time returned Cloudflare 502. Disclaimer modal MUST be scrolled to bottom before the checkbox TouchableOpacity accepts a tap (scrollEndReached state). Programmatic scroll via `document.querySelectorAll('div').forEach(d => { if overflowY auto+scroll then d.scrollTop=scrollHeight; d.dispatchEvent(new Event('scroll',{bubbles:true})) })` works. On new project screen the first visible input placeholder is 'z.B. Dachsanierung Hauptstraße'; the Home search input is still in the DOM and comes first so target by placeholder. Register page.on('dialog') AFTER opening the project detail (not before, else first default handler intercepts). Download handler via page.expect_download works for the web Blob export.",
+  "rca_of_issue": "Not applicable – no bug reproduced; execution was blocked by (a) a disclaimer gate that was previously solved only via coordinate clicks (iteration 27 note) and (b) a 502 preview outage."
+}

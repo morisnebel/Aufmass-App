@@ -163,6 +163,7 @@ export const DisclaimerGate: React.FC<{ children: React.ReactNode }> = ({ childr
           {/* Footer with Checkbox + Button */}
           <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) + 8 }]}>
             <TouchableOpacity
+              testID="disclaimer-checkbox"
               style={[styles.checkboxRow, !scrollEndReached && { opacity: 0.4 }]}
               onPress={() => { if (scrollEndReached) setAccepted(!accepted); }}
               activeOpacity={0.7}
@@ -177,6 +178,7 @@ export const DisclaimerGate: React.FC<{ children: React.ReactNode }> = ({ childr
             </TouchableOpacity>
 
             <TouchableOpacity
+              testID="disclaimer-accept"
               style={[styles.acceptBtn, !accepted && styles.acceptBtnDisabled]}
               onPress={handleAccept}
               disabled={!accepted}

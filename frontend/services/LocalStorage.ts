@@ -675,6 +675,9 @@ export interface Project {
   description?: string;
   address?: string;
   status: string;
+  // Ursprungs-ID für Export/Import-Synchronisation: Duplikat-Erkennung über
+  // Geräte hinweg (bleibt über Export/Import-Ketten erhalten)
+  origin_id?: string;
   // Notizen/Bemerkungen zum Projekt
   remarks?: string;
   // Projektart (Überschrift für PDF)
@@ -791,6 +794,9 @@ export const ProjectService = {
     await setItems(KEYS.ROOFS, roofs.filter(r => r.project_id !== id));
     const checklists = await getItems<Checklist>(KEYS.CHECKLISTS);
     await setItems(KEYS.CHECKLISTS, checklists.filter(c => c.project_id !== id));
+    // Berichte des Projekts mitlöschen (sonst bleiben verwaiste Berichte zurück)
+    const reports = await getItems<Report>(KEYS.REPORTS);
+    await setItems(KEYS.REPORTS, reports.filter((r) => r.project_id !== id));
     return true;
   },
 };

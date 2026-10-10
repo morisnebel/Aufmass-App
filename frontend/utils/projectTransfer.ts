@@ -16,7 +16,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File, Paths, FileMode } from 'expo-file-system';
 import * as LegacyFS from 'expo-file-system/legacy';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import {
   ProjectService,
   CustomerService,
@@ -125,7 +125,7 @@ interface LineWriter {
 const bigImageThreshold = 2000; // Strings darüber gelten als eingebettete Bilder
 
 // Schreibt alle Daten eines Projekts als einzelne NDJSON-Zeilen.
-const writeProjectLines = async (projectId: string, w: LineWriter): Promise<void> => {
+const writeProjectLines = async (projectId: string, w: LineWriter, includePhotos: boolean): Promise<void> => {
   const project = await ProjectService.getById(projectId);
   if (!project) return;
   const customer = project.customer_id
@@ -133,16 +133,31 @@ const writeProjectLines = async (projectId: string, w: LineWriter): Promise<void
     : null;
   const roofs = await RoofService.getByProjectId(projectId);
 
+  // Mengen vorab ermitteln (für die Fortschrittsanzeige beim Import)
+  const allChecklists = await ChecklistService.getAll();
+  const checklistMetas = allChecklists.filter((c: any) => c.project_id === projectId);
+  const reports = await ReportService.getByProjectId(projectId);
+  const allPhotos = await PhotoService.getAll();
+  const photoMetas = includePhotos
+    ? allPhotos.filter((p: any) => p.project_id === projectId)
+    : [];
+  const sketches = await SketchService.getByProjectId(projectId);
+
   w.write(JSON.stringify({
     type: 'project',
     project,
     customer: customer || {},
     roofs: roofs || [],
+    counts: {
+      photos: photoMetas.length,
+      sketches: sketches.length,
+      checklists: checklistMetas.length,
+      reports: (reports || []).length,
+    },
   }));
 
   // Checklisten: einzeln laden (getById stellt ausgelagerte Bilder wieder her)
-  const allChecklists = await ChecklistService.getAll();
-  for (const c of allChecklists.filter((c: any) => c.project_id === projectId)) {
+  for (const c of checklistMetas) {
     try {
       const full = await ChecklistService.getById(c.id);
       if (full) w.write(JSON.stringify({ type: 'checklist', data: full }));
@@ -152,14 +167,12 @@ const writeProjectLines = async (projectId: string, w: LineWriter): Promise<void
   }
 
   // Berichte
-  const reports = await ReportService.getByProjectId(projectId);
   for (const r of reports || []) {
     w.write(JSON.stringify({ type: 'report', data: r }));
   }
 
   // Fotos: Metadaten aus dem (leichten) Array, Bilddaten EINZELN nachladen
-  const allPhotos = await PhotoService.getAll();
-  for (const p of allPhotos.filter((p: any) => p.project_id === projectId)) {
+  for (const p of photoMetas) {
     try {
       let image = await AsyncStorage.getItem(`photo_img_${p.id}`);
       if (!image) image = (p as any).image_data || (p as any).uri || '';
@@ -171,7 +184,6 @@ const writeProjectLines = async (projectId: string, w: LineWriter): Promise<void
   }
 
   // Skizzen: Metadaten + Hintergrund + Elementbilder als getrennte Zeilen
-  const sketches = await SketchService.getByProjectId(projectId);
   for (const s of sketches) {
     try {
       let meta: any = null;
@@ -245,17 +257,20 @@ const writeProjectLines = async (projectId: string, w: LineWriter): Promise<void
 };
 
 export const exportProjectsToFile = async (
-  projectIds: string[]
+  projectIds: string[],
+  options?: { includePhotos?: boolean }
 ): Promise<{ uri: string; sizeBytes: number; fileName: string }> => {
-  // Dateiname bestimmen
+  const includePhotos = options?.includePhotos !== false;
+  // Dateiname bestimmen ("_ohne_Fotos" zur Unterscheidung im Downloads-Ordner)
+  const suffix = includePhotos ? '' : '_ohne_Fotos';
   let fileName: string;
   if (projectIds.length === 1) {
     const project = await ProjectService.getById(projectIds[0]);
     const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
-    fileName = `${safeName}.aufmass`;
+    fileName = `${safeName}${suffix}.aufmass`;
   } else {
     const timestamp = new Date().toISOString().slice(0, 10);
-    fileName = `Projekte_${timestamp}_${projectIds.length}.aufmass`;
+    fileName = `Projekte_${timestamp}_${projectIds.length}${suffix}.aufmass`;
   }
 
   const header = JSON.stringify({
@@ -268,7 +283,7 @@ export const exportProjectsToFile = async (
   if (Platform.OS === 'web') {
     const lines: string[] = [header];
     const w: LineWriter = { write: (line) => lines.push(line) };
-    for (const id of projectIds) await writeProjectLines(id, w);
+    for (const id of projectIds) await writeProjectLines(id, w, includePhotos);
     const content = lines.join('\n');
     const blob = new Blob([content], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -302,7 +317,7 @@ export const exportProjectsToFile = async (
   try {
     w.write(header);
     for (const id of projectIds) {
-      await writeProjectLines(id, w);
+      await writeProjectLines(id, w, includePhotos);
     }
   } finally {
     handle.close();
@@ -314,9 +329,25 @@ export const exportProjectsToFile = async (
 // IMPORT
 // ---------------------------------------------------------------------------
 export interface ImportSummary {
-  importedProjects: { id: string; name: string }[];
+  importedProjects: { id: string; name: string }[]; // neu angelegte Kopien
+  updatedProjects: { id: string; name: string }[];  // per Sync ersetzte Projekte
+  skippedProjects: string[];                        // vom Nutzer übersprungen
   failedItems: number;
   totalItems: number;
+}
+
+export interface ImportProgress {
+  projectIndex: number;          // 1-basiert
+  projectCount: number | null;
+  projectName: string;
+  label: string;                 // z.B. "Foto 5 von 23"
+  fraction: number | null;       // 0..1 innerhalb des Projekts, null = unbestimmt
+}
+
+export interface ImportOptions {
+  onProgress?: (p: ImportProgress) => void;
+  // Wird gerufen, wenn das Projekt bereits auf dem Gerät existiert
+  onDuplicate?: (projectName: string) => Promise<'update' | 'copy' | 'skip'>;
 }
 
 interface ImportState {
@@ -324,9 +355,31 @@ interface ImportState {
   skipChildren: boolean;
   sketchIdMap: Record<string, string>;
   importedProjects: { id: string; name: string }[];
+  updatedProjects: { id: string; name: string }[];
+  skippedProjects: string[];
+  createdProjectIds: string[]; // für Rollback bei fatalem Fehler
   failedItems: number;
   totalItems: number;
+  // Fortschritt
+  projectIndex: number;
+  projectCount: number | null;
+  currentProjectName: string;
+  itemsDone: number;
+  itemsTotal: number | null;
+  counters: { photo: number; sketch: number; checklist: number; report: number };
+  itemTotals: { photo: number | null; sketch: number | null; checklist: number | null; report: number | null };
+  options: ImportOptions;
 }
+
+const emitProgress = (state: ImportState, label: string) => {
+  state.options.onProgress?.({
+    projectIndex: state.projectIndex,
+    projectCount: state.projectCount,
+    projectName: state.currentProjectName,
+    label,
+    fraction: state.itemsTotal ? Math.min(1, state.itemsDone / state.itemsTotal) : null,
+  });
+};
 
 const stripSystemFields = (obj: any): any => {
   const d = { ...obj };
@@ -341,27 +394,82 @@ const stripSystemFields = (obj: any): any => {
 const processRecord = async (rec: any, state: ImportState): Promise<void> => {
   if (!rec || typeof rec !== 'object') return;
 
-  if (rec.format === FORMAT_TAG) return; // Header-Zeile
+  if (rec.format === FORMAT_TAG) {
+    // Header-Zeile: Projektanzahl für die Fortschrittsanzeige übernehmen
+    if (typeof rec.projectCount === 'number') state.projectCount = rec.projectCount;
+    return;
+  }
 
   if (rec.type === 'project') {
     state.sketchIdMap = {};
     state.skipChildren = false;
     state.currentProjectId = null;
+    state.projectIndex++;
+    state.currentProjectName = rec.project?.name || '';
+    // Fortschritts-Zähler für dieses Projekt zurücksetzen
+    const counts = rec.counts || null;
+    state.counters = { photo: 0, sketch: 0, checklist: 0, report: 0 };
+    state.itemTotals = {
+      photo: counts ? (counts.photos ?? null) : null,
+      sketch: counts ? (counts.sketches ?? null) : null,
+      checklist: counts ? (counts.checklists ?? null) : null,
+      report: counts ? (counts.reports ?? null) : null,
+    };
+    state.itemsDone = 0;
+    state.itemsTotal = counts
+      ? (counts.photos || 0) + (counts.sketches || 0) + (counts.checklists || 0) + (counts.reports || 0)
+      : null;
+    emitProgress(state, 'Projekt wird angelegt…');
     try {
-      // Kunde: beim Import immer neu anlegen (Konflikte vermeiden)
+      // Duplikat-Erkennung über die Ursprungs-ID (bleibt über Export/Import-Ketten erhalten)
+      const fileOrigin: string | null = rec.project?.origin_id || rec.project?.id || null;
+      let action: 'copy' | 'update' = 'copy';
+      let existing: any = null;
+      if (fileOrigin && state.options.onDuplicate) {
+        const allProjects = await ProjectService.getAll();
+        existing = allProjects.find(
+          (p: any) => p.origin_id === fileOrigin || p.id === fileOrigin
+        ) || null;
+        if (existing) {
+          const choice = await state.options.onDuplicate(rec.project?.name || '');
+          if (choice === 'skip') {
+            state.skipChildren = true;
+            state.skippedProjects.push(rec.project?.name || '');
+            return;
+          }
+          action = choice;
+        }
+      }
+
       let newCustomerId = rec.project?.customer_id;
-      if (rec.customer && rec.customer.name) {
+      if (action === 'update' && existing?.customer_id) {
+        // Sync: bestehende Kundenzuordnung behalten (keine Kunden-Dubletten)
+        newCustomerId = existing.customer_id;
+      } else if (rec.customer && rec.customer.name) {
+        // Kunde: beim Import immer neu anlegen (Konflikte vermeiden)
         const newCustomer = await CustomerService.create(stripSystemFields(rec.customer));
         newCustomerId = newCustomer.id;
       }
+
+      if (action === 'update' && existing) {
+        // Komplett ersetzen: alten Stand (inkl. Fotos/Skizzen/Berichte) löschen
+        await ProjectService.delete(existing.id);
+      }
+
       const projectData = stripSystemFields({
         ...rec.project,
-        name: `${rec.project.name} (Import)`,
+        name: action === 'update' ? rec.project.name : `${rec.project.name} (Import)`,
         customer_id: newCustomerId,
+        origin_id: fileOrigin || undefined,
       });
       const newProject = await ProjectService.create(projectData);
       state.currentProjectId = newProject.id;
-      state.importedProjects.push({ id: newProject.id, name: rec.project.name });
+      state.createdProjectIds.push(newProject.id);
+      if (action === 'update') {
+        state.updatedProjects.push({ id: newProject.id, name: rec.project.name });
+      } else {
+        state.importedProjects.push({ id: newProject.id, name: rec.project.name });
+      }
 
       for (const roof of rec.roofs || []) {
         state.totalItems++;
@@ -388,16 +496,25 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
     switch (rec.type) {
       case 'checklist': {
         state.totalItems++;
+        state.counters.checklist++;
+        state.itemsDone++;
+        emitProgress(state, `Checkliste ${state.counters.checklist}${state.itemTotals.checklist ? ` von ${state.itemTotals.checklist}` : ''}`);
         await ChecklistService.create({ ...stripSystemFields(rec.data), project_id: projectId });
         break;
       }
       case 'report': {
         state.totalItems++;
+        state.counters.report++;
+        state.itemsDone++;
+        emitProgress(state, `Bericht ${state.counters.report}${state.itemTotals.report ? ` von ${state.itemTotals.report}` : ''}`);
         await ReportService.create({ ...stripSystemFields(rec.data), project_id: projectId });
         break;
       }
       case 'photo': {
         state.totalItems++;
+        state.counters.photo++;
+        state.itemsDone++;
+        emitProgress(state, `Foto ${state.counters.photo}${state.itemTotals.photo ? ` von ${state.itemTotals.photo}` : ''}`);
         const img = rec.image || '';
         await PhotoService.create({
           ...stripSystemFields(rec.data),
@@ -409,6 +526,9 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
       }
       case 'sketch': {
         state.totalItems++;
+        state.counters.sketch++;
+        state.itemsDone++;
+        emitProgress(state, `Skizze ${state.counters.sketch}${state.itemTotals.sketch ? ` von ${state.itemTotals.sketch}` : ''}`);
         const origId = rec.data?.id;
         const light = stripSystemFields({ ...rec.data, project_id: projectId });
         delete light.metadata;
@@ -444,6 +564,9 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
       // SketchService.create() splittet Hintergrund/Bilder automatisch auf.
       case 'legacy_sketch': {
         state.totalItems++;
+        state.counters.sketch++;
+        state.itemsDone++;
+        emitProgress(state, `Skizze ${state.counters.sketch}${state.itemTotals.sketch ? ` von ${state.itemTotals.sketch}` : ''}`);
         await SketchService.create({ ...stripSystemFields(rec.data), project_id: projectId });
         break;
       }
@@ -461,11 +584,23 @@ const importLegacyPayload = async (importData: any, state: ImportState): Promise
   const bundles = Array.isArray(importData.projects)
     ? importData.projects
     : [importData];
+  state.projectCount = bundles.filter((b: any) => b?.project).length;
 
   for (const bundle of bundles) {
     if (!bundle?.project) continue;
     await processRecord(
-      { type: 'project', project: bundle.project, customer: bundle.customer, roofs: bundle.roofs },
+      {
+        type: 'project',
+        project: bundle.project,
+        customer: bundle.customer,
+        roofs: bundle.roofs,
+        counts: {
+          photos: bundle.photos?.length || 0,
+          sketches: bundle.sketches?.length || 0,
+          checklists: bundle.checklists?.length || 0,
+          reports: bundle.reports?.length || 0,
+        },
+      },
       state
     );
     const lists: [string, any[] | undefined][] = [
@@ -538,14 +673,28 @@ const streamImportNative = async (filePath: string, state: ImportState): Promise
   }
 };
 
-export const importProjectsFromFile = async (uri: string): Promise<ImportSummary> => {
+export const importProjectsFromFile = async (
+  uri: string,
+  options: ImportOptions = {}
+): Promise<ImportSummary> => {
   const state: ImportState = {
     currentProjectId: null,
     skipChildren: false,
     sketchIdMap: {},
     importedProjects: [],
+    updatedProjects: [],
+    skippedProjects: [],
+    createdProjectIds: [],
     failedItems: 0,
     totalItems: 0,
+    projectIndex: 0,
+    projectCount: null,
+    currentProjectName: '',
+    itemsDone: 0,
+    itemsTotal: null,
+    counters: { photo: 0, sketch: 0, checklist: 0, report: 0 },
+    itemTotals: { photo: null, sketch: null, checklist: null, report: null },
+    options,
   };
 
   try {
@@ -617,20 +766,76 @@ export const importProjectsFromFile = async (uri: string): Promise<ImportSummary
       }
     }
 
-    if (state.importedProjects.length === 0) {
+    if (
+      state.importedProjects.length === 0 &&
+      state.updatedProjects.length === 0 &&
+      state.skippedProjects.length === 0
+    ) {
       throw new Error('IMPORT_INVALID');
     }
 
     return {
       importedProjects: state.importedProjects,
+      updatedProjects: state.updatedProjects,
+      skippedProjects: state.skippedProjects,
       failedItems: state.failedItems,
       totalItems: state.totalItems,
     };
   } catch (fatalError) {
     // Rollback: halb importierte Projekte entfernen (keine "Geister-Projekte")
-    for (const p of state.importedProjects) {
-      try { await ProjectService.delete(p.id); } catch { /* ignorieren */ }
+    for (const id of state.createdProjectIds) {
+      try { await ProjectService.delete(id); } catch { /* ignorieren */ }
     }
     throw fatalError;
   }
 };
+
+// ---------------------------------------------------------------------------
+// DIALOG-HELFER (von Home- und Projektdetail-Screen gemeinsam genutzt)
+// ---------------------------------------------------------------------------
+
+// Fragt vor dem Export, ob Fotos enthalten sein sollen.
+// true = mit Fotos, false = ohne Fotos, null = abgebrochen
+export const askExportPhotoChoice = (): Promise<boolean | null> =>
+  new Promise((resolve) => {
+    if (Platform.OS === 'web') {
+      // Web-Fallback (Alert.alert rendert auf Web nicht)
+      resolve(window.confirm('Fotos mit exportieren?\n\nOK = Mit Fotos\nAbbrechen = Ohne Fotos (kleinere Datei)'));
+      return;
+    }
+    Alert.alert(
+      'Projekt exportieren',
+      'Sollen die Fotos mit exportiert werden?',
+      [
+        { text: 'Mit Fotos', onPress: () => resolve(true) },
+        { text: 'Ohne Fotos (kleinere Datei)', onPress: () => resolve(false) },
+        { text: 'Abbrechen', style: 'cancel', onPress: () => resolve(null) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(null) }
+    );
+  });
+
+// Fragt beim Import, wie mit einem bereits vorhandenen Projekt umgegangen werden soll.
+export const askDuplicateAction = (projectName: string): Promise<'update' | 'copy' | 'skip'> =>
+  new Promise((resolve) => {
+    if (Platform.OS === 'web') {
+      resolve(
+        window.confirm(
+          `Projekt "${projectName}" existiert bereits auf diesem Gerät.\n\nOK = Aktualisieren (vorhandenes Projekt ersetzen)\nAbbrechen = Als Kopie importieren`
+        )
+          ? 'update'
+          : 'copy'
+      );
+      return;
+    }
+    Alert.alert(
+      'Projekt bereits vorhanden',
+      `„${projectName}" existiert bereits auf diesem Gerät.\n\nWie möchten Sie fortfahren?`,
+      [
+        { text: 'Aktualisieren (ersetzen)', onPress: () => resolve('update') },
+        { text: 'Als Kopie importieren', onPress: () => resolve('copy') },
+        { text: 'Überspringen', style: 'cancel', onPress: () => resolve('skip') },
+      ],
+      { cancelable: false }
+    );
+  });

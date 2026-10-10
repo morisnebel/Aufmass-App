@@ -815,7 +815,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
             <Text style={styles.projectDate}>
-              {new Date(item.created_at).toLocaleDateString('de-DE')}
+              {new Date(lastActivity[item.id] || item.updated_at || item.created_at).toLocaleDateString('de-DE')}
             </Text>
           </View>
         </View>

@@ -37,6 +37,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy';
+import { exportProjectsToFile } from '../../utils/projectTransfer';
 import { SvgXml } from 'react-native-svg';
 import Svg, { Path as SvgPath, Text as SvgText, Image as SvgImage } from 'react-native-svg';
 
@@ -1833,76 +1834,28 @@ export default function ProjectDetailScreen() {
   };
 
   // Export project as .aufmass file to iCloud/Files
+  // Speicherschonender Streaming-Export: Daten werden zeilenweise in die Datei
+  // geschrieben (verhindert Hermes-OOM-Crash bei großen Projekten).
   const exportProjectFile = async () => {
+    if (!project?.id) return;
     try {
       setIsGeneratingPdf(true);
-      
-      // Skizzen mit vollständigen Bearbeitungsdaten (metadata + Hintergrund) laden
-      const sketchesWithData = project?.id
-        ? await SketchService.getByProjectIdWithData(project.id)
-        : (sketches || []);
+      const { uri } = await exportProjectsToFile([project.id]);
 
-      // Gather all project data
-      const exportData = {
-        version: '1.0',
-        exportDate: new Date().toISOString(),
-        project: project || {},
-        customer: customer || {},
-        roofs: roofs || [],
-        photos: photos || [],
-        sketches: sketchesWithData,
-        checklists: checklists || [],
-        reports: reports || [],
-      };
-      
-      // Convert to JSON string
-      const jsonString = JSON.stringify(exportData, null, 2);
-      
-      // Get safe filename
-      const safeName = (project?.name || 'projekt').replace(/[^a-zA-Z0-9äöüÄÖÜß]/g, '_');
-      
-      // Create file in cache directory directly as JSON
-      const fileUri = `${cacheDirectory}${safeName}.aufmass`;
-      
-      await writeAsStringAsync(fileUri, jsonString);
-      
       // Hide loader BEFORE opening share dialog to prevent stuck overlay
       setIsGeneratingPdf(false);
-      
-      // Share the file
-      await Sharing.shareAsync(fileUri, {
-        mimeType: 'application/json',
-        dialogTitle: t('projects.saveProject2'),
-      });
-      
+
+      // Web: Datei wurde bereits als Browser-Download ausgeliefert
+      if (Platform.OS !== 'web') {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/json',
+          dialogTitle: t('projects.saveProject2'),
+        });
+      }
     } catch (error: any) {
       console.error('Export error:', error);
       setIsGeneratingPdf(false);
-      // Fallback: Share as text
-      try {
-        let sketchesWithData: any = sketches || [];
-        try {
-          if (project?.id) sketchesWithData = await SketchService.getByProjectIdWithData(project.id);
-        } catch {}
-        const exportData = {
-          version: '1.0',
-          exportDate: new Date().toISOString(),
-          project: project || {},
-          customer: customer || {},
-          roofs: roofs || [],
-          photos: photos || [],
-          sketches: sketchesWithData,
-          checklists: checklists || [],
-          reports: reports || [],
-        };
-        const jsonString = JSON.stringify(exportData);
-        await Share.share({
-          message: jsonString,
-          title: `${project?.name || 'Projekt'}.aufmass`,
-        });
-      } catch (shareError) {
-        Alert.alert(t('projects.exportError2'), t('projects.exportNotPossible'));
-      }
+      Alert.alert(t('projects.exportError2'), t('projects.exportNotPossible'));
     }
   };
 

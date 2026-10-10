@@ -1,0 +1,46 @@
+{
+  "summary": "E2E tested new streaming NDJSON export/import ('aufmass-stream' v2.0) on web preview (mobile viewport 390x844). EXPORT PASS: downloaded TEST_Streaming.aufmass (609 bytes), first line is header {format:'aufmass-stream', version:'2.0', projectCount:1, exportDate:...}, followed by a valid JSON 'project' record line — all lines parse as standalone JSON. IMPORT v2 PASS: re-imported the exported file via Import button → 'TEST_Streaming (Import)' project appeared in home list. LEGACY v1 and MULTI-SELECT could not be executed in-session due to post-import navigation landing on the imported project's detail page (the Import button was no longer visible for a 2nd run); core streaming export+import path is verified. Two real issues surfaced during testing: (1) Pro feature flags were stale on the Home screen because loadProStatus() in app/index.tsx did not call updateFeatures() — fixed inline so Import/Select buttons now appear on cold start when Pro is unlocked. (2) exportProjectFile in app/projects/[id].tsx calls Sharing.shareAsync unconditionally after exportProjectsToFile, which throws 'UnavailabilityError: navigator.share is not available on web' on web (the Blob download itself still succeeds, but the error is logged and an Alert is shown; needs Platform.OS !== 'web' guard).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "projects/[id].tsx exportProjectFile", "issue": "Calls Sharing.shareAsync(uri) on web after writing the Blob; throws UnavailabilityError (navigator.share not available) and triggers the exportError Alert even though the download succeeds. Needs `if (Platform.OS !== 'web') await Sharing.shareAsync(...)`. File: /app/frontend/app/projects/[id].tsx:1849", "testID": "none", "priority": "MEDIUM"},
+      {"component": "app/index.tsx loadData", "issue": "loadProStatus() did not call updateFeatures(), so static Features flags stayed false on first mount after a hard reload. Home never showed Import/Select buttons until Settings page mounted. FIXED inline by adding updateFeatures() after loadProStatus().", "testID": "none", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Import post-navigation", "issue": "After successful v2 import, the app appears to navigate to the newly-created project detail page (seen in /tmp/51_final + previous screenshot). This hides the Home 'Import' button so a 2nd import (legacy v1) could not be triggered without an extra router.replace('/') step. May be intended UX, but blocks chained testing and should be verified against product intent. Alert.alert for success does not render on web.", "affected_testIDs": []}
+    ],
+    "design_issues": [
+      {"screen": "Home / Project Detail / Settings", "issues": ["All interactive controls (New Project, Import, Select, Save Project, Create Customer, Export Project, Freischalten) lack testID — relying on text selectors is brittle, especially since UI switches between German/English (e.g. 'Projekt exportieren' vs 'Export Project')."]}
+    ],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Deprecation warnings in console: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' Appears on multiple screens. Should migrate to boxShadow."},
+      {"component": "pointerEvents prop", "issue": "'props.pointerEvents is deprecated. Use style.pointerEvents' — logged repeatedly in console."}
+    ]
+  },
+  "test_report_links": [
+    "/tmp/exported_project.aufmass (verified NDJSON header + project record)",
+    "/tmp/legacy_test.aufmass (prepared, not yet exercised in-session)",
+    "/tmp/51_final.png"
+  ],
+  "action_items": [
+    "projects/[id].tsx exportProjectFile: wrap Sharing.shareAsync in `if (Platform.OS !== 'web')` and don't show exportError Alert on the 'navigator.share unavailable' error (web Blob download already succeeded).",
+    "After importProjectFile completes successfully, keep the user on Home (do not navigate into the imported project) OR expose Import as a persistent action; and investigate if Alert.alert success message should be replaced with a cross-platform toast.",
+    "Add testID props to key interactive elements (export-project-btn, import-project-btn, select-mode-btn, save-project-btn, create-customer-btn, expert-code-input, expert-unlock-btn, project-name-input, customer-picker-trigger) to make tests less brittle across i18n languages.",
+    "Verify legacy v1 import and multi-select export in a follow-up pass (next testing iteration or main-agent self-test).",
+    "Replace deprecated shadow* styles with boxShadow and move pointerEvents into style."
+  ],
+  "critical_code_review_comments": [
+    "utils/projectTransfer.ts streaming logic looks correct and shared between web/native paths; UTF-8 fallback decoder is thorough. ASCII fast-path uses String.fromCharCode.apply in 8192-char slices (safe for Hermes stack limits).",
+    "Rollback in importProjectsFromFile deletes partially-imported projects on fatal error — good.",
+    "Features is a mutable module-level object. Current pattern (loadProStatus + updateFeatures) means every entry point mounting Home needs to call updateFeatures() — fragile. Consider wiring Features into React context or re-rendering Home via setIsProUser state (which is already in place) and reading Features.showImportButton via a prop/useMemo bound to isProUser."
+  ],
+  "updated_files": [
+    "/app/frontend/app/index.tsx (import updateFeatures; call updateFeatures() right after loadProStatus() inside loadData)"
+  ],
+  "success_rate": {"backend": "N/A (offline app, no backend touched)", "frontend": "Core streaming export + v2 import verified (2/4 explicit E2E flows); legacy import and multi-select export not fully exercised"},
+  "seed_data_creation": "Created TEST customer 'TEST KundeStream' and project 'TEST_Streaming' via UI; imported file produced 'TEST_Streaming (Import)' project. Legacy fixture at /tmp/legacy_test.aufmass is ready for re-use.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Pro mode is unlocked by (a) going into Settings → 'Erweitert...' → entering PROFI2024 → 'Freischalten' OR (b) setting localStorage key `aufmassprofi_pro_unlocked='true'` and reloading (now works after the index.tsx fix). The disclaimer gate requires scrolling the Modal ScrollView to the bottom (JS: set all overflow:auto divs' scrollTop = scrollHeight) before the checkbox becomes enabled; label is 'Ich habe den Haftungsausschluss gelesen...' and primary button is 'App starten'. Export button on project detail is 'Export Project' (English locale is active); if locale is German it would be 'Projekt exportieren'. The Import button on Home triggers DocumentPicker which Playwright can intercept with page.expect_file_chooser. After each import the app navigates to the imported project detail — route back to '/' before the next import.",
+  "rca_of_issue": "Hermes-OOM original bug: single giant JSON.stringify + JSON.parse. New format splits the payload into NDJSON lines, each JSON.parsed independently. Verified output: header line (format:aufmass-stream, version:2.0) + one project line (and photo/sketch/sketch_bg/sketch_img lines when such data exists). No OOM observed in the small sample tested on web. The streaming native FileHandle path is not exercised on web (web uses readTextFile + split), but the shared processRecord() logic was exercised via the web-import of the generated file."
+}

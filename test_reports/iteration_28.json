@@ -1,0 +1,42 @@
+{
+  "summary": "Verified all 5 flows from the review request on the Expo web preview (mobile viewport 390x844). ALL PASS. (1) Legacy v1 single-project import: /tmp/legacy_test.aufmass imported successfully, 'Legacy Testprojekt (Import)' appears on home list, Fotos tab shows counter '1' confirming the embedded photo was persisted. (2) Legacy v1 multi-project import: /tmp/legacy_multi.aufmass with 2 projects imported, both 'Multi A (Import)' and 'Multi B (Import)' appear on home, no auto-navigation (user remained on home as expected). (3) Multi-select export of 2 projects produced blob download 'Projekte_2026-10-10_2.aufmass' (949 bytes), first line is header '{\"format\":\"aufmass-stream\",\"version\":\"2.0\",\"projectCount\":2,...}' and body contains exactly 2 lines with '\"type\":\"project\"'. (4) WEB SHARE GUARD REGRESSION FIXED/VERIFIED: Single-project 'Export Project' from project detail now downloads 'Multi_A__Import_.aufmass' (525 bytes) with ZERO console errors — no 'UnavailabilityError: navigator.share' and no export-error alert. (5) Roundtrip of multi-export: re-imported the downloaded Projekte_*.aufmass → both projects appeared again with additional '(Import)' suffix ('Multi A (Import) (Import)' etc.), proving the v2 streaming path handles multi-project NDJSON files on both export and import. No business-logic or integration bugs found. Only pre-existing noisy deprecation warnings ('shadow*' and 'pointerEvents') remain and were already reported in iteration_27.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home / Disclaimer / Settings / Project detail", "issues": ["Still no testID attributes on key interactive controls (Import, Select, Export, Export Project, Freischalten, disclaimer checkbox, 'App starten'). Had to click via text selectors + coordinate math on the checkbox, which is brittle across i18n."]}
+    ],
+    "react_native_issues": [
+      {"component": "shadow* style props", "issue": "Deprecation warning in console: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' (pre-existing, carried over from iteration_27)"},
+      {"component": "pointerEvents prop", "issue": "Deprecation warning: 'props.pointerEvents is deprecated. Use style.pointerEvents' (pre-existing, carried over from iteration_27)"}
+    ]
+  },
+  "test_report_links": [
+    "/tmp/legacy_test.aufmass",
+    "/tmp/legacy_multi.aufmass",
+    "/tmp/dl/Projekte_2026-10-10_2.aufmass (verified NDJSON header + 2 project lines)",
+    "/tmp/dl/Multi_A__Import_.aufmass (single-export, no navigator.share error)",
+    "/tmp/s1_seeded.png",
+    "/tmp/s2_selected.png",
+    "/tmp/s4_after_single_export.png",
+    "/tmp/s5_roundtrip.png"
+  ],
+  "action_items": [
+    "No action required for the streaming NDJSON import/export feature — all 5 regression flows pass.",
+    "(Still open from iteration_27) Add testID props to Import, Select, Export, Export Project, disclaimer checkbox, 'App starten', Freischalten controls to stabilise future automated tests across German/English locales.",
+    "(Still open from iteration_27) Migrate deprecated shadow* styles to boxShadow and move pointerEvents into style to clean up console warnings."
+  ],
+  "critical_code_review_comments": [
+    "utils/projectTransfer.ts: both export paths (web Blob + native streamed FileHandle) share writeProjectLines() + processRecord() logic — good; multi-project filename pattern Projekte_<YYYY-MM-DD>_<count>.aufmass matches spec; legacy v1 payload with projects[] array now routes through importLegacyPayload() correctly.",
+    "app/projects/[id].tsx:1849 and app/index.tsx:288 — Platform.OS !== 'web' guard around Sharing.shareAsync is in place; verified via E2E that web export produces no UnavailabilityError.",
+    "After legacy single-project import the app auto-navigates to the new project detail (intended UX per prompt). After multi-project import the user stays on home — behaviour matches the spec."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (offline app, no backend)", "frontend": "5/5 explicit flows PASS; 0 console errors during export; v2 header validated as JSON; multi-project roundtrip verified"},
+  "seed_data_creation": "Created /tmp/legacy_test.aufmass (v1 single-project with embedded 1x1 PNG photo) and /tmp/legacy_multi.aufmass (v1 multi-project with 2 bundles). Imported them into AsyncStorage during the test; data is local to the browser context used during the run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Each mcp_browser_automation call creates a FRESH browser context — localStorage/AsyncStorage does NOT persist across tool invocations. Any flow that needs seeded data must perform the seeding in the SAME tool call. Pro is unlocked by setting localStorage key `aufmassprofi_pro_unlocked='true'` + `aufmassprofi_disclaimer_accepted='true'` and reloading. Disclaimer still shows on first visit even with the flag set — the inner ScrollView must be scrolled to the bottom before the checkbox becomes enabled; checkbox is to the LEFT of the label 'Ich habe den Haftungsausschluss gelesen...' (click ~15px left of the label's bounding box). After legacy v1 single-project import, the app navigates INTO the imported project detail — go back to '/' via page.goto() before chaining more imports.",
+  "rca_of_issue": "No new issues. The two issues reported in iteration_27 (navigator.share on web + updateFeatures()) are both fixed: (a) exportSelectedProjects in app/index.tsx:288 and exportProjectFile in app/projects/[id].tsx:1849 both guard Sharing.shareAsync with Platform.OS !== 'web', so the Blob download path on web no longer triggers the UnavailabilityError or the error-alert cascade; verified by capturing 0 console errors during single + multi exports. (b) updateFeatures() is called after loadProStatus() so Import/Select buttons appear reliably on home when Pro is unlocked."
+}

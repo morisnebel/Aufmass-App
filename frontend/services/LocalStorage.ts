@@ -812,6 +812,26 @@ export interface Sketch {
   updated_at: string;
 }
 
+// Lagert große eingebettete Bilder (base64-URIs) aus Skizzen-Elementen in eigene
+// sketch_img_-Keys aus, BEVOR die Metadaten per JSON.stringify serialisiert werden.
+// Verhindert riesige String-Allokationen (std::bad_alloc-Crash auf iOS beim Import).
+const externalizeSketchImages = (meta: any, sketchId: string, saveOps: Promise<any>[]): any => {
+  const out = { ...meta };
+  delete out.backgroundImage;
+  if (Array.isArray(out.elements)) {
+    out.elements = out.elements.map((el: any) => {
+      const uri = el?.data?.uri;
+      if (el?.type === 'image' && typeof uri === 'string' && uri.length > 50000) {
+        const imageKey = `sketch_img_${sketchId}_${el.id}`;
+        saveOps.push(AsyncStorage.setItem(imageKey, uri).catch(() => {}));
+        return { ...el, data: { ...el.data, uri: '__stored__', imageStorageKey: imageKey } };
+      }
+      return el;
+    });
+  }
+  return out;
+};
+
 export const SketchService = {
   getAll: async (): Promise<Sketch[]> => {
     return getItems<Sketch>(KEYS.SKETCHES);
@@ -976,8 +996,7 @@ export const SketchService = {
       try {
         const meta = JSON.parse(heavyMetadata);
         const bg = meta.backgroundImage || null;
-        const metaWithoutBg = { ...meta };
-        delete metaWithoutBg.backgroundImage;
+        const metaWithoutBg = externalizeSketchImages(meta, id, saveOps);
         saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
         if (bg) {
           saveOps.push(AsyncStorage.setItem(`sketch_bg_${id}`, bg));
@@ -1010,8 +1029,7 @@ export const SketchService = {
       try {
         const meta = JSON.parse(heavyMetadata);
         const bg = meta.backgroundImage || null;
-        const metaWithoutBg = { ...meta };
-        delete metaWithoutBg.backgroundImage;
+        const metaWithoutBg = externalizeSketchImages(meta, id, saveOps);
         saveOps.push(AsyncStorage.setItem(`sketch_meta_${id}`, JSON.stringify(metaWithoutBg)));
         if (bg) {
           saveOps.push(AsyncStorage.setItem(`sketch_bg_${id}`, bg));

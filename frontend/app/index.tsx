@@ -18,13 +18,11 @@ import {
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, ReportService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber, cleanupOrphanedStorage } from '../services/LocalStorage';
+import { ProjectService, CustomerService, ChecklistService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber, cleanupOrphanedStorage } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { readAsStringAsync, writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
-import { readTextFile } from '../utils/readTextFile';
+import { exportProjectsToFile, importProjectsFromFile } from '../utils/projectTransfer';
 import * as Sharing from 'expo-sharing';
-import { Features, AppName, getProStatus, loadProStatus } from '../services/FeatureFlags';
+import { Features, AppName, getProStatus, loadProStatus, updateFeatures } from '../services/FeatureFlags';
 import { BackupService } from '../services/BackupService';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -133,6 +131,7 @@ export default function HomeScreen() {
 
       // Ausgeliehene & Inspektion-fällige Maschinen laden (nur Pro)
       const proStatus = await loadProStatus();
+      updateFeatures();
       setIsProUser(proStatus);
       if (proStatus) {
         try {
@@ -272,6 +271,7 @@ export default function HomeScreen() {
   };
   
   // Export selected projects
+  // Speicherschonender Streaming-Export (verhindert OOM bei großen Projekten)
   const exportSelectedProjects = async () => {
     if (selectedProjects.size === 0) {
       Alert.alert(t('common.note'), t('home.selectAtLeastOne'));
@@ -280,54 +280,17 @@ export default function HomeScreen() {
     
     setIsProcessing(true);
     try {
-      const exportDataArray = [];
-      
-      for (const projectId of selectedProjects) {
-        const project = projects.find(p => p.id === projectId);
-        if (!project) continue;
-        
-        const customer = customers[project.customer_id];
-        const [roofs, photos, sketches, checklists, reports] = await Promise.all([
-          RoofService.getByProjectId(projectId),
-          PhotoService.getByProjectId(projectId),
-          SketchService.getByProjectIdWithData(projectId),
-          ChecklistService.getByProjectId(projectId),
-          ReportService.getByProjectId(projectId),
-        ]);
-        
-        exportDataArray.push({
-          version: '1.0',
-          exportDate: new Date().toISOString(),
-          project,
-          customer: customer || {},
-          roofs: roofs || [],
-          photos: photos || [],
-          sketches: sketches || [],
-          checklists: checklists || [],
-          reports: reports || [],
-        });
-      }
-      
-      // Create combined export file
-      const combinedExport = {
-        version: '1.0',
-        exportDate: new Date().toISOString(),
-        projectCount: exportDataArray.length,
-        projects: exportDataArray,
-      };
-      
-      const jsonString = JSON.stringify(combinedExport, null, 2);
-      const timestamp = new Date().toISOString().slice(0, 10);
-      const fileUri = `${cacheDirectory}Projekte_${timestamp}_${selectedProjects.size}.aufmass`;
-      
-      await writeAsStringAsync(fileUri, jsonString);
+      const { uri } = await exportProjectsToFile([...selectedProjects]);
       
       setIsProcessing(false);
       
-      await Sharing.shareAsync(fileUri, {
-        mimeType: 'application/json',
-        dialogTitle: `${selectedProjects.size} Projekte exportieren`,
-      });
+      // Web: Datei wurde bereits als Browser-Download ausgeliefert
+      if (Platform.OS !== 'web') {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/json',
+          dialogTitle: `${selectedProjects.size} Projekte exportieren`,
+        });
+      }
       
       // Exit selection mode after successful export
       setSelectionMode(false);
@@ -419,11 +382,13 @@ export default function HomeScreen() {
   };
 
   // Import project from .aufmass file
+  // Streaming-Import: Datei wird zeilenweise verarbeitet (kein JSON.parse der
+  // ganzen Datei mehr → verhindert Hermes-OOM-Crash bei großen Projekten).
   const importProjectFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/json', '*/*'],
-        // Android: content://-URI behalten (readTextFile kopiert selbst in den Cache);
+        // Android: content://-URI behalten (projectTransfer kopiert selbst in den Cache);
         // das Picker-eigene Kopieren schlaegt in Expo Go an den Berechtigungen fehl
         copyToCacheDirectory: Platform.OS === "ios",
       });
@@ -443,108 +408,34 @@ export default function HomeScreen() {
       
       setLoading(true);
       
-      // Read file content (Android-sicher: content://-URIs werden unterstützt)
-      const content = await readTextFile(file.uri);
-      
-      // Clean up content - remove truncation markers if present
-      let cleanContent = content;
-      if (content.includes('... (gekürzt)')) {
-        Alert.alert(t('common.error'), t('home.importIncomplete'));
-        setLoading(false);
-        return;
-      }
-      
-      const importData = JSON.parse(cleanContent);
-      
-      // Validate import data
-      if (!importData.project || !importData.version) {
-        Alert.alert(t('common.error'), t('home.importInvalid'));
-        setLoading(false);
-        return;
-      }
-      
-      // Import mit Einzelfehler-Toleranz: ein fehlgeschlagenes Foto bricht nicht
-      // den ganzen Import ab. Bei fatalem Fehler wird das halb importierte
-      // Projekt zurückgerollt (kein "Geister-Projekt").
-      let newProject: { id: string } | null = null;
-      let failedItems = 0;
-      let totalItems = 0;
-
-      try {
-        // Import customer if exists
-        let newCustomerId = importData.project.customer_id;
-        if (importData.customer && importData.customer.name) {
-          // Always create a new customer for imports to avoid conflicts
-          const customerData = {
-            ...importData.customer,
-            id: undefined,
-            created_at: undefined,
-            updated_at: undefined,
-          };
-          delete customerData.id;
-          const newCustomer = await CustomerService.create(customerData);
-          newCustomerId = newCustomer.id;
-        }
-
-        // Import project with new ID
-        const projectData = {
-          ...importData.project,
-          name: `${importData.project.name} (Import)`,
-          customer_id: newCustomerId,
-        };
-        delete projectData.id;
-        delete projectData.created_at;
-        delete projectData.updated_at;
-
-        newProject = await ProjectService.create(projectData);
-
-        const importList = async (items: unknown[] | undefined, createFn: (d: never) => Promise<unknown>) => {
-          if (!items || items.length === 0) return;
-          for (const item of items) {
-            totalItems++;
-            try {
-              const d: Record<string, unknown> = { ...(item as Record<string, unknown>), project_id: newProject!.id };
-              delete d.id;
-              delete d.created_at;
-              delete d.updated_at;
-              await createFn(d as never);
-            } catch (itemError) {
-              failedItems++;
-              console.error('Import-Element fehlgeschlagen:', itemError);
-            }
-          }
-        };
-
-        await importList(importData.roofs, (d) => RoofService.create(d));
-        await importList(importData.photos, (d) => PhotoService.create(d));
-        await importList(importData.sketches, (d) => SketchService.create(d));
-        await importList(importData.checklists, (d) => ChecklistService.create(d));
-        await importList(importData.reports, (d) => ReportService.create(d));
-      } catch (fatalError) {
-        // Rollback: halb importiertes Projekt samt Unterdaten entfernen
-        if (newProject?.id) {
-          try { await ProjectService.delete(newProject.id); } catch { /* ignorieren */ }
-        }
-        throw fatalError;
-      }
+      const summary = await importProjectsFromFile(file.uri);
 
       await loadData();
-      if (failedItems > 0) {
+      const firstName = summary.importedProjects[0]?.name || '';
+      if (summary.failedItems > 0) {
         Alert.alert(
           'Teilweise importiert',
-          `Projekt "${importData.project.name}" wurde importiert, aber ${failedItems} von ${totalItems} Elementen (z.B. Fotos/Skizzen) konnten nicht übernommen werden.\n\nMöglicher Grund: Speicher-Limit. Bitte die installierte App (ab Version 1.1.14) verwenden – in Expo Go ist der Speicher auf 6 MB begrenzt.`
+          `${summary.importedProjects.length > 1 ? `${summary.importedProjects.length} Projekte wurden` : `Projekt "${firstName}" wurde`} importiert, aber ${summary.failedItems} von ${summary.totalItems} Elementen (z.B. Fotos/Skizzen) konnten nicht übernommen werden.\n\nMöglicher Grund: Speicher-Limit. Bitte die installierte App (ab Version 1.1.14) verwenden – in Expo Go ist der Speicher auf 6 MB begrenzt.`
         );
+      } else if (summary.importedProjects.length > 1) {
+        Alert.alert(t('common.success'), `${summary.importedProjects.length} Projekte wurden erfolgreich importiert.`);
       } else {
-        Alert.alert(t('common.success'), t('home.importSuccess', { name: importData.project.name }));
+        Alert.alert(t('common.success'), t('home.importSuccess', { name: firstName }));
       }
 
-      // Navigate to the imported project
-      router.push(`/projects/${newProject!.id}`);
+      // Navigate to the imported project (nur bei Einzel-Import)
+      if (summary.importedProjects.length === 1) {
+        router.push(`/projects/${summary.importedProjects[0].id}`);
+      }
 
     } catch (error) {
       console.error('Error importing project:', error);
       const msg = String((error as Error)?.message || '');
-      if (msg.includes('SQLITE_FULL') || msg.includes('disk is full')) {
+      if (msg.includes('IMPORT_INCOMPLETE')) {
+        Alert.alert(t('common.error'), t('home.importIncomplete'));
+      } else if (msg.includes('IMPORT_INVALID')) {
+        Alert.alert(t('common.error'), t('home.importInvalid'));
+      } else if (msg.includes('SQLITE_FULL') || msg.includes('disk is full')) {
         Alert.alert(
           t('common.error'),
           'Import fehlgeschlagen: Der App-Speicher ist voll (Android-Limit von 6 MB in Expo Go / älteren Builds).\n\nBitte den neuesten installierten Build (ab Version 1.1.14) verwenden – dort ist das Limit auf 512 MB erhöht.'

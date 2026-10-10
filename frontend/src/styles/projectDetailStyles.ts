@@ -456,6 +456,15 @@ export const styles = StyleSheet.create({
     padding: 8,
     zIndex: 10,
   },
+  sketchMoveButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 96,
+    backgroundColor: 'rgba(96, 125, 139, 0.9)',
+    borderRadius: 20,
+    padding: 8,
+    zIndex: 10,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',

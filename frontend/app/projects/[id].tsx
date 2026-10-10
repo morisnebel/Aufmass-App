@@ -213,6 +213,9 @@ export default function ProjectDetailScreen() {
   const [sketchToDelete, setSketchToDelete] = useState<string | null>(null);
   const [isDeletingSketch, setIsDeletingSketch] = useState(false);
   const [isDuplicatingSketch, setIsDuplicatingSketch] = useState(false);
+  const [moveSketchModal, setMoveSketchModal] = useState<{ visible: boolean; sketchId: string; sketchTitle: string }>({ visible: false, sketchId: '', sketchTitle: '' });
+  const [moveTargetProjects, setMoveTargetProjects] = useState<any[]>([]);
+  const [isMovingSketch, setIsMovingSketch] = useState(false);
   
   // Photo gallery save state
   const [photoSelectMode, setPhotoSelectMode] = useState(false);
@@ -884,6 +887,51 @@ export default function ProjectDetailScreen() {
       Alert.alert('Fehler', 'Skizze konnte nicht dupliziert werden.');
     } finally {
       setIsDuplicatingSketch(false);
+    }
+  };
+
+  // Skizze in ein anderes Projekt verschieben: Zielauswahl-Modal öffnen
+  const openMoveSketchModal = async (sketch: any) => {
+    try {
+      const all = await ProjectService.getAll();
+      const targets = all
+        .filter((p: any) => p.id !== id)
+        .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
+      if (targets.length === 0) {
+        if (Platform.OS === 'web') alert('Kein anderes Projekt vorhanden.');
+        else Alert.alert('Verschieben nicht möglich', 'Es gibt kein anderes Projekt, in das die Skizze verschoben werden könnte.');
+        return;
+      }
+      setMoveTargetProjects(targets);
+      setMoveSketchModal({ visible: true, sketchId: sketch.id, sketchTitle: sketch.title || sketch.name || 'Skizze' });
+    } catch (error) {
+      console.error('Error loading projects for move:', error);
+    }
+  };
+
+  const moveSketchToProject = async (targetProject: any) => {
+    if (isMovingSketch) return;
+    setIsMovingSketch(true);
+    try {
+      // Alle ausgelagerten Daten-Keys (Vorschau, Metadaten, Bilder) hängen an der
+      // Skizzen-ID und bleiben beim Verschieben unverändert gültig.
+      await SketchService.update(moveSketchModal.sketchId, { project_id: targetProject.id } as any);
+      const movedTitle = moveSketchModal.sketchTitle;
+      setMoveSketchModal({ visible: false, sketchId: '', sketchTitle: '' });
+      await loadProjectData();
+      if (Platform.OS === 'web') {
+        alert(`„${movedTitle}" wurde nach „${targetProject.name}" verschoben.`);
+      } else {
+        Alert.alert('Skizze verschoben', `„${movedTitle}" ist jetzt im Projekt „${targetProject.name}".`, [
+          { text: 'OK', style: 'cancel' },
+          { text: 'Projekt öffnen', onPress: () => router.push(`/projects/${targetProject.id}`) },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error moving sketch:', error);
+      Alert.alert('Fehler', 'Skizze konnte nicht verschoben werden.');
+    } finally {
+      setIsMovingSketch(false);
     }
   };
 
@@ -3237,6 +3285,15 @@ export default function ProjectDetailScreen() {
                     
                   </TouchableOpacity>
                   
+                  {/* Move Button */}
+                  <TouchableOpacity
+                    style={styles.sketchMoveButton}
+                    testID={`sketch-move-${sketch.id}`}
+                    onPress={() => openMoveSketchModal(sketch)}
+                  >
+                    <Ionicons name="arrow-redo-outline" size={20} color="#fff" />
+                  </TouchableOpacity>
+
                   {/* Duplicate Button */}
                   <TouchableOpacity
                     style={styles.sketchCopyButton}
@@ -5301,6 +5358,49 @@ export default function ProjectDetailScreen() {
                 <Text style={{ color: '#fff', fontWeight: '700' }}>Speichern</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Skizze-verschieben Modal */}
+      <Modal visible={moveSketchModal.visible} transparent animationType="fade" onRequestClose={() => setMoveSketchModal({ visible: false, sketchId: '', sketchTitle: '' })}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18, maxHeight: '75%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+              <Ionicons name="arrow-redo-outline" size={22} color="#1976d2" />
+              <Text style={{ marginLeft: 8, fontSize: 17, fontWeight: '700', color: '#333' }} numberOfLines={1}>
+                Skizze verschieben
+              </Text>
+            </View>
+            <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }} numberOfLines={2}>
+              „{moveSketchModal.sketchTitle}" in welches Projekt verschieben?
+            </Text>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {moveTargetProjects.map((p: any) => (
+                <TouchableOpacity
+                  key={p.id}
+                  testID={`move-target-${p.id}`}
+                  disabled={isMovingSketch}
+                  onPress={() => moveSketchToProject(p)}
+                  style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
+                >
+                  <Ionicons name="folder-outline" size={20} color="#1976d2" />
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: '#333' }} numberOfLines={1}>{p.name}</Text>
+                    {!!p.project_number && (
+                      <Text style={{ fontSize: 12, color: '#999' }}>Nr. {p.project_number}</Text>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#bbb" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => setMoveSketchModal({ visible: false, sketchId: '', sketchTitle: '' })}
+              style={{ marginTop: 14, paddingVertical: 11, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f5f5' }}
+            >
+              <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

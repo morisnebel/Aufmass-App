@@ -212,6 +212,7 @@ export default function ProjectDetailScreen() {
   const [deleteSketchModalVisible, setDeleteSketchModalVisible] = useState(false);
   const [sketchToDelete, setSketchToDelete] = useState<string | null>(null);
   const [isDeletingSketch, setIsDeletingSketch] = useState(false);
+  const [isDuplicatingSketch, setIsDuplicatingSketch] = useState(false);
   
   // Photo gallery save state
   const [photoSelectMode, setPhotoSelectMode] = useState(false);
@@ -855,6 +856,35 @@ export default function ProjectDetailScreen() {
         },
       ]
     );
+  };
+
+  // Skizze duplizieren (inkl. aller ausgelagerten Daten) und optional
+  // direkt die Kopie zum Weiterbearbeiten öffnen
+  const handleDuplicateSketch = async (sketchId: string) => {
+    if (isDuplicatingSketch) return;
+    setIsDuplicatingSketch(true);
+    try {
+      const copy = await SketchService.duplicate(sketchId);
+      await loadProjectData();
+      if (copy) {
+        if (Platform.OS === 'web') {
+          alert('Skizze wurde dupliziert.');
+        } else {
+          Alert.alert('Skizze dupliziert', 'Die Kopie wurde angelegt. Möchtest du sie jetzt bearbeiten?', [
+            { text: 'Später', style: 'cancel' },
+            {
+              text: 'Jetzt bearbeiten',
+              onPress: () => router.push(`/sketches/draw?projectId=${id}&sketchId=${copy.id}`),
+            },
+          ]);
+        }
+      }
+    } catch (error) {
+      console.error('Error duplicating sketch:', error);
+      Alert.alert('Fehler', 'Skizze konnte nicht dupliziert werden.');
+    } finally {
+      setIsDuplicatingSketch(false);
+    }
   };
 
   const handleDeleteSketch = async () => {
@@ -3207,6 +3237,16 @@ export default function ProjectDetailScreen() {
                     
                   </TouchableOpacity>
                   
+                  {/* Duplicate Button */}
+                  <TouchableOpacity
+                    style={styles.sketchCopyButton}
+                    testID={`sketch-duplicate-${sketch.id}`}
+                    disabled={isDuplicatingSketch}
+                    onPress={() => handleDuplicateSketch(sketch.id)}
+                  >
+                    <Ionicons name="copy-outline" size={20} color="#fff" />
+                  </TouchableOpacity>
+
                   {/* Delete Button */}
                   <TouchableOpacity
                     style={styles.sketchDeleteButton}

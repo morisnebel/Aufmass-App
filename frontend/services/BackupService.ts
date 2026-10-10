@@ -42,8 +42,8 @@ const AUTO_BACKUP_INDEX_KEY = 'aufmassprofi_auto_backups_index';
 const MAX_AUTO_BACKUPS = 3;
 const snapDataKey = (id: string, storageKey: string) => `aufmassprofi_snap_${id}_${storageKey}`;
 
-// Dynamische Bild-/Daten-Keys (Fotos, Skizzen, Checklisten-Bilder)
-const DYNAMIC_KEY_PREFIXES = ['photo_img_', 'sketch_meta_', 'sketch_bg_', 'chk_img_', 'doc_img_'];
+// Dynamische Bild-/Daten-Keys (Fotos, Skizzen inkl. Elementbilder + Vorschauen, Checklisten-Bilder)
+const DYNAMIC_KEY_PREFIXES = ['photo_img_', 'sketch_meta_', 'sketch_bg_', 'sketch_img_', 'sketch_prev_', 'chk_img_', 'doc_img_'];
 const isBackupKey = (key: string) => STORAGE_KEYS.includes(key) || DYNAMIC_KEY_PREFIXES.some(p => key.startsWith(p));
 const getAllBackupKeys = async (): Promise<string[]> => {
   try {

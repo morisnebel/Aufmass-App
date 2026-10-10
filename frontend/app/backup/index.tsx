@@ -294,11 +294,11 @@ export default function BackupScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Ionicons name="time-outline" size={20} color="#0f172a" />
-            <Text style={styles.sectionTitle}>Automatische Snapshots</Text>
+            <Text style={styles.sectionTitle}>Automatisches Backup</Text>
           </View>
           <Text style={styles.sectionSub}>
-            Zusätzliche Sicherheitsnetze – rollende letzte 3 Snapshots im App-Speicher.
-            Werden alle 24 Stunden beim App-Start erstellt.
+            Automatisches Backup aller Daten (inkl. Fotos und Skizzen) – wird einmal pro Woche
+            beim App-Start erstellt, die letzten 3 bleiben erhalten.
             ⚠️ Gehen bei App-Deinstallation verloren – deshalb nicht als Hauptsicherung nutzen!
           </Text>
 

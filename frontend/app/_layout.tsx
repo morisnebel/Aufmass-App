@@ -36,7 +36,8 @@ export default function RootLayout() {
     Promise.allSettled([migrateChecklistImages(), migrateDocumentImages()])
       .then(results => results.forEach(r => { if (r.status === 'rejected') console.error('[App] Migration error:', r.reason); }))
       .finally(() => {
-        BackupService.createAutoSnapshotIfNeeded(24).catch(err =>
+        // Automatisches Backup: wöchentlich beim App-Start (letzte 3 bleiben erhalten)
+        BackupService.createAutoSnapshotIfNeeded(24 * 7).catch(err =>
           console.warn('[App] Auto-snapshot error:', err)
         );
       });

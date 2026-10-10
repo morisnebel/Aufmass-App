@@ -1194,6 +1194,65 @@ export const SketchService = {
     return sketches[index];
   },
 
+  // Dupliziert eine Skizze inkl. aller ausgelagerten Daten-Keys (Vorschau,
+  // Metadaten, Hintergrund, Elementbilder). Kopiert jeden großen String
+  // EINZELN, damit nie mehrere Riesen-Strings gleichzeitig im Speicher liegen.
+  duplicate: async (id: string): Promise<Sketch | null> => {
+    const sketches = await getItems<Sketch>(KEYS.SKETCHES);
+    const original = sketches.find(s => s.id === id);
+    if (!original) return null;
+
+    const newId = generateId();
+    const now = new Date().toISOString();
+    const copy: Sketch = {
+      ...original,
+      id: newId,
+      created_at: now,
+      updated_at: now,
+    };
+    if (original.title) copy.title = `${original.title} (Kopie)`;
+    if (original.name) copy.name = `${original.name} (Kopie)`;
+    if (!original.title && !original.name) copy.title = 'Skizze (Kopie)';
+
+    // Ausgelagerte Vorschau (sketch_data) kopieren
+    if (original.sketch_data === '__stored__') {
+      const prev = await AsyncStorage.getItem(`sketch_prev_${id}`).catch(() => null);
+      if (prev) await AsyncStorage.setItem(`sketch_prev_${newId}`, prev);
+      else copy.sketch_data = undefined;
+    }
+
+    // Hintergrundbild kopieren
+    const bg = await AsyncStorage.getItem(`sketch_bg_${id}`).catch(() => null);
+    if (bg) await AsyncStorage.setItem(`sketch_bg_${newId}`, bg);
+
+    // Metadaten kopieren + Bild-Verweise auf die NEUEN Storage-Keys umschreiben
+    const metaStr = await AsyncStorage.getItem(`sketch_meta_${id}`).catch(() => null);
+    if (metaStr) {
+      let newMetaStr = metaStr;
+      try {
+        const meta = JSON.parse(metaStr);
+        if (Array.isArray(meta.elements)) {
+          for (let i = 0; i < meta.elements.length; i++) {
+            const el = meta.elements[i];
+            const oldKey = el?.data?.imageStorageKey;
+            if (el?.type === 'image' && oldKey) {
+              const newKey = `sketch_img_${newId}_${el.id}`;
+              const img = await AsyncStorage.getItem(oldKey).catch(() => null);
+              if (img) await AsyncStorage.setItem(newKey, img);
+              meta.elements[i] = { ...el, data: { ...el.data, imageStorageKey: newKey } };
+            }
+          }
+        }
+        newMetaStr = JSON.stringify(meta);
+      } catch { /* Nicht parsebar: 1:1 übernehmen */ }
+      await AsyncStorage.setItem(`sketch_meta_${newId}`, newMetaStr);
+    }
+
+    sketches.push(copy);
+    await setItems(KEYS.SKETCHES, sketches);
+    return copy;
+  },
+
   delete: async (id: string): Promise<boolean> => {
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const filtered = sketches.filter(s => s.id !== id);

@@ -328,6 +328,21 @@ export const BackupService = {
       // Alte monolithische Snapshots (OOM-Quelle) ohne Parse entsorgen
       await AsyncStorage.removeItem(AUTO_BACKUP_KEY).catch(() => {});
 
+      // Selbstheilung: verwaiste Snapshot-Datenkopien entfernen. Diese entstehen,
+      // wenn die App WÄHREND einer Snapshot-Erstellung beendet wird (Index-Eintrag
+      // fehlt dann) – ohne Aufräumen wächst der Speicher unbegrenzt!
+      try {
+        const rawIdx0 = await AsyncStorage.getItem(AUTO_BACKUP_INDEX_KEY);
+        const idx0: AutoBackupSnapshot[] = rawIdx0 ? JSON.parse(rawIdx0) : [];
+        const validPrefixes = idx0.map(s => `aufmassprofi_snap_${s.id}_`);
+        const all = (await AsyncStorage.getAllKeys()) || [];
+        const orphans = all.filter(k => k.startsWith('aufmassprofi_snap_') && !validPrefixes.some(p => k.startsWith(p)));
+        for (let i = 0; i < orphans.length; i += 50) {
+          await AsyncStorage.multiRemove(orphans.slice(i, i + 50)).catch(() => {});
+        }
+        if (orphans.length > 0) console.log(`[AutoBackup] ${orphans.length} verwaiste Snapshot-Keys entfernt`);
+      } catch {}
+
       const id = genId();
       const savedKeys: string[] = [];
       let sizeBytes = 0;
@@ -370,8 +385,16 @@ export const BackupService = {
         keys: savedKeys,
       };
       const updated = [entry, ...index];
-      const keep = updated.slice(0, MAX_AUTO_BACKUPS);
-      const drop = updated.slice(MAX_AUTO_BACKUPS);
+      // Konfigurierbare Anzahl aufbewahrter Snapshots (1-3, Standard 3).
+      // Wichtig: Jeder Snapshot ist eine VOLLKOPIE aller Daten inkl. Fotos!
+      let maxKeep = MAX_AUTO_BACKUPS;
+      try {
+        const v = await AsyncStorage.getItem('aufmassprofi_max_auto_snapshots');
+        const n = v ? parseInt(v, 10) : NaN;
+        if (n >= 1 && n <= 3) maxKeep = n;
+      } catch {}
+      const keep = updated.slice(0, maxKeep);
+      const drop = updated.slice(maxKeep);
       // Überzählige Snapshots samt Datenkopien löschen
       for (const d of drop) {
         for (const k of (d.keys || STORAGE_KEYS)) {

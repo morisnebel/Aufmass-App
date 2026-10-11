@@ -1,0 +1,233 @@
+/**
+ * StorageCleanup
+ * Analysiert die Speicherbelegung der App und entfernt SICHER nur Daten,
+ * die nachweislich nicht mehr benötigt werden:
+ *  - Verwaiste Daten-Keys (Bild-Blobs ohne zugehörigen Datensatz)
+ *  - Verwaiste Snapshot-Kopien (Snapshot-Erstellung wurde unterbrochen)
+ *  - Temporäre Dateien im Cache (Export-/Import-/PDF-Reste)
+ * Aktive Projekte, Kunden, Fotos, Skizzen etc. werden NIE angetastet.
+ */
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import { Directory, File, Paths } from 'expo-file-system';
+import { ProjectService, extractImageRefKeys } from './LocalStorage';
+
+const SNAP_PREFIX = 'aufmassprofi_snap_';
+const SNAP_INDEX_KEY = 'aufmassprofi_auto_backups_index';
+const OLD_MONOLITH_KEY = 'aufmassprofi_auto_backups'; // Alt-Format, nur noch Ballast
+
+export interface StorageAnalysis {
+  totalBytes: number;      // Gesamtbelegung AsyncStorage + Cache
+  liveBytes: number;       // Aktive App-Daten (bleiben unangetastet)
+  snapshotBytes: number;   // Gültige automatische Backups
+  snapshotCount: number;
+  trashBytes: number;      // Daten von Projekten im Papierkorb (Foto-/Skizzen-Blobs)
+  trashCount: number;
+  orphanBytes: number;     // Verwaiste Daten (sicher löschbar)
+  orphanCount: number;
+  orphanKeys: string[];
+  cacheBytes: number;      // Temporäre Dateien (sicher löschbar)
+  cacheCount: number;
+}
+
+const safeParse = (raw: string | null): any[] => {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+};
+
+// Rekursive Cache-Vermessung (nur nativ)
+const measureCache = (): { bytes: number; count: number } => {
+  let bytes = 0;
+  let count = 0;
+  if (Platform.OS === 'web') return { bytes, count };
+  try {
+    const stack: Directory[] = [new Directory(Paths.cache)];
+    while (stack.length > 0) {
+      const dir = stack.pop()!;
+      let entries: (File | Directory)[] = [];
+      try { entries = dir.list(); } catch { continue; }
+      for (const e of entries) {
+        if (e instanceof Directory) {
+          stack.push(e);
+        } else {
+          count++;
+          try { bytes += (e as File).size ?? 0; } catch {}
+        }
+      }
+    }
+  } catch {}
+  return { bytes, count };
+};
+
+export const analyzeStorage = async (): Promise<StorageAnalysis> => {
+  const allKeys = (await AsyncStorage.getAllKeys()) || [];
+
+  // Referenz-Daten (leichte Arrays) laden
+  const [projectsRaw, photosRaw, sketchesRaw, checklistsRaw, templatesRaw, documentsRaw, idxRaw] = await Promise.all([
+    AsyncStorage.getItem('aufmassprofi_projects'),
+    AsyncStorage.getItem('aufmassprofi_photos'),
+    AsyncStorage.getItem('aufmassprofi_sketches'),
+    AsyncStorage.getItem('aufmassprofi_checklists'),
+    AsyncStorage.getItem('aufmassprofi_checklist_templates'),
+    AsyncStorage.getItem('aufmassprofi_documents'),
+    AsyncStorage.getItem(SNAP_INDEX_KEY),
+  ]);
+
+  const projects = safeParse(projectsRaw);
+  const photos = safeParse(photosRaw);
+  const sketches = safeParse(sketchesRaw);
+  const snapIndex = safeParse(idxRaw);
+
+  const validPhotoIds = new Set(photos.map((p: any) => p.id));
+  const validSketchIds = new Set(sketches.map((s: any) => s.id));
+  // Referenzierte chk_img_/doc_img_-Keys (auch aus Checklisten-Vorlagen!)
+  const refImgKeys = new Set<string>([
+    ...extractImageRefKeys(checklistsRaw),
+    ...extractImageRefKeys(templatesRaw),
+    ...extractImageRefKeys(documentsRaw),
+  ]);
+  const validSnapPrefixes = snapIndex.map((s: any) => `${SNAP_PREFIX}${s.id}_`);
+
+  let liveBytes = 0;
+  let snapshotBytes = 0;
+  let orphanBytes = 0;
+  const orphanKeys: string[] = [];
+  // Größen dynamischer Keys merken (für Papierkorb-Berechnung)
+  const dynSizes = new Map<string, number>();
+
+  // Jeden Key EINZELN vermessen – nie mehrere große Strings gleichzeitig im Speicher
+  for (const key of allKeys) {
+    let len = 0;
+    try {
+      const v = await AsyncStorage.getItem(key);
+      len = v ? v.length : 0;
+    } catch { continue; }
+
+    if (key === OLD_MONOLITH_KEY) {
+      orphanBytes += len;
+      orphanKeys.push(key);
+      continue;
+    }
+    if (key === SNAP_INDEX_KEY) { snapshotBytes += len; continue; }
+    if (key.startsWith(SNAP_PREFIX)) {
+      if (validSnapPrefixes.some((p: string) => key.startsWith(p))) {
+        snapshotBytes += len;
+      } else {
+        // Verwaiste Snapshot-Kopie (Erstellung wurde unterbrochen)
+        orphanBytes += len;
+        orphanKeys.push(key);
+      }
+      continue;
+    }
+
+    let isDyn = false;
+    let isOrphan = false;
+    if (key.startsWith('photo_img_')) { isDyn = true; isOrphan = !validPhotoIds.has(key.slice(10)); }
+    else if (key.startsWith('sketch_meta_')) { isDyn = true; isOrphan = !validSketchIds.has(key.slice(12)); }
+    else if (key.startsWith('sketch_bg_')) { isDyn = true; isOrphan = !validSketchIds.has(key.slice(10)); }
+    else if (key.startsWith('sketch_prev_')) { isDyn = true; isOrphan = !validSketchIds.has(key.slice(12)); }
+    else if (key.startsWith('sketch_img_')) {
+      isDyn = true;
+      const sid = key.slice(11).split('_')[0];
+      isOrphan = sid !== 'new' && !validSketchIds.has(sid);
+    }
+    else if (key.startsWith('chk_img_')) { isDyn = true; isOrphan = !refImgKeys.has(key); }
+    else if (key.startsWith('doc_img_')) { isDyn = true; isOrphan = !refImgKeys.has(key); }
+
+    if (isDyn && isOrphan) {
+      orphanBytes += len;
+      orphanKeys.push(key);
+    } else {
+      liveBytes += len;
+      if (isDyn) dynSizes.set(key, len);
+    }
+  }
+
+  // Papierkorb: Foto-/Skizzen-Blobs der gelöschten Projekte
+  const trashedIds = new Set(projects.filter((p: any) => !!p.deleted_at).map((p: any) => p.id));
+  let trashBytes = 0;
+  if (trashedIds.size > 0) {
+    for (const p of photos) {
+      if (trashedIds.has(p.project_id)) trashBytes += dynSizes.get(`photo_img_${p.id}`) || 0;
+    }
+    for (const s of sketches) {
+      if (trashedIds.has(s.project_id)) {
+        trashBytes += (dynSizes.get(`sketch_meta_${s.id}`) || 0)
+          + (dynSizes.get(`sketch_bg_${s.id}`) || 0)
+          + (dynSizes.get(`sketch_prev_${s.id}`) || 0);
+        const imgPrefix = `sketch_img_${s.id}_`;
+        for (const [k, v] of dynSizes) {
+          if (k.startsWith(imgPrefix)) trashBytes += v;
+        }
+      }
+    }
+  }
+
+  const cache = measureCache();
+
+  return {
+    totalBytes: liveBytes + snapshotBytes + orphanBytes + cache.bytes,
+    liveBytes,
+    snapshotBytes,
+    snapshotCount: snapIndex.length,
+    trashBytes,
+    trashCount: trashedIds.size,
+    orphanBytes,
+    orphanCount: orphanKeys.length,
+    orphanKeys,
+    cacheBytes: cache.bytes,
+    cacheCount: cache.count,
+  };
+};
+
+/**
+ * Sichere Bereinigung: entfernt NUR verwaiste Keys + temporäre Cache-Dateien.
+ * Gibt die Anzahl freigegebener Bytes zurück.
+ */
+export const cleanupSafe = async (analysis: StorageAnalysis): Promise<{ freedBytes: number; removedKeys: number; removedFiles: number }> => {
+  // Verwaiste Keys in kleinen Batches löschen
+  for (let i = 0; i < analysis.orphanKeys.length; i += 50) {
+    await AsyncStorage.multiRemove(analysis.orphanKeys.slice(i, i + 50)).catch(() => {});
+  }
+
+  // Temporäre Cache-Dateien löschen (nur nativ; Cache enthält ausschließlich
+  // App-eigene Export-/Import-/PDF-Reste – OS darf ihn ohnehin jederzeit leeren)
+  let removedFiles = 0;
+  if (Platform.OS !== 'web') {
+    try {
+      const entries = new Directory(Paths.cache).list();
+      for (const e of entries) {
+        try {
+          e.delete();
+          removedFiles++;
+        } catch {}
+      }
+    } catch {}
+  }
+
+  return {
+    freedBytes: analysis.orphanBytes + analysis.cacheBytes,
+    removedKeys: analysis.orphanKeys.length,
+    removedFiles,
+  };
+};
+
+/**
+ * Leert den Papierkorb SOFORT endgültig (alle soft-gelöschten Projekte
+ * inkl. aller zugehörigen Daten – nutzt die kaskadierende Löschung).
+ */
+export const emptyTrashNow = async (): Promise<number> => {
+  const trashed = await ProjectService.getTrashed();
+  for (const p of trashed) {
+    try { await ProjectService.delete(p.id); } catch (e) {
+      console.warn('[StorageCleanup] Papierkorb-Löschung fehlgeschlagen:', p.id, e);
+    }
+  }
+  return trashed.length;
+};

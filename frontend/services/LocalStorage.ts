@@ -815,55 +815,64 @@ export const ProjectService = {
     return projects[index];
   },
 
+  // Löscht ein Projekt ENDGÜLTIG inkl. ALLER zugehörigen Daten:
+  // Skizzen (+ Meta/Hintergrund/Vorschau/Elementbilder), Fotos (+ Bild-Blobs),
+  // Checklisten (+ chk_img_-Bilder), Dokumente (+ doc_img_-Daten), Dächer, Berichte.
   delete: async (id: string): Promise<boolean> => {
     const projects = await getItems<Project>(KEYS.PROJECTS);
-    const filtered = projects.filter(p => p.id !== id);
-    await setItems(KEYS.PROJECTS, filtered);
-    // Also delete related data
+    await setItems(KEYS.PROJECTS, projects.filter(p => p.id !== id));
+
+    const keysToRemove: string[] = [];
+
+    // --- Skizzen: ERST Metadaten lesen (Element-Bild-Keys ermitteln), DANN löschen ---
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const sketchesToDelete = sketches.filter(s => s.project_id === id);
-    await setItems(KEYS.SKETCHES, sketches.filter(s => s.project_id !== id));
-    // Clean up separate sketch data keys
-    const cleanupOps: Promise<void>[] = [];
     for (const sketch of sketchesToDelete) {
-      cleanupOps.push(AsyncStorage.removeItem(`sketch_meta_${sketch.id}`));
-      cleanupOps.push(AsyncStorage.removeItem(`sketch_bg_${sketch.id}`));
-      cleanupOps.push(AsyncStorage.removeItem(`sketch_prev_${sketch.id}`));
-      // Clean up separately stored image elements
       try {
         const metaStr = await AsyncStorage.getItem(`sketch_meta_${sketch.id}`);
         if (metaStr) {
-          const meta = JSON.parse(metaStr);
-          if (meta?.elements) {
-            for (const el of meta.elements) {
-              if (el.data?.imageStorageKey) {
-                cleanupOps.push(AsyncStorage.removeItem(el.data.imageStorageKey));
-              }
-            }
-          }
+          const re = /"imageStorageKey"\s*:\s*"([^"\\]+)"/g;
+          let m: RegExpExecArray | null;
+          while ((m = re.exec(metaStr)) !== null) keysToRemove.push(m[1]);
         }
-      } catch (e) {
-        // Ignore parse errors during cleanup
-      }
+      } catch {}
+      keysToRemove.push(`sketch_meta_${sketch.id}`, `sketch_bg_${sketch.id}`, `sketch_prev_${sketch.id}`);
     }
-    if (cleanupOps.length > 0) {
-      await Promise.all(cleanupOps);
-    }
+    await setItems(KEYS.SKETCHES, sketches.filter(s => s.project_id !== id));
+
+    // --- Fotos inkl. separat gespeicherter Bild-Blobs ---
     const photos = await getItems<Photo>(KEYS.PHOTOS);
-    // Separat gespeicherte Bilddaten der Projekt-Fotos mitlöschen (sonst bleibt
-    // der Speicher mit verwaisten photo_img_-Blobs gefüllt -> SQLITE_FULL)
     const photosToDelete = photos.filter(p => p.project_id === id);
-    if (photosToDelete.length > 0) {
-      await AsyncStorage.multiRemove(photosToDelete.map(p => `photo_img_${p.id}`)).catch(() => {});
-    }
+    keysToRemove.push(...photosToDelete.map(p => `photo_img_${p.id}`));
     await setItems(KEYS.PHOTOS, photos.filter(p => p.project_id !== id));
+
+    // --- Checklisten inkl. ausgelagerter Bilder (chk_img_) ---
+    const checklists = await getItems<Checklist>(KEYS.CHECKLISTS);
+    const checklistsToDelete = checklists.filter(c => c.project_id === id);
+    for (const c of checklistsToDelete) {
+      try { keysToRemove.push(...extractImageRefKeys(JSON.stringify(c))); } catch {}
+    }
+    await setItems(KEYS.CHECKLISTS, checklists.filter(c => c.project_id !== id));
+
+    // --- Dokumente inkl. ausgelagerter PDF-/Seitendaten (doc_img_) ---
+    const documents = await getItems<any>(KEYS.DOCUMENTS);
+    const documentsToDelete = documents.filter((d: any) => d.project_id === id);
+    for (const d of documentsToDelete) {
+      try { keysToRemove.push(...extractImageRefKeys(JSON.stringify(d))); } catch {}
+    }
+    await setItems(KEYS.DOCUMENTS, documents.filter((d: any) => d.project_id !== id));
+
+    // --- Dächer & Berichte ---
     const roofs = await getItems<Roof>(KEYS.ROOFS);
     await setItems(KEYS.ROOFS, roofs.filter(r => r.project_id !== id));
-    const checklists = await getItems<Checklist>(KEYS.CHECKLISTS);
-    await setItems(KEYS.CHECKLISTS, checklists.filter(c => c.project_id !== id));
-    // Berichte des Projekts mitlöschen (sonst bleiben verwaiste Berichte zurück)
     const reports = await getItems<Report>(KEYS.REPORTS);
     await setItems(KEYS.REPORTS, reports.filter((r) => r.project_id !== id));
+
+    // Gesammelte Daten-Keys in kleinen Batches entfernen
+    const unique = [...new Set(keysToRemove)];
+    for (let i = 0; i < unique.length; i += 50) {
+      await AsyncStorage.multiRemove(unique.slice(i, i + 50)).catch(() => {});
+    }
     return true;
   },
 };
@@ -1414,6 +1423,17 @@ export const cleanupGhostPhotos = async (): Promise<number> => {
 // Entfernt verwaiste Speicher-Blobs (photo_img_/sketch_meta_/sketch_bg_/sketch_img_),
 // deren Foto/Skizze nicht mehr existiert. Wichtig: Gelöschte Projekte haben früher
 // ihre Bilddaten zurückgelassen -> Speicher blieb voll (SQLITE_FULL bei 6-MB-Limit).
+// Findet alle ausgelagerten Bild-Keys (@chkimg:/@docimg:-Referenzen) in einem
+// JSON-String – ohne teures Parsen großer Strukturen
+export const extractImageRefKeys = (raw: string | null | undefined): string[] => {
+  if (!raw) return [];
+  const keys: string[] = [];
+  const re = /@(?:chkimg|docimg):([^"\\]+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(raw)) !== null) keys.push(m[1]);
+  return keys;
+};
+
 export const cleanupOrphanedStorage = async (): Promise<number> => {
   try {
     const [photos, sketches] = await Promise.all([

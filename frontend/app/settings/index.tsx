@@ -1060,6 +1060,21 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
             </TouchableOpacity>
             <TouchableOpacity
+              testID="settings-storage"
+              style={legalStyles.navRow}
+              onPress={() => router.push('/storage')}
+              activeOpacity={0.7}
+            >
+              <View style={[legalStyles.navIcon, { backgroundColor: '#dcfce7' }]}>
+                <Ionicons name="sparkles-outline" size={18} color="#16a34a" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Speicher bereinigen</Text>
+                <Text style={legalStyles.navSub}>Verwaiste Daten und temporäre Dateien entfernen</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+            <TouchableOpacity
               testID="settings-trash"
               style={legalStyles.navRow}
               onPress={() => router.push('/trash')}

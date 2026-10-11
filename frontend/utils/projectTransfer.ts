@@ -25,6 +25,7 @@ import {
   SketchService,
   ChecklistService,
   ReportService,
+  DocumentService,
 } from '../services/LocalStorage';
 import { readTextFile } from './readTextFile';
 
@@ -137,6 +138,8 @@ const writeProjectLines = async (projectId: string, w: LineWriter, includePhotos
   const allChecklists = await ChecklistService.getAll();
   const checklistMetas = allChecklists.filter((c: any) => c.project_id === projectId);
   const reports = await ReportService.getByProjectId(projectId);
+  const allDocs = await DocumentService.getAll();
+  const docMetas = allDocs.filter((d: any) => d.project_id === projectId);
   const allPhotos = await PhotoService.getAll();
   const photoMetas = includePhotos
     ? allPhotos.filter((p: any) => p.project_id === projectId)
@@ -153,6 +156,7 @@ const writeProjectLines = async (projectId: string, w: LineWriter, includePhotos
       sketches: sketches.length,
       checklists: checklistMetas.length,
       reports: (reports || []).length,
+      documents: docMetas.length,
     },
   }));
 
@@ -169,6 +173,17 @@ const writeProjectLines = async (projectId: string, w: LineWriter, includePhotos
   // Berichte
   for (const r of reports || []) {
     w.write(JSON.stringify({ type: 'report', data: r }));
+  }
+
+  // Dokumente (PDFs mit Anmerkungen): EINZELN laden – getById stellt die
+  // ausgelagerten doc_img_-Daten wieder her (Datei bleibt in sich vollständig)
+  for (const dm of docMetas) {
+    try {
+      const full = await DocumentService.getById(dm.id);
+      if (full) w.write(JSON.stringify({ type: 'document', data: full }));
+    } catch (e) {
+      console.warn('[Export] Dokument übersprungen:', dm.id, e);
+    }
   }
 
   // Fotos: Metadaten aus dem (leichten) Array, Bilddaten EINZELN nachladen
@@ -380,8 +395,8 @@ interface ImportState {
   currentProjectName: string;
   itemsDone: number;
   itemsTotal: number | null;
-  counters: { photo: number; sketch: number; checklist: number; report: number };
-  itemTotals: { photo: number | null; sketch: number | null; checklist: number | null; report: number | null };
+  counters: { photo: number; sketch: number; checklist: number; report: number; document: number };
+  itemTotals: { photo: number | null; sketch: number | null; checklist: number | null; report: number | null; document: number | null };
   exportDate: string | null; // aus der Header-Zeile (für Duplikat-Zeitvergleich)
   importedPhotoCount: number;  // über alle Projekte (für End-Verifikation)
   importedSketchCount: number;
@@ -454,16 +469,17 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
     state.currentProjectName = rec.project?.name || '';
     // Fortschritts-Zähler für dieses Projekt zurücksetzen
     const counts = rec.counts || null;
-    state.counters = { photo: 0, sketch: 0, checklist: 0, report: 0 };
+    state.counters = { photo: 0, sketch: 0, checklist: 0, report: 0, document: 0 };
     state.itemTotals = {
       photo: counts ? (counts.photos ?? null) : null,
       sketch: counts ? (counts.sketches ?? null) : null,
       checklist: counts ? (counts.checklists ?? null) : null,
       report: counts ? (counts.reports ?? null) : null,
+      document: counts ? (counts.documents ?? null) : null,
     };
     state.itemsDone = 0;
     state.itemsTotal = counts
-      ? (counts.photos || 0) + (counts.sketches || 0) + (counts.checklists || 0) + (counts.reports || 0)
+      ? (counts.photos || 0) + (counts.sketches || 0) + (counts.checklists || 0) + (counts.reports || 0) + (counts.documents || 0)
       : null;
     emitProgress(state, 'Projekt wird angelegt…');
     try {
@@ -559,6 +575,15 @@ const processRecord = async (rec: any, state: ImportState): Promise<void> => {
         state.itemsDone++;
         emitProgress(state, `Bericht ${state.counters.report}${state.itemTotals.report ? ` von ${state.itemTotals.report}` : ''}`);
         await ReportService.create({ ...stripSystemFields(rec.data), project_id: projectId });
+        break;
+      }
+      case 'document': {
+        state.totalItems++;
+        state.counters.document++;
+        state.itemsDone++;
+        emitProgress(state, `Dokument ${state.counters.document}${state.itemTotals.document ? ` von ${state.itemTotals.document}` : ''}`);
+        // DocumentService.create lagert große PDF-/Seitendaten automatisch in doc_img_-Keys aus
+        await DocumentService.create({ ...stripSystemFields(rec.data), project_id: projectId });
         break;
       }
       case 'photo': {
@@ -747,8 +772,8 @@ export const importProjectsFromFile = async (
     currentProjectName: '',
     itemsDone: 0,
     itemsTotal: null,
-    counters: { photo: 0, sketch: 0, checklist: 0, report: 0 },
-    itemTotals: { photo: null, sketch: null, checklist: null, report: null },
+    counters: { photo: 0, sketch: 0, checklist: 0, report: 0, document: 0 },
+    itemTotals: { photo: null, sketch: null, checklist: null, report: null, document: null },
     exportDate: null,
     importedPhotoCount: 0,
     importedSketchCount: 0,

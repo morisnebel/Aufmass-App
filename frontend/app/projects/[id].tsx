@@ -2189,6 +2189,78 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  // Projekt ARCHIVIEREN: als Datei exportieren (extern sichern), danach
+  // ENDGÜLTIG aus der App entfernen – spart dauerhaft Speicher.
+  // Wiederherstellung jederzeit über den normalen Import möglich.
+  const archiveProject = async () => {
+    if (!project?.id || isGeneratingPdf) return;
+    const projectName = project.name;
+
+    const confirmDelete = () => {
+      const doDelete = async () => {
+        setIsGeneratingPdf(true);
+        try {
+          await ProjectService.delete(project.id);
+          setIsGeneratingPdf(false);
+          router.replace('/');
+          setTimeout(() => {
+            const msg = `„${projectName}" wurde archiviert und aus der App entfernt. Über „Importieren" kannst du es jederzeit aus der Archiv-Datei wiederherstellen.`;
+            if (Platform.OS === 'web') alert(msg);
+            else Alert.alert('✅ Projekt archiviert', msg);
+          }, 400);
+        } catch (e) {
+          setIsGeneratingPdf(false);
+          console.error('Archive delete error:', e);
+          Alert.alert('Fehler', 'Projekt konnte nicht entfernt werden.');
+        }
+      };
+      if (Platform.OS === 'web') {
+        // eslint-disable-next-line no-alert
+        if (window.confirm(`Archiv-Datei heruntergeladen?\n\n„${projectName}" wird jetzt ENDGÜLTIG aus der App entfernt (inkl. aller Fotos, Skizzen und Dokumente).`)) doDelete();
+      } else {
+        Alert.alert(
+          'Datei sicher gespeichert?',
+          `Wenn die Archiv-Datei in iCloud Drive / Google Drive gespeichert ist, wird „${projectName}" jetzt ENDGÜLTIG aus der App entfernt (inkl. aller Fotos, Skizzen und Dokumente).`,
+          [
+            { text: 'Projekt behalten', style: 'cancel' },
+            { text: 'Ja, jetzt entfernen', style: 'destructive', onPress: doDelete },
+          ]
+        );
+      }
+    };
+
+    const start = async () => {
+      try {
+        setIsGeneratingPdf(true);
+        // Archiv IMMER komplett (mit Fotos) – nur so ist die Wiederherstellung vollständig
+        const { uri } = await exportProjectsToFile([project.id], { includePhotos: true });
+        setIsGeneratingPdf(false);
+        if (Platform.OS !== 'web') {
+          await Sharing.shareAsync(uri, {
+            mimeType: 'application/json',
+            dialogTitle: 'Projekt-Archiv speichern (iCloud Drive / Google Drive)',
+          });
+        }
+        confirmDelete();
+      } catch (e) {
+        setIsGeneratingPdf(false);
+        console.error('Archive export error:', e);
+        Alert.alert('Fehler', 'Archivieren fehlgeschlagen – das Projekt wurde NICHT entfernt.');
+      }
+    };
+
+    const intro = `1. „${projectName}" wird komplett als Datei exportiert (inkl. Fotos, Skizzen, Dokumente)\n2. Speichere die Datei extern, z. B. in iCloud Drive oder Google Drive\n3. Danach wird das Projekt endgültig aus der App entfernt und gibt Speicher frei\n\nWiederherstellen jederzeit über „Importieren" möglich.`;
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (window.confirm(`Projekt archivieren?\n\n${intro}`)) start();
+    } else {
+      Alert.alert('Projekt archivieren', intro, [
+        { text: 'Abbrechen', style: 'cancel' },
+        { text: 'Archivieren starten', onPress: start },
+      ]);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -2220,6 +2292,13 @@ export default function ProjectDetailScreen() {
         <TouchableOpacity testID="project-export" style={styles.actionButton} onPress={exportProjectFile}>
           <Ionicons name="cloud-upload" size={20} color="#1976d2" />
           <Text style={styles.actionButtonText}>{t('projects.exportProject')}</Text>
+        </TouchableOpacity>
+        )}
+        {/* Projekt archivieren: exportieren + endgültig entfernen */}
+        {Features.showProjektExport && (
+        <TouchableOpacity testID="project-archive" style={styles.actionButton} onPress={archiveProject}>
+          <Ionicons name="archive-outline" size={20} color="#d97706" />
+          <Text style={[styles.actionButtonText, { color: '#d97706' }]}>Archivieren</Text>
         </TouchableOpacity>
         )}
       </View>

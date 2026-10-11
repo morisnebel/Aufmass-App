@@ -1,4 +1,4 @@
-import '../utils/asyncStorageGuard'; // MUSS früh laufen: schützt vor nativen NSNull-Crashes
+import '../utils/storageBackend'; // MUSS früh laufen: SQLite-Backend + Schutz vor nativen NSNull-Crashes
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

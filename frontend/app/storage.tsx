@@ -255,6 +255,28 @@ export default function StorageScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Speicher pro Projekt */}
+        {!!analysis && analysis.projectStats.some(p => p.bytes > 0) && (
+          <View style={styles.section}>
+            <View style={styles.rowCenter}>
+              <Ionicons name="folder-open-outline" size={20} color="#0891b2" />
+              <Text style={styles.sectionTitle}>Speicher pro Projekt</Text>
+            </View>
+            <Text style={styles.sectionSub}>Belegung durch Fotos und Skizzen des jeweiligen Projekts.</Text>
+            {analysis.projectStats.filter(p => p.bytes > 0).slice(0, 15).map(p => (
+              <View key={p.id} style={styles.statRow}>
+                <Text style={styles.statLabel} numberOfLines={1}>
+                  {p.name}{p.deleted ? '  🗑️ (Papierkorb)' : ''}
+                </Text>
+                <Text style={styles.statValue}>{fmtSize(p.bytes)}</Text>
+              </View>
+            ))}
+            {analysis.projectStats.filter(p => p.bytes > 0).length > 15 && (
+              <Text style={[styles.sectionSub, { marginTop: 6, marginBottom: 0 }]}>… und weitere Projekte</Text>
+            )}
+          </View>
+        )}
+
         {/* Sichere Bereinigung */}
         <View style={styles.section}>
           <View style={styles.rowCenter}>

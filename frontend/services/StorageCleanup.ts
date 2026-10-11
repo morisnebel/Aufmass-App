@@ -29,6 +29,8 @@ export interface StorageAnalysis {
   orphanKeys: string[];
   cacheBytes: number;      // Temporäre Dateien (sicher löschbar)
   cacheCount: number;
+  // Speicherbelegung pro Projekt (Foto-/Skizzen-Blobs), absteigend sortiert
+  projectStats: { id: string; name: string; bytes: number; deleted: boolean }[];
 }
 
 const safeParse = (raw: string | null): any[] => {
@@ -160,25 +162,27 @@ export const analyzeStorage = async (): Promise<StorageAnalysis> => {
     }
   }
 
-  // Papierkorb: Foto-/Skizzen-Blobs der gelöschten Projekte
+  // Speicherbelegung pro Projekt: jeden dynamischen Key seinem Projekt zuordnen
+  const photoProject = new Map(photos.map((p: any) => [p.id, p.project_id]));
+  const sketchProject = new Map(sketches.map((s: any) => [s.id, s.project_id]));
+  const projectBytes = new Map<string, number>();
+  for (const [k, v] of dynSizes) {
+    let pid: string | undefined;
+    if (k.startsWith('photo_img_')) pid = photoProject.get(k.slice(10));
+    else if (k.startsWith('sketch_meta_')) pid = sketchProject.get(k.slice(12));
+    else if (k.startsWith('sketch_bg_')) pid = sketchProject.get(k.slice(10));
+    else if (k.startsWith('sketch_prev_')) pid = sketchProject.get(k.slice(12));
+    else if (k.startsWith('sketch_img_')) pid = sketchProject.get(k.slice(11).split('_')[0]);
+    if (pid) projectBytes.set(pid, (projectBytes.get(pid) || 0) + v);
+  }
+  const projectStats = projects
+    .map((p: any) => ({ id: p.id, name: p.name || 'Unbenannt', bytes: projectBytes.get(p.id) || 0, deleted: !!p.deleted_at }))
+    .sort((a, b) => b.bytes - a.bytes);
+
+  // Papierkorb: Daten der gelöschten Projekte
   const trashedIds = new Set(projects.filter((p: any) => !!p.deleted_at).map((p: any) => p.id));
   let trashBytes = 0;
-  if (trashedIds.size > 0) {
-    for (const p of photos) {
-      if (trashedIds.has(p.project_id)) trashBytes += dynSizes.get(`photo_img_${p.id}`) || 0;
-    }
-    for (const s of sketches) {
-      if (trashedIds.has(s.project_id)) {
-        trashBytes += (dynSizes.get(`sketch_meta_${s.id}`) || 0)
-          + (dynSizes.get(`sketch_bg_${s.id}`) || 0)
-          + (dynSizes.get(`sketch_prev_${s.id}`) || 0);
-        const imgPrefix = `sketch_img_${s.id}_`;
-        for (const [k, v] of dynSizes) {
-          if (k.startsWith(imgPrefix)) trashBytes += v;
-        }
-      }
-    }
-  }
+  for (const tid of trashedIds) trashBytes += projectBytes.get(tid as string) || 0;
 
   const cache = measureCache();
 
@@ -194,6 +198,7 @@ export const analyzeStorage = async (): Promise<StorageAnalysis> => {
     orphanKeys,
     cacheBytes: cache.bytes,
     cacheCount: cache.count,
+    projectStats,
   };
 };
 

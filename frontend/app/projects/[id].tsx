@@ -221,6 +221,10 @@ export default function ProjectDetailScreen() {
   const [selectedSketches, setSelectedSketches] = useState<string[]>([]);
   // Skizzen-Zwischenablage: gemerkte Skizze zum gezielten Einfügen in (andere) Projekte
   const [sketchClipboard, setSketchClipboard] = useState<{ sketchId: string; title: string } | null>(null);
+  // Foto-Zwischenablage: gemerkte Fotos zum gezielten Einfügen in (andere) Projekte
+  const [photoClipboard, setPhotoClipboard] = useState<{ photoIds: string[]; label: string } | null>(null);
+  // Ziel-Ordner-Schritt beim Übertragen (nach Projektauswahl)
+  const [folderStep, setFolderStep] = useState<{ project: any; folders: string[] } | null>(null);
   
   // Photo gallery save state
   const [photoSelectMode, setPhotoSelectMode] = useState(false);
@@ -597,6 +601,7 @@ export default function ProjectDetailScreen() {
     useCallback(() => {
       loadProjectData();
       loadSketchClipboard();
+      loadPhotoClipboard();
     }, [id])
   );
 
@@ -895,6 +900,74 @@ export default function ProjectDetailScreen() {
     await AsyncStorage.removeItem(SKETCH_CLIPBOARD_KEY).catch(() => {});
   };
 
+  // ===== Foto-Zwischenablage (gezieltes Einfügen in andere Projekte) =====
+  const PHOTO_CLIPBOARD_KEY = 'aufmassprofi_photo_clipboard';
+
+  const loadPhotoClipboard = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(PHOTO_CLIPBOARD_KEY);
+      if (!raw) { setPhotoClipboard(null); return; }
+      const clip = JSON.parse(raw);
+      if (!Array.isArray(clip?.photoIds) || clip.photoIds.length === 0) { setPhotoClipboard(null); return; }
+      // Nur noch existierende Fotos behalten
+      const all = await PhotoService.getAll();
+      const validIds = new Set(all.map((p: any) => p.id));
+      const ids = clip.photoIds.filter((pid: string) => validIds.has(pid));
+      if (ids.length === 0) {
+        await AsyncStorage.removeItem(PHOTO_CLIPBOARD_KEY);
+        setPhotoClipboard(null);
+        return;
+      }
+      setPhotoClipboard({ photoIds: ids, label: `${ids.length} ${ids.length === 1 ? 'Foto' : 'Fotos'}` });
+    } catch {
+      setPhotoClipboard(null);
+    }
+  };
+
+  const clearPhotoClipboard = async () => {
+    setPhotoClipboard(null);
+    await AsyncStorage.removeItem(PHOTO_CLIPBOARD_KEY).catch(() => {});
+  };
+
+  // Ausgewählte Fotos merken – danach in jedem Projekt über „Fotos einfügen" platzierbar
+  const handleRememberPhotos = async () => {
+    if (selectedPhotos.length === 0) return;
+    const ids = [...selectedPhotos];
+    await AsyncStorage.setItem(PHOTO_CLIPBOARD_KEY, JSON.stringify({ photoIds: ids })).catch(() => {});
+    setPhotoClipboard({ photoIds: ids, label: `${ids.length} ${ids.length === 1 ? 'Foto' : 'Fotos'}` });
+    setPhotoDeleteMode(false);
+    setSelectedPhotos([]);
+    const msg = `${ids.length} ${ids.length === 1 ? 'Foto' : 'Fotos'} gemerkt. Öffne ein Projekt und tippe im Foto-Tab auf „Fotos einfügen".`;
+    if (Platform.OS === 'web') alert(msg);
+    else Alert.alert('Fotos gemerkt', msg);
+  };
+
+  // Gemerkte Fotos als Kopien in DIESES Projekt einfügen (Zwischenablage wird geleert)
+  const handlePastePhotos = async () => {
+    if (!photoClipboard || isMovingSketch) return;
+    setIsMovingSketch(true);
+    try {
+      const projectId = (Array.isArray(id) ? id[0] : id) as string;
+      let done = 0;
+      for (const pid of photoClipboard.photoIds) {
+        try {
+          const copy = await PhotoService.duplicate(pid, projectId);
+          if (copy) done++;
+        } catch (e) { console.error('[PhotoPaste] fehlgeschlagen:', pid, e); }
+      }
+      await clearPhotoClipboard();
+      await loadProjectData();
+      const msg = `${done} ${done === 1 ? 'Foto' : 'Fotos'} eingefügt.`;
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Fotos eingefügt', msg);
+    } catch (error) {
+      console.error('Error pasting photos:', error);
+      Alert.alert('Fehler', 'Fotos konnten nicht eingefügt werden.');
+    } finally {
+      setIsMovingSketch(false);
+    }
+  };
+
   // Gemerkte Skizze in DIESES Projekt einfügen (Zwischenablage wird danach geleert)
   const handlePasteSketch = async () => {
     if (!sketchClipboard || isDuplicatingSketch) return;
@@ -1030,26 +1103,56 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  const transferItemsToProject = async (targetProject: any) => {
+  // Nach Projektauswahl: vorhandene Ordner des Zielprojekts laden (Ordner-Schritt)
+  const prepareFolderStep = async (target: any) => {
+    try {
+      const all = moveSketchModal.kind === 'photo' ? await PhotoService.getAll() : await SketchService.getAll();
+      const folders = [...new Set(
+        all.filter((x: any) => x.project_id === target.id && x.folder).map((x: any) => x.folder as string)
+      )].sort((a, b) => a.localeCompare(b));
+      setFolderStep({ project: target, folders });
+    } catch {
+      setFolderStep({ project: target, folders: [] });
+    }
+  };
+
+  const transferItemsToProject = async (targetProject: any, folderChoice?: { type: 'keep' | 'none' | 'set'; name?: string }) => {
     if (isMovingSketch) return;
     setIsMovingSketch(true);
     try {
       const { itemIds, mode, kind } = moveSketchModal;
+      // Ordner-Override: 'keep' = unverändert lassen
+      const folderPatch = !folderChoice || folderChoice.type === 'keep'
+        ? {}
+        : { folder: folderChoice.type === 'set' ? folderChoice.name : undefined };
       let done = 0;
       for (const itemId of itemIds) {
         try {
           if (kind === 'photo') {
-            if (mode === 'move') await PhotoService.update(itemId, { project_id: targetProject.id } as any);
-            else await PhotoService.duplicate(itemId, targetProject.id);
+            if (mode === 'move') {
+              await PhotoService.update(itemId, { project_id: targetProject.id, ...folderPatch } as any);
+            } else {
+              const copy = await PhotoService.duplicate(itemId, targetProject.id);
+              if (copy && folderChoice && folderChoice.type !== 'keep') {
+                await PhotoService.update(copy.id, folderPatch as any);
+              }
+            }
           } else {
-            if (mode === 'move') await SketchService.update(itemId, { project_id: targetProject.id } as any);
-            else await SketchService.duplicate(itemId, targetProject.id);
+            if (mode === 'move') {
+              await SketchService.update(itemId, { project_id: targetProject.id, ...folderPatch } as any);
+            } else {
+              const copy = await SketchService.duplicate(itemId, targetProject.id);
+              if (copy && folderChoice && folderChoice.type !== 'keep') {
+                await SketchService.update(copy.id, folderPatch as any);
+              }
+            }
           }
           done++;
         } catch (e) {
           console.error('[Transfer] Element fehlgeschlagen:', itemId, e);
         }
       }
+      setFolderStep(null);
       setMoveSketchModal({ visible: false, itemIds: [], mode: 'move', kind: 'sketch', label: '' });
       if (kind === 'photo') {
         setPhotoDeleteMode(false);
@@ -2759,6 +2862,15 @@ export default function ProjectDetailScreen() {
                       <Ionicons name="copy-outline" size={20} color="#fff" />
                       <Text style={[styles.photoActionButtonTextWhite, { fontSize: 12 }]}>Kopieren</Text>
                     </TouchableOpacity>
+                    <TouchableOpacity
+                      testID="photo-remember"
+                      style={[styles.photoActionButton, { backgroundColor: selectedPhotos.length > 0 ? '#16a34a' : '#ccc' }]}
+                      disabled={selectedPhotos.length === 0}
+                      onPress={handleRememberPhotos}
+                    >
+                      <Ionicons name="clipboard-outline" size={20} color="#fff" />
+                      <Text style={[styles.photoActionButtonTextWhite, { fontSize: 12 }]}>Merken</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
               ) : (
@@ -2811,6 +2923,31 @@ export default function ProjectDetailScreen() {
                 </>
               )}
             </View>
+
+            {/* Fotos aus der Zwischenablage einfügen */}
+            {photoClipboard && !photoDeleteMode && !photoSelectMode && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+                <TouchableOpacity
+                  testID="photo-paste"
+                  disabled={isMovingSketch}
+                  onPress={handlePastePhotos}
+                  style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#e8f5e9', borderWidth: 2, borderColor: '#16a34a', borderStyle: 'dashed', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 12 }}
+                >
+                  <Ionicons name="clipboard-outline" size={20} color="#16a34a" />
+                  <Text style={{ color: '#15803d', fontWeight: '700', fontSize: 14 }} numberOfLines={1}>
+                    Fotos einfügen: {photoClipboard.label}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="photo-paste-clear"
+                  onPress={clearPhotoClipboard}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ padding: 8, borderRadius: 16, backgroundColor: '#f1f5f9' }}
+                >
+                  <Ionicons name="close" size={18} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+            )}
 
             {!isTabLoading && photos.length > 0 && (
               <Text style={{ fontSize: 12, color: '#999', textAlign: 'center', marginBottom: 6 }}>
@@ -5633,7 +5770,7 @@ export default function ProjectDetailScreen() {
       </Modal>
 
       {/* Skizzen/Fotos-übertragen Modal */}
-      <Modal visible={moveSketchModal.visible} transparent animationType="fade" onRequestClose={() => setMoveSketchModal({ visible: false, itemIds: [], mode: 'move', kind: 'sketch', label: '' })}>
+      <Modal visible={moveSketchModal.visible} transparent animationType="fade" onRequestClose={() => { setFolderStep(null); setMoveSketchModal({ visible: false, itemIds: [], mode: 'move', kind: 'sketch', label: '' }); }}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18, maxHeight: '75%' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
@@ -5647,13 +5784,59 @@ export default function ProjectDetailScreen() {
             <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }} numberOfLines={2}>
               „{moveSketchModal.label}" in welches Projekt {moveSketchModal.mode === 'move' ? 'verschieben' : 'kopieren'}?
             </Text>
+            {folderStep ? (
+              <>
+                <Text style={{ fontSize: 13, color: '#1976d2', fontWeight: '700', marginBottom: 8 }} numberOfLines={1}>
+                  📁 Ziel-Ordner in „{folderStep.project.name}" wählen:
+                </Text>
+                <ScrollView style={{ maxHeight: 360 }}>
+                  <TouchableOpacity
+                    testID="folder-keep"
+                    disabled={isMovingSketch}
+                    onPress={() => transferItemsToProject(folderStep.project, { type: 'keep' })}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
+                  >
+                    <Ionicons name="checkmark-circle-outline" size={20} color="#16a34a" />
+                    <Text style={{ flex: 1, marginLeft: 10, fontSize: 15, fontWeight: '600', color: '#333' }}>Ordner beibehalten</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="folder-none"
+                    disabled={isMovingSketch}
+                    onPress={() => transferItemsToProject(folderStep.project, { type: 'none' })}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
+                  >
+                    <Ionicons name="remove-circle-outline" size={20} color="#64748b" />
+                    <Text style={{ flex: 1, marginLeft: 10, fontSize: 15, fontWeight: '600', color: '#333' }}>Ohne Ordner</Text>
+                  </TouchableOpacity>
+                  {folderStep.folders.map(f => (
+                    <TouchableOpacity
+                      key={f}
+                      testID={`folder-target-${f}`}
+                      disabled={isMovingSketch}
+                      onPress={() => transferItemsToProject(folderStep.project, { type: 'set', name: f })}
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
+                    >
+                      <Ionicons name="folder-outline" size={20} color="#1976d2" />
+                      <Text style={{ flex: 1, marginLeft: 10, fontSize: 15, fontWeight: '600', color: '#333' }} numberOfLines={1}>{f}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+                <TouchableOpacity
+                  onPress={() => setFolderStep(null)}
+                  style={{ marginTop: 14, paddingVertical: 11, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f5f5' }}
+                >
+                  <Text style={{ color: '#666', fontWeight: '600' }}>Zurück zur Projektauswahl</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
             <ScrollView style={{ maxHeight: 360 }}>
               {moveTargetProjects.map((p: any) => (
                 <TouchableOpacity
                   key={p.id}
                   testID={`move-target-${p.id}`}
                   disabled={isMovingSketch}
-                  onPress={() => transferItemsToProject(p)}
+                  onPress={() => prepareFolderStep(p)}
                   style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
                 >
                   <Ionicons name="folder-outline" size={20} color="#1976d2" />
@@ -5668,11 +5851,13 @@ export default function ProjectDetailScreen() {
               ))}
             </ScrollView>
             <TouchableOpacity
-              onPress={() => setMoveSketchModal({ visible: false, itemIds: [], mode: 'move', kind: 'sketch', label: '' })}
+              onPress={() => { setFolderStep(null); setMoveSketchModal({ visible: false, itemIds: [], mode: 'move', kind: 'sketch', label: '' }); }}
               style={{ marginTop: 14, paddingVertical: 11, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f5f5' }}
             >
               <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>
             </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
       </Modal>

@@ -107,6 +107,8 @@ export default function HomeScreen() {
   const [backupDueDays, setBackupDueDays] = useState<number | null>(null);
   // Speicher-Warnung: freigebbare Bytes (verwaiste Daten + temporäre Dateien)
   const [storageFreeable, setStorageFreeable] = useState<number | null>(null);
+  // Archiv-Erinnerung: alte abgeschlossene Projekte zum Archivieren vorschlagen
+  const [archiveSuggest, setArchiveSuggest] = useState<{ count: number; ids: string[] } | null>(null);
   const [isProUser, setIsProUser] = useState<boolean>(getProStatus());
 
   const loadData = async () => {
@@ -117,6 +119,7 @@ export default function HomeScreen() {
       ]);
 
       setProjects(projectsData);
+      computeArchiveSuggestion(projectsData);
 
       // Letzte Bearbeitung je Projekt ermitteln (für Sortierung "Zuletzt bearbeitet"):
       // Projekt-updated_at allein reicht nicht, da neue Fotos/Skizzen es nicht ändern
@@ -350,6 +353,31 @@ export default function HomeScreen() {
     }
   };
   
+  // Alte abgeschlossene Projekte (>60 Tage unverändert) zum Archivieren vorschlagen.
+  // Hinweis ist 14 Tage stummschaltbar (X-Button).
+  const computeArchiveSuggestion = async (list: any[]) => {
+    try {
+      const snooze = await AsyncStorage.getItem('aufmassprofi_archive_hint_snooze');
+      if (snooze && Date.now() - new Date(snooze).getTime() < 14 * 24 * 60 * 60 * 1000) {
+        setArchiveSuggest(null);
+        return;
+      }
+      const AGE = 60 * 24 * 60 * 60 * 1000;
+      const doneStatuses = ['fertig', 'archiviert', 'abgebrochen'];
+      const old = list.filter((p: any) => !p.deleted_at
+        && doneStatuses.includes(normalizeStatus(p.status))
+        && Date.now() - new Date(p.updated_at || p.created_at).getTime() > AGE);
+      setArchiveSuggest(old.length > 0 ? { count: old.length, ids: old.map((p: any) => p.id) } : null);
+    } catch {
+      setArchiveSuggest(null);
+    }
+  };
+
+  const snoozeArchiveSuggestion = async () => {
+    setArchiveSuggest(null);
+    await AsyncStorage.setItem('aufmassprofi_archive_hint_snooze', new Date().toISOString()).catch(() => {});
+  };
+
   // Mehrere Projekte in EINEM Schritt archivieren: eine gemeinsame Archiv-Datei
   // exportieren (immer mit Fotos), extern sichern, dann endgültig entfernen
   const archiveSelectedProjects = async () => {
@@ -1011,6 +1039,44 @@ export default function HomeScreen() {
           </View>
           <TouchableOpacity onPress={() => setStorageFreeable(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}>
             <Ionicons name="close" size={18} color="#991b1b" />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+
+      {/* Archiv-Erinnerung: alte abgeschlossene Projekte */}
+      {archiveSuggest !== null && Features.showProjektExport && !selectionMode && (
+        <TouchableOpacity
+          testID="archive-suggest-banner"
+          style={{
+            marginHorizontal: 16,
+            marginTop: 12,
+            backgroundColor: '#fef3c7',
+            borderRadius: 10,
+            padding: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            borderLeftWidth: 4,
+            borderLeftColor: '#d97706',
+          }}
+          onPress={() => {
+            setSelectionMode(true);
+            setSelectedProjects(new Set(archiveSuggest.ids));
+          }}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="archive-outline" size={22} color="#d97706" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#92400e' }}>Archivieren empfohlen</Text>
+            <Text style={{ fontSize: 11, color: '#92400e', marginTop: 1 }}>
+              {archiveSuggest.count} {archiveSuggest.count === 1 ? 'abgeschlossenes Projekt ist' : 'abgeschlossene Projekte sind'} seit über 60 Tagen unverändert. Als Datei auslagern und Speicher freigeben?
+            </Text>
+          </View>
+          <View style={{ backgroundColor: '#d97706', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 60, alignItems: 'center' }}>
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>Auswählen</Text>
+          </View>
+          <TouchableOpacity testID="archive-suggest-dismiss" onPress={snoozeArchiveSuggestion} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}>
+            <Ionicons name="close" size={18} color="#92400e" />
           </TouchableOpacity>
         </TouchableOpacity>
       )}

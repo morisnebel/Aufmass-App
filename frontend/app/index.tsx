@@ -24,6 +24,7 @@ import { exportProjectsToFile, importProjectsFromFile, askExportPhotoChoice, ask
 import * as Sharing from 'expo-sharing';
 import { Features, AppName, getProStatus, loadProStatus, updateFeatures } from '../services/FeatureFlags';
 import { BackupService } from '../services/BackupService';
+import { quickFreeableScan } from '../services/StorageCleanup';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PROJECT_STATUSES, getStatusMeta, getStatusOrder, normalizeStatus } from '../src/constants/projectStatus';
@@ -75,7 +76,13 @@ export default function HomeScreen() {
     ProjectService.purgeExpiredTrash()
       .catch(() => {})
       .then(() => migrateSketchPreviews().catch(() => {}))
-      .then(() => cleanupOrphanedStorage().catch(() => {}));
+      .then(() => cleanupOrphanedStorage().catch(() => {}))
+      // Speicher-Warnung: verbleibende verwaiste Daten (z.B. Snapshot-Reste,
+      // Checklisten-/Dokument-Bilder) + temporäre Dateien messen
+      .then(() => quickFreeableScan().catch(() => 0))
+      .then((bytes) => {
+        if (bytes && bytes > 20 * 1024 * 1024) setStorageFreeable(bytes);
+      });
   }, []);
 
   // Filter-Änderung speichern
@@ -97,6 +104,8 @@ export default function HomeScreen() {
   const [expandedBanner, setExpandedBanner] = useState<'loaned' | 'inspection' | 'tuv' | 'lowstock' | null>(null);
   // Backup-Erinnerungs-Banner
   const [backupDueDays, setBackupDueDays] = useState<number | null>(null);
+  // Speicher-Warnung: freigebbare Bytes (verwaiste Daten + temporäre Dateien)
+  const [storageFreeable, setStorageFreeable] = useState<number | null>(null);
   const [isProUser, setIsProUser] = useState<boolean>(getProStatus());
 
   const loadData = async () => {
@@ -889,6 +898,43 @@ export default function HomeScreen() {
               <Ionicons name="close" size={18} color="#92400e" />
             </TouchableOpacity>
           )}
+        </TouchableOpacity>
+      )}
+
+      {/* Speicher-Warnung: viele verwaiste Daten gefunden */}
+      {storageFreeable !== null && (
+        <TouchableOpacity
+          testID="storage-warning-banner"
+          style={{
+            marginHorizontal: 16,
+            marginTop: 12,
+            backgroundColor: '#fee2e2',
+            borderRadius: 10,
+            padding: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            borderLeftWidth: 4,
+            borderLeftColor: '#dc2626',
+          }}
+          onPress={() => router.push('/storage')}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="sparkles-outline" size={22} color="#dc2626" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#991b1b' }}>Speicher-Bereinigung empfohlen</Text>
+            <Text style={{ fontSize: 11, color: '#991b1b', marginTop: 1 }}>
+              {storageFreeable >= 1024 * 1024 * 1024
+                ? `${(storageFreeable / (1024 * 1024 * 1024)).toFixed(2)} GB`
+                : `${Math.round(storageFreeable / (1024 * 1024))} MB`} nicht mehr benötigte Daten gefunden. Jetzt sicher entfernen?
+            </Text>
+          </View>
+          <View style={{ backgroundColor: '#dc2626', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minWidth: 60, alignItems: 'center' }}>
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>Bereinigen</Text>
+          </View>
+          <TouchableOpacity onPress={() => setStorageFreeable(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}>
+            <Ionicons name="close" size={18} color="#991b1b" />
+          </TouchableOpacity>
         </TouchableOpacity>
       )}
 

@@ -65,10 +65,15 @@ const measureCache = (): { bytes: number; count: number } => {
   return { bytes, count };
 };
 
-export const analyzeStorage = async (): Promise<StorageAnalysis> => {
-  const allKeys = (await AsyncStorage.getAllKeys()) || [];
+interface OrphanCtx {
+  validPhotoIds: Set<string>;
+  validSketchIds: Set<string>;
+  refImgKeys: Set<string>;
+  validSnapPrefixes: string[];
+}
 
-  // Referenz-Daten (leichte Arrays) laden
+// Lädt die leichten Referenz-Arrays und baut den Kontext für die Orphan-Erkennung
+const loadOrphanCtx = async (): Promise<{ ctx: OrphanCtx; projects: any[]; photos: any[]; sketches: any[]; snapIndex: any[] }> => {
   const [projectsRaw, photosRaw, sketchesRaw, checklistsRaw, templatesRaw, documentsRaw, idxRaw] = await Promise.all([
     AsyncStorage.getItem('aufmassprofi_projects'),
     AsyncStorage.getItem('aufmassprofi_photos'),
@@ -78,21 +83,49 @@ export const analyzeStorage = async (): Promise<StorageAnalysis> => {
     AsyncStorage.getItem('aufmassprofi_documents'),
     AsyncStorage.getItem(SNAP_INDEX_KEY),
   ]);
-
   const projects = safeParse(projectsRaw);
   const photos = safeParse(photosRaw);
   const sketches = safeParse(sketchesRaw);
   const snapIndex = safeParse(idxRaw);
+  const ctx: OrphanCtx = {
+    validPhotoIds: new Set(photos.map((p: any) => p.id)),
+    validSketchIds: new Set(sketches.map((s: any) => s.id)),
+    // Referenzierte chk_img_/doc_img_-Keys (auch aus Checklisten-Vorlagen!)
+    refImgKeys: new Set<string>([
+      ...extractImageRefKeys(checklistsRaw),
+      ...extractImageRefKeys(templatesRaw),
+      ...extractImageRefKeys(documentsRaw),
+    ]),
+    validSnapPrefixes: snapIndex.map((s: any) => `${SNAP_PREFIX}${s.id}_`),
+  };
+  return { ctx, projects, photos, sketches, snapIndex };
+};
 
-  const validPhotoIds = new Set(photos.map((p: any) => p.id));
-  const validSketchIds = new Set(sketches.map((s: any) => s.id));
-  // Referenzierte chk_img_/doc_img_-Keys (auch aus Checklisten-Vorlagen!)
-  const refImgKeys = new Set<string>([
-    ...extractImageRefKeys(checklistsRaw),
-    ...extractImageRefKeys(templatesRaw),
-    ...extractImageRefKeys(documentsRaw),
-  ]);
-  const validSnapPrefixes = snapIndex.map((s: any) => `${SNAP_PREFIX}${s.id}_`);
+type KeyClass = 'orphan' | 'snapshot' | 'index' | 'dyn' | 'other';
+
+const classifyKey = (key: string, ctx: OrphanCtx): KeyClass => {
+  if (key === OLD_MONOLITH_KEY) return 'orphan';
+  if (key === SNAP_INDEX_KEY) return 'index';
+  if (key.startsWith(SNAP_PREFIX)) {
+    // Verwaiste Snapshot-Kopie (Erstellung wurde unterbrochen) → orphan
+    return ctx.validSnapPrefixes.some(p => key.startsWith(p)) ? 'snapshot' : 'orphan';
+  }
+  if (key.startsWith('photo_img_')) return ctx.validPhotoIds.has(key.slice(10)) ? 'dyn' : 'orphan';
+  if (key.startsWith('sketch_meta_')) return ctx.validSketchIds.has(key.slice(12)) ? 'dyn' : 'orphan';
+  if (key.startsWith('sketch_bg_')) return ctx.validSketchIds.has(key.slice(10)) ? 'dyn' : 'orphan';
+  if (key.startsWith('sketch_prev_')) return ctx.validSketchIds.has(key.slice(12)) ? 'dyn' : 'orphan';
+  if (key.startsWith('sketch_img_')) {
+    const sid = key.slice(11).split('_')[0];
+    return (sid === 'new' || ctx.validSketchIds.has(sid)) ? 'dyn' : 'orphan';
+  }
+  if (key.startsWith('chk_img_')) return ctx.refImgKeys.has(key) ? 'dyn' : 'orphan';
+  if (key.startsWith('doc_img_')) return ctx.refImgKeys.has(key) ? 'dyn' : 'orphan';
+  return 'other';
+};
+
+export const analyzeStorage = async (): Promise<StorageAnalysis> => {
+  const allKeys = (await AsyncStorage.getAllKeys()) || [];
+  const { ctx, projects, photos, sketches, snapIndex } = await loadOrphanCtx();
 
   let liveBytes = 0;
   let snapshotBytes = 0;
@@ -109,43 +142,21 @@ export const analyzeStorage = async (): Promise<StorageAnalysis> => {
       len = v ? v.length : 0;
     } catch { continue; }
 
-    if (key === OLD_MONOLITH_KEY) {
-      orphanBytes += len;
-      orphanKeys.push(key);
-      continue;
-    }
-    if (key === SNAP_INDEX_KEY) { snapshotBytes += len; continue; }
-    if (key.startsWith(SNAP_PREFIX)) {
-      if (validSnapPrefixes.some((p: string) => key.startsWith(p))) {
-        snapshotBytes += len;
-      } else {
-        // Verwaiste Snapshot-Kopie (Erstellung wurde unterbrochen)
+    switch (classifyKey(key, ctx)) {
+      case 'orphan':
         orphanBytes += len;
         orphanKeys.push(key);
-      }
-      continue;
-    }
-
-    let isDyn = false;
-    let isOrphan = false;
-    if (key.startsWith('photo_img_')) { isDyn = true; isOrphan = !validPhotoIds.has(key.slice(10)); }
-    else if (key.startsWith('sketch_meta_')) { isDyn = true; isOrphan = !validSketchIds.has(key.slice(12)); }
-    else if (key.startsWith('sketch_bg_')) { isDyn = true; isOrphan = !validSketchIds.has(key.slice(10)); }
-    else if (key.startsWith('sketch_prev_')) { isDyn = true; isOrphan = !validSketchIds.has(key.slice(12)); }
-    else if (key.startsWith('sketch_img_')) {
-      isDyn = true;
-      const sid = key.slice(11).split('_')[0];
-      isOrphan = sid !== 'new' && !validSketchIds.has(sid);
-    }
-    else if (key.startsWith('chk_img_')) { isDyn = true; isOrphan = !refImgKeys.has(key); }
-    else if (key.startsWith('doc_img_')) { isDyn = true; isOrphan = !refImgKeys.has(key); }
-
-    if (isDyn && isOrphan) {
-      orphanBytes += len;
-      orphanKeys.push(key);
-    } else {
-      liveBytes += len;
-      if (isDyn) dynSizes.set(key, len);
+        break;
+      case 'snapshot':
+      case 'index':
+        snapshotBytes += len;
+        break;
+      case 'dyn':
+        liveBytes += len;
+        dynSizes.set(key, len);
+        break;
+      default:
+        liveBytes += len;
     }
   }
 
@@ -184,6 +195,31 @@ export const analyzeStorage = async (): Promise<StorageAnalysis> => {
     cacheBytes: cache.bytes,
     cacheCount: cache.count,
   };
+};
+
+/**
+ * Schneller Scan: Wie viele Bytes könnten durch eine Bereinigung freigegeben
+ * werden? Liest NUR die Werte verwaister Keys (nicht die aktiven Daten) –
+ * günstig genug für den App-Start (Speicher-Warnung auf der Startseite).
+ */
+export const quickFreeableScan = async (): Promise<number> => {
+  try {
+    const allKeys = (await AsyncStorage.getAllKeys()) || [];
+    const { ctx } = await loadOrphanCtx();
+    let bytes = 0;
+    for (const key of allKeys) {
+      if (classifyKey(key, ctx) === 'orphan') {
+        try {
+          const v = await AsyncStorage.getItem(key);
+          bytes += v ? v.length : 0;
+        } catch {}
+      }
+    }
+    bytes += measureCache().bytes;
+    return bytes;
+  } catch {
+    return 0;
+  }
 };
 
 /**

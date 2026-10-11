@@ -1268,13 +1268,18 @@ export const SketchService = {
     const sketches = await getItems<Sketch>(KEYS.SKETCHES);
     const filtered = sketches.filter(s => s.id !== id);
 
-    // Delete main array entry + separate heavy data keys in parallel
-    await Promise.all([
-      setItems(KEYS.SKETCHES, filtered),
-      AsyncStorage.removeItem(`sketch_meta_${id}`),
-      AsyncStorage.removeItem(`sketch_bg_${id}`),
-      AsyncStorage.removeItem(`sketch_prev_${id}`),
-    ]);
+    // ERST Element-Bild-Keys aus den Metadaten ermitteln, DANN alles löschen
+    const toRemove = [`sketch_meta_${id}`, `sketch_bg_${id}`, `sketch_prev_${id}`];
+    try {
+      const metaStr = await AsyncStorage.getItem(`sketch_meta_${id}`);
+      if (metaStr) {
+        const re = /"imageStorageKey"\s*:\s*"([^"\\]+)"/g;
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(metaStr)) !== null) toRemove.push(m[1]);
+      }
+    } catch {}
+    await setItems(KEYS.SKETCHES, filtered);
+    await AsyncStorage.multiRemove(toRemove).catch(() => {});
     return true;
   },
 
@@ -1589,6 +1594,28 @@ export const PhotoService = {
     photos[index] = { ...photos[index], ...data, updated_at: new Date().toISOString() };
     await setItems(KEYS.PHOTOS, photos);
     return photos[index];
+  },
+
+  // Kopiert ein Foto (inkl. separat gespeicherter Bilddaten) –
+  // optional in ein anderes Projekt (targetProjectId)
+  duplicate: async (id: string, targetProjectId?: string): Promise<Photo | null> => {
+    const photos = await getItems<Photo>(KEYS.PHOTOS);
+    const original = photos.find(p => p.id === id);
+    if (!original) return null;
+    const newId = generateId();
+    const now = new Date().toISOString();
+    const copy: Photo = {
+      ...original,
+      id: newId,
+      project_id: targetProjectId || original.project_id,
+      created_at: now,
+      updated_at: now,
+    };
+    const img = await storage.getItem(`photo_img_${id}`).catch(() => null);
+    if (img) await storage.setItem(`photo_img_${newId}`, img);
+    photos.push(copy);
+    await setItems(KEYS.PHOTOS, photos);
+    return copy;
   },
 
   delete: async (id: string): Promise<boolean> => {

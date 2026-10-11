@@ -213,7 +213,7 @@ export default function ProjectDetailScreen() {
   const [sketchToDelete, setSketchToDelete] = useState<string | null>(null);
   const [isDeletingSketch, setIsDeletingSketch] = useState(false);
   const [isDuplicatingSketch, setIsDuplicatingSketch] = useState(false);
-  const [moveSketchModal, setMoveSketchModal] = useState<{ visible: boolean; sketchIds: string[]; mode: 'move' | 'copy'; label: string }>({ visible: false, sketchIds: [], mode: 'move', label: '' });
+  const [moveSketchModal, setMoveSketchModal] = useState<{ visible: boolean; itemIds: string[]; mode: 'move' | 'copy'; kind: 'sketch' | 'photo'; label: string }>({ visible: false, itemIds: [], mode: 'move', kind: 'sketch', label: '' });
   const [moveTargetProjects, setMoveTargetProjects] = useState<any[]>([]);
   const [isMovingSketch, setIsMovingSketch] = useState(false);
   // Mehrfach-Auswahl von Skizzen (gesammelt verschieben/kopieren)
@@ -968,9 +968,9 @@ export default function ProjectDetailScreen() {
     }
   };
 
-  // Skizze(n) verschieben/kopieren: Zielauswahl-Modal öffnen
-  const openTransferModal = async (sketchIds: string[], mode: 'move' | 'copy', label: string) => {
-    if (sketchIds.length === 0) return;
+  // Skizze(n)/Foto(s) verschieben/kopieren: Zielauswahl-Modal öffnen
+  const openTransferModal = async (itemIds: string[], mode: 'move' | 'copy', label: string, kind: 'sketch' | 'photo' = 'sketch') => {
+    if (itemIds.length === 0) return;
     try {
       const all = await ProjectService.getAll();
       const targets = all
@@ -978,11 +978,11 @@ export default function ProjectDetailScreen() {
         .sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
       if (targets.length === 0) {
         if (Platform.OS === 'web') alert('Kein anderes Projekt vorhanden.');
-        else Alert.alert('Nicht möglich', 'Es gibt kein anderes Projekt, in das die Skizzen übertragen werden könnten.');
+        else Alert.alert('Nicht möglich', 'Es gibt kein anderes Projekt, in das übertragen werden könnte.');
         return;
       }
       setMoveTargetProjects(targets);
-      setMoveSketchModal({ visible: true, sketchIds, mode, label });
+      setMoveSketchModal({ visible: true, itemIds, mode, kind, label });
     } catch (error) {
       console.error('Error loading projects for transfer:', error);
     }
@@ -999,41 +999,78 @@ export default function ProjectDetailScreen() {
     setSelectedSketches([]);
   };
 
-  const transferSketchesToProject = async (targetProject: any) => {
+  // Mehrere ausgewählte Skizzen auf einmal löschen (inkl. aller Daten-Keys)
+  const handleMultiDeleteSketches = () => {
+    if (selectedSketches.length === 0 || isMovingSketch) return;
+    const n = selectedSketches.length;
+    const doDelete = async () => {
+      setIsMovingSketch(true);
+      try {
+        for (const sid of selectedSketches) {
+          try { await SketchService.delete(sid); } catch (e) { console.error('[MultiDelete] Skizze fehlgeschlagen:', sid, e); }
+        }
+        exitSketchSelectMode();
+        await loadProjectData();
+      } finally {
+        setIsMovingSketch(false);
+      }
+    };
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (window.confirm(`${n} ${n === 1 ? 'Skizze' : 'Skizzen'} unwiderruflich löschen?`)) doDelete();
+    } else {
+      Alert.alert(
+        `${n} ${n === 1 ? 'Skizze' : 'Skizzen'} löschen`,
+        'Die ausgewählten Skizzen werden unwiderruflich gelöscht.',
+        [
+          { text: 'Abbrechen', style: 'cancel' },
+          { text: 'Löschen', style: 'destructive', onPress: doDelete },
+        ]
+      );
+    }
+  };
+
+  const transferItemsToProject = async (targetProject: any) => {
     if (isMovingSketch) return;
     setIsMovingSketch(true);
     try {
-      const { sketchIds, mode } = moveSketchModal;
+      const { itemIds, mode, kind } = moveSketchModal;
       let done = 0;
-      for (const sid of sketchIds) {
+      for (const itemId of itemIds) {
         try {
-          if (mode === 'move') {
-            await SketchService.update(sid, { project_id: targetProject.id } as any);
+          if (kind === 'photo') {
+            if (mode === 'move') await PhotoService.update(itemId, { project_id: targetProject.id } as any);
+            else await PhotoService.duplicate(itemId, targetProject.id);
           } else {
-            // Alle ausgelagerten Daten-Keys werden von duplicate() mitkopiert
-            await SketchService.duplicate(sid, targetProject.id);
+            if (mode === 'move') await SketchService.update(itemId, { project_id: targetProject.id } as any);
+            else await SketchService.duplicate(itemId, targetProject.id);
           }
           done++;
         } catch (e) {
-          console.error('[Transfer] Skizze fehlgeschlagen:', sid, e);
+          console.error('[Transfer] Element fehlgeschlagen:', itemId, e);
         }
       }
-      setMoveSketchModal({ visible: false, sketchIds: [], mode: 'move', label: '' });
-      exitSketchSelectMode();
+      setMoveSketchModal({ visible: false, itemIds: [], mode: 'move', kind: 'sketch', label: '' });
+      if (kind === 'photo') {
+        setPhotoDeleteMode(false);
+        setSelectedPhotos([]);
+      } else {
+        exitSketchSelectMode();
+      }
       await loadProjectData();
       const verb = mode === 'move' ? 'verschoben' : 'kopiert';
-      const what = done === 1 ? '1 Skizze' : `${done} Skizzen`;
+      const noun = kind === 'photo' ? (done === 1 ? '1 Foto' : `${done} Fotos`) : (done === 1 ? '1 Skizze' : `${done} Skizzen`);
       if (Platform.OS === 'web') {
-        alert(`${what} nach „${targetProject.name}" ${verb}.`);
+        alert(`${noun} nach „${targetProject.name}" ${verb}.`);
       } else {
-        Alert.alert(`Skizzen ${verb}`, `${what} ${done === 1 ? 'ist' : 'sind'} jetzt im Projekt „${targetProject.name}".`, [
+        Alert.alert(`${kind === 'photo' ? 'Fotos' : 'Skizzen'} ${verb}`, `${noun} ${done === 1 ? 'ist' : 'sind'} jetzt im Projekt „${targetProject.name}".`, [
           { text: 'OK', style: 'cancel' },
           { text: 'Projekt öffnen', onPress: () => router.push(`/projects/${targetProject.id}`) },
         ]);
       }
     } catch (error) {
-      console.error('Error transferring sketches:', error);
-      Alert.alert('Fehler', 'Skizzen konnten nicht übertragen werden.');
+      console.error('Error transferring items:', error);
+      Alert.alert('Fehler', 'Übertragen fehlgeschlagen.');
     } finally {
       setIsMovingSketch(false);
     }
@@ -2655,7 +2692,8 @@ export default function ProjectDetailScreen() {
                   </TouchableOpacity>
                 </>
               ) : photoDeleteMode ? (
-                <>
+                <View style={{ width: '100%', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
                   <TouchableOpacity
                     style={[styles.photoActionButton, { backgroundColor: selectedPhotos.length > 0 ? '#f44336' : '#ccc', flex: 1 }]}
                     onPress={handleDeleteSelectedPhotos}
@@ -2699,9 +2737,30 @@ export default function ProjectDetailScreen() {
                     }}
                   >
                     <Ionicons name="close" size={22} color="#fff" />
-                    <Text style={styles.photoActionButtonTextWhite}>Abbrechen</Text>
                   </TouchableOpacity>
-                </>
+                  </View>
+                  {/* Ausgewählte Fotos in anderes Projekt verschieben/kopieren */}
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      testID="photo-multi-move"
+                      style={[styles.photoActionButton, { backgroundColor: selectedPhotos.length > 0 ? '#607d8b' : '#ccc' }]}
+                      disabled={selectedPhotos.length === 0 || isMovingSketch}
+                      onPress={() => openTransferModal(selectedPhotos, 'move', `${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'Foto' : 'Fotos'}`, 'photo')}
+                    >
+                      <Ionicons name="arrow-redo-outline" size={20} color="#fff" />
+                      <Text style={[styles.photoActionButtonTextWhite, { fontSize: 12 }]}>Verschieben</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      testID="photo-multi-copy"
+                      style={[styles.photoActionButton, { backgroundColor: selectedPhotos.length > 0 ? '#1976d2' : '#ccc' }]}
+                      disabled={selectedPhotos.length === 0 || isMovingSketch}
+                      onPress={() => openTransferModal(selectedPhotos, 'copy', `${selectedPhotos.length} ${selectedPhotos.length === 1 ? 'Foto' : 'Fotos'}`, 'photo')}
+                    >
+                      <Ionicons name="copy-outline" size={20} color="#fff" />
+                      <Text style={[styles.photoActionButtonTextWhite, { fontSize: 12 }]}>Kopieren</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               ) : (
                 <>
                   {/* Zur Galerie (Exportieren) */}
@@ -2732,8 +2791,8 @@ export default function ProjectDetailScreen() {
                     >
                       <Ionicons name="trash-outline" size={22} color="#f44336" />
                       <View style={styles.photoActionButtonTextContainer}>
-                        <Text style={[styles.photoActionButtonText, { color: '#f44336' }]}>Fotos löschen</Text>
-                        <Text style={[styles.photoActionButtonSubtext, { color: '#f44336' }]}>(Mehrfach)</Text>
+                        <Text style={[styles.photoActionButtonText, { color: '#f44336' }]}>Fotos auswählen</Text>
+                        <Text style={[styles.photoActionButtonSubtext, { color: '#f44336' }]}>(Löschen/Verschieben)</Text>
                       </View>
                     </TouchableOpacity>
                   )}
@@ -3013,10 +3072,21 @@ export default function ProjectDetailScreen() {
                     <Ionicons name="copy-outline" size={16} color="#fff" />
                     <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Kopieren</Text>
                   </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity
+                    testID="sketch-multi-delete"
+                    disabled={selectedSketches.length === 0}
+                    onPress={handleMultiDeleteSketches}
+                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10, backgroundColor: selectedSketches.length === 0 ? '#e2e8f0' : '#dc2626' }}
+                  >
+                    <Ionicons name="trash" size={16} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Löschen</Text>
+                  </TouchableOpacity>
                   <TouchableOpacity
                     testID="sketch-select-cancel"
                     onPress={exitSketchSelectMode}
-                    style={{ paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#f1f5f9' }}
+                    style={{ flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 10, backgroundColor: '#f1f5f9', paddingVertical: 10 }}
                   >
                     <Text style={{ color: '#64748b', fontWeight: '700', fontSize: 13 }}>Abbrechen</Text>
                   </TouchableOpacity>
@@ -5562,16 +5632,16 @@ export default function ProjectDetailScreen() {
         </View>
       </Modal>
 
-      {/* Skizze(n)-übertragen Modal */}
-      <Modal visible={moveSketchModal.visible} transparent animationType="fade" onRequestClose={() => setMoveSketchModal({ visible: false, sketchIds: [], mode: 'move', label: '' })}>
+      {/* Skizzen/Fotos-übertragen Modal */}
+      <Modal visible={moveSketchModal.visible} transparent animationType="fade" onRequestClose={() => setMoveSketchModal({ visible: false, itemIds: [], mode: 'move', kind: 'sketch', label: '' })}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24 }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18, maxHeight: '75%' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <Ionicons name={moveSketchModal.mode === 'move' ? 'arrow-redo-outline' : 'copy-outline'} size={22} color="#1976d2" />
               <Text style={{ marginLeft: 8, fontSize: 17, fontWeight: '700', color: '#333' }} numberOfLines={1}>
-                {moveSketchModal.sketchIds.length > 1
-                  ? (moveSketchModal.mode === 'move' ? 'Skizzen verschieben' : 'Skizzen kopieren')
-                  : (moveSketchModal.mode === 'move' ? 'Skizze verschieben' : 'Skizze kopieren')}
+                {(moveSketchModal.kind === 'photo'
+                  ? (moveSketchModal.itemIds.length > 1 ? 'Fotos' : 'Foto')
+                  : (moveSketchModal.itemIds.length > 1 ? 'Skizzen' : 'Skizze'))} {moveSketchModal.mode === 'move' ? 'verschieben' : 'kopieren'}
               </Text>
             </View>
             <Text style={{ fontSize: 13, color: '#666', marginBottom: 12 }} numberOfLines={2}>
@@ -5583,7 +5653,7 @@ export default function ProjectDetailScreen() {
                   key={p.id}
                   testID={`move-target-${p.id}`}
                   disabled={isMovingSketch}
-                  onPress={() => transferSketchesToProject(p)}
+                  onPress={() => transferItemsToProject(p)}
                   style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}
                 >
                   <Ionicons name="folder-outline" size={20} color="#1976d2" />
@@ -5598,7 +5668,7 @@ export default function ProjectDetailScreen() {
               ))}
             </ScrollView>
             <TouchableOpacity
-              onPress={() => setMoveSketchModal({ visible: false, sketchIds: [], mode: 'move', label: '' })}
+              onPress={() => setMoveSketchModal({ visible: false, itemIds: [], mode: 'move', kind: 'sketch', label: '' })}
               style={{ marginTop: 14, paddingVertical: 11, borderRadius: 10, alignItems: 'center', backgroundColor: '#f5f5f5' }}
             >
               <Text style={{ color: '#666', fontWeight: '600' }}>Abbrechen</Text>

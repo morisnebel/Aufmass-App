@@ -25,6 +25,7 @@ import * as Sharing from 'expo-sharing';
 import { Features, AppName, getProStatus, loadProStatus, updateFeatures } from '../services/FeatureFlags';
 import { BackupService } from '../services/BackupService';
 import { quickFreeableScan } from '../services/StorageCleanup';
+import { addArchiveEntries } from '../services/ArchiveLog';
 import { useTranslation } from 'react-i18next';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PROJECT_STATUSES, getStatusMeta, getStatusOrder, normalizeStatus } from '../src/constants/projectStatus';
@@ -349,6 +350,82 @@ export default function HomeScreen() {
     }
   };
   
+  // Mehrere Projekte in EINEM Schritt archivieren: eine gemeinsame Archiv-Datei
+  // exportieren (immer mit Fotos), extern sichern, dann endgültig entfernen
+  const archiveSelectedProjects = async () => {
+    if (selectedProjects.size === 0) {
+      Alert.alert(t('common.note'), t('home.selectAtLeastOne'));
+      return;
+    }
+    const ids = [...selectedProjects];
+    const selected = projects.filter(p => ids.includes(p.id));
+
+    const doDelete = async (fileName: string) => {
+      setIsProcessing(true);
+      try {
+        await addArchiveEntries(selected.map(p => ({ name: p.name, project_number: (p as any).project_number, fileName })));
+        for (const pid of ids) {
+          await ProjectService.delete(pid);
+        }
+        await loadData();
+        setSelectionMode(false);
+        setSelectedProjects(new Set());
+        const msg = `${ids.length} Projekte archiviert und aus der App entfernt.\n\nÜbersicht: Einstellungen → Archiv-Übersicht. Wiederherstellen jederzeit über „Importieren".`;
+        if (Platform.OS === 'web') alert(msg);
+        else Alert.alert('✅ Archiviert', msg);
+      } catch (error) {
+        console.error('Archive delete error:', error);
+        Alert.alert(t('common.error'), 'Entfernen fehlgeschlagen.');
+      } finally {
+        setIsProcessing(false);
+      }
+    };
+
+    const confirmDelete = (fileName: string) => {
+      const text = `Wenn die Archiv-Datei „${fileName}" in iCloud Drive / Google Drive gespeichert ist, werden die ${ids.length} Projekte jetzt ENDGÜLTIG aus der App entfernt (inkl. aller Fotos, Skizzen und Dokumente).`;
+      if (Platform.OS === 'web') {
+        // eslint-disable-next-line no-alert
+        if (window.confirm(`Datei sicher gespeichert?\n\n${text}`)) doDelete(fileName);
+      } else {
+        Alert.alert('Datei sicher gespeichert?', text, [
+          { text: 'Projekte behalten', style: 'cancel' },
+          { text: 'Ja, jetzt entfernen', style: 'destructive', onPress: () => doDelete(fileName) },
+        ]);
+      }
+    };
+
+    const start = async () => {
+      setIsProcessing(true);
+      try {
+        // Archiv IMMER komplett (mit Fotos) – nur so ist die Wiederherstellung vollständig
+        const { uri, fileName } = await exportProjectsToFile(ids, { includePhotos: true });
+        setIsProcessing(false);
+        if (Platform.OS !== 'web') {
+          await Sharing.shareAsync(uri, {
+            mimeType: 'application/json',
+            dialogTitle: `${ids.length} Projekte archivieren (iCloud Drive / Google Drive)`,
+          });
+        }
+        confirmDelete(fileName);
+      } catch (error) {
+        console.error('Archive export error:', error);
+        setIsProcessing(false);
+        Alert.alert(t('common.error'), 'Archivieren fehlgeschlagen – es wurde NICHTS entfernt.');
+      }
+    };
+
+    const intro = `1. Die ${ids.length} ausgewählten Projekte werden zusammen in EINE Datei exportiert (inkl. Fotos, Skizzen, Dokumente)\n2. Datei extern speichern (iCloud Drive / Google Drive)\n3. Danach werden die Projekte endgültig aus der App entfernt und geben Speicher frei`;
+    if (Platform.OS === 'web') {
+      // eslint-disable-next-line no-alert
+      if (window.confirm(`${ids.length} Projekte archivieren?\n\n${intro}`)) start();
+    } else {
+      Alert.alert('Projekte archivieren', intro, [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: 'Archivieren starten', onPress: start },
+      ]);
+    }
+  };
+
   // Delete selected projects
   const deleteSelectedProjects = async () => {
     if (selectedProjects.size === 0) {
@@ -1425,6 +1502,16 @@ export default function HomeScreen() {
           >
             <Ionicons name="swap-horizontal-outline" size={16} color="#4caf50" />
             <Text style={[styles.multiSelectButtonText, { color: '#4caf50' }]}>Status</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.multiSelectButton, { backgroundColor: '#fef3c7' }]}
+            testID="multi-archive"
+            onPress={archiveSelectedProjects}
+            disabled={selectedProjects.size === 0}
+          >
+            <Ionicons name="archive-outline" size={16} color="#d97706" />
+            <Text style={[styles.multiSelectButtonText, { color: '#d97706' }]}>Archiv</Text>
           </TouchableOpacity>
           
           <TouchableOpacity

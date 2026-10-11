@@ -38,6 +38,7 @@ import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
 import { copyAsync, deleteAsync, cacheDirectory, writeAsStringAsync, readAsStringAsync } from 'expo-file-system/legacy';
 import { exportProjectsToFile, askExportPhotoChoice } from '../../utils/projectTransfer';
+import { addArchiveEntries } from '../../services/ArchiveLog';
 import { SvgXml } from 'react-native-svg';
 import Svg, { Path as SvgPath, Text as SvgText, Image as SvgImage } from 'react-native-svg';
 
@@ -2196,10 +2197,12 @@ export default function ProjectDetailScreen() {
     if (!project?.id || isGeneratingPdf) return;
     const projectName = project.name;
 
-    const confirmDelete = () => {
+    const confirmDelete = (fileName: string) => {
       const doDelete = async () => {
         setIsGeneratingPdf(true);
         try {
+          // Eintrag in die Archiv-Übersicht (Einstellungen → Archiv-Übersicht)
+          await addArchiveEntries([{ name: projectName, project_number: (project as any).project_number, fileName }]);
           await ProjectService.delete(project.id);
           setIsGeneratingPdf(false);
           router.replace('/');
@@ -2233,7 +2236,7 @@ export default function ProjectDetailScreen() {
       try {
         setIsGeneratingPdf(true);
         // Archiv IMMER komplett (mit Fotos) – nur so ist die Wiederherstellung vollständig
-        const { uri } = await exportProjectsToFile([project.id], { includePhotos: true });
+        const { uri, fileName } = await exportProjectsToFile([project.id], { includePhotos: true });
         setIsGeneratingPdf(false);
         if (Platform.OS !== 'web') {
           await Sharing.shareAsync(uri, {
@@ -2241,7 +2244,7 @@ export default function ProjectDetailScreen() {
             dialogTitle: 'Projekt-Archiv speichern (iCloud Drive / Google Drive)',
           });
         }
-        confirmDelete();
+        confirmDelete(fileName);
       } catch (e) {
         setIsGeneratingPdf(false);
         console.error('Archive export error:', e);

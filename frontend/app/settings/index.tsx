@@ -1075,6 +1075,21 @@ export default function SettingsScreen() {
               <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
             </TouchableOpacity>
             <TouchableOpacity
+              testID="settings-archive"
+              style={legalStyles.navRow}
+              onPress={() => router.push('/archive')}
+              activeOpacity={0.7}
+            >
+              <View style={[legalStyles.navIcon, { backgroundColor: '#fef3c7' }]}>
+                <Ionicons name="archive-outline" size={18} color="#d97706" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Archiv-Übersicht</Text>
+                <Text style={legalStyles.navSub}>Liste der archivierten Projekte mit Datum</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+            <TouchableOpacity
               testID="settings-trash"
               style={legalStyles.navRow}
               onPress={() => router.push('/trash')}

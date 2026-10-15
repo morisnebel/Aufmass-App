@@ -2986,7 +2986,7 @@ export default function ProjectDetailScreen() {
                       <Ionicons name="trash-outline" size={22} color="#f44336" />
                       <View style={styles.photoActionButtonTextContainer}>
                         <Text style={[styles.photoActionButtonText, { color: '#f44336' }]}>Fotos auswählen</Text>
-                        <Text style={[styles.photoActionButtonSubtext, { color: '#f44336' }]}>(Löschen/Verschieben)</Text>
+                        <Text style={[styles.photoActionButtonSubtext, { color: '#f44336' }]}>(Löschen/Verschieben/Kopieren)</Text>
                       </View>
                     </TouchableOpacity>
                   )}
@@ -3204,6 +3204,30 @@ export default function ProjectDetailScreen() {
                     </TouchableOpacity>
                   )}
                   
+                  {/* Verschieben / Kopieren - rechts unter dem Edit-Button */}
+                  {!photoSelectMode && !photoDeleteMode && (
+                    <TouchableOpacity
+                      style={styles.photoMoveButton}
+                      testID={`photo-move-${photo.id}`}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      disabled={isMovingSketch}
+                      onPress={() => openTransferModal([photo.id], 'move', photo.description || 'Foto', 'photo')}
+                    >
+                      <Ionicons name="arrow-redo-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                  {!photoSelectMode && !photoDeleteMode && (
+                    <TouchableOpacity
+                      style={styles.photoCopyButton}
+                      testID={`photo-copy-${photo.id}`}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                      disabled={isMovingSketch}
+                      onPress={() => openTransferModal([photo.id], 'copy', photo.description || 'Foto', 'photo')}
+                    >
+                      <Ionicons name="copy-outline" size={20} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+
                   {/* Delete Button - Bottom Right (nur wenn nicht im Auswahl-Modus) */}
                   {!photoSelectMode && !photoDeleteMode && (
                     <TouchableOpacity

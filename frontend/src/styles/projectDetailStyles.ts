@@ -376,7 +376,7 @@ export const styles = StyleSheet.create({
   },
   photoDeleteButton: {
     position: 'absolute',
-    bottom: 48,
+    top: 140,
     right: 8,
     backgroundColor: 'rgba(244, 67, 54, 0.9)',
     borderRadius: 20,

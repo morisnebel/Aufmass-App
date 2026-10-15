@@ -3102,6 +3102,7 @@ export default function ProjectDetailScreen() {
                           <Svg
                             viewBox={`0 0 ${canvasW} ${canvasH}`}
                             preserveAspectRatio="xMidYMid meet"
+                            pointerEvents="none"
                             style={[styles.photoImage, { backgroundColor: '#f5f5f5' }]}
                           >
                             <SvgImage
@@ -3191,11 +3192,16 @@ export default function ProjectDetailScreen() {
                     )}
                   </TouchableOpacity>
                   
-                  {/* Edit Icon - Top Right (nur wenn nicht im Auswahl-Modus) */}
+                  {/* Edit Button - Top Right (nur wenn nicht im Auswahl-Modus) */}
                   {!photoSelectMode && !photoDeleteMode && (
-                    <View style={styles.photoEditOverlay}>
+                    <TouchableOpacity
+                      style={styles.photoEditOverlay}
+                      testID={`photo-edit-${photo.id}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      onPress={() => router.push(`/photos/annotate?photoId=${photo.id}&projectId=${id}`)}
+                    >
                       <Ionicons name="create-outline" size={20} color="#fff" />
-                    </View>
+                    </TouchableOpacity>
                   )}
                   
                   {/* Delete Button - Bottom Right (nur wenn nicht im Auswahl-Modus) */}
@@ -3708,7 +3714,7 @@ export default function ProjectDetailScreen() {
                     
                     {/* Render SVG preview */}
                     {svgXml && (
-                      <View style={styles.sketchPreviewContainer}>
+                      <View style={styles.sketchPreviewContainer} pointerEvents="none">
                         <SvgXml
                           xml={svgXml}
                           width="100%"

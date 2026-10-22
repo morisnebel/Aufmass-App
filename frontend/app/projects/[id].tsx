@@ -4672,7 +4672,7 @@ export default function ProjectDetailScreen() {
                           {hoursVal > 0 && (
                             <View style={styles.reportStat}>
                               <Ionicons name="time-outline" size={13} color="#666" />
-                              <Text style={styles.reportStatText}>{hoursVal} Std.</Text>
+                              <Text style={styles.reportStatText}>{String(Math.round(hoursVal * 100) / 100).replace('.', ',')} Std.</Text>
                             </View>
                           )}
                           {(rep.photos || []).length > 0 && (

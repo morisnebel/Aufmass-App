@@ -18,11 +18,10 @@ const escapeHtml = (text: string | undefined | null): string => {
     .replace(/'/g, '&#039;');
 };
 
-// Dezimalstunden -> "H:MM h" (z.B. 8.5 -> "8:30 h")
+// Dezimalstunden -> "8,5 h" (Industriestunden; bei Abrechnung klarer als "8:30 h")
 const formatHoursHM = (hours: number | undefined | null): string => {
   const h = typeof hours === 'number' && Number.isFinite(hours) ? hours : 0;
-  const totalMin = Math.round(h * 60);
-  return `${Math.floor(totalMin / 60)}:${String(totalMin % 60).padStart(2, '0')} h`;
+  return `${String(Math.round(h * 100) / 100).replace('.', ',')} h`;
 };
 
 const formatDate = (iso: string | undefined): string => {
@@ -281,10 +280,7 @@ export const generateReportSectionHtml = (
     ? `<div class="machines-list">
         ${machinesAny.map(m => {
           const h = (m.hours != null && !isNaN(m.hours) && m.hours > 0)
-            ? (() => {
-                const tm = Math.round((m.hours as number) * 60);
-                return ` <strong>· ${Math.floor(tm / 60)}:${String(tm % 60).padStart(2, '0')} h</strong>`;
-              })()
+            ? ` <strong>· ${formatHoursHM(m.hours)}</strong>`
             : '';
           return `<span class="machine-tag">🔧 ${escapeHtml(m.name)}${h}</span>`;
         }).join('')}
@@ -387,13 +383,10 @@ export const generateReportSectionHtml = (
 
   // ===== Fahrzeiten HTML =====
   const r = report as any;
-  // Helper: dezimalstunden zu "h:mm" - dasselbe wie im Editor
+  // Helper: Dezimalstunden als Dezimalzahl, z.B. 1.5 -> "1,5 h" (wie im Editor)
   const fmtHM = (hours: any): string => {
     if (hours == null || !Number.isFinite(hours) || hours <= 0) return '–';
-    const totalMin = Math.round(hours * 60);
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return `${h}:${m.toString().padStart(2, '0')} h`;
+    return `${String(Math.round(hours * 100) / 100).replace('.', ',')} h`;
   };
   const teamTravelHas = (r.travel_to_hours != null || r.travel_back_hours != null || r.travel_to_km != null || r.travel_back_km != null || r.travel_costs != null || r.travel_note);
   const perEmpTravelHas = r.travel_per_employee_enabled && (report.employees || []).some((e: any) => e.travel_to_hours != null || e.travel_back_hours != null || e.travel_to_km != null || e.travel_back_km != null || e.travel_costs != null);

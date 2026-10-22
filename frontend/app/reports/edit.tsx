@@ -62,6 +62,12 @@ const formatHM = (hours?: number): string => {
   return `${h}:${m.toString().padStart(2, '0')}`;
 };
 
+/** Formatiert Dezimalstunden als Dezimalzahl mit Komma, z.B. 8.5 → "8,5" (Industriestunden) */
+const formatDecH = (hours?: number | null): string => {
+  if (hours == null || !Number.isFinite(hours) || hours <= 0) return '0';
+  return String(Math.round(hours * 100) / 100).replace('.', ',');
+};
+
 // Berechnet Stunden aus Beginn, Ende und Pause (Minuten)
 const calcEmpHours = (from?: string, to?: string, pauseMin?: number): number => {
   if (!from || !to) return 0;
@@ -1329,7 +1335,7 @@ export default function ReportEditScreen() {
                         </TouchableOpacity>
                         <View style={styles.hoursCellBox}>
                           <Text style={styles.timeCellMini}>STD.</Text>
-                          <Text style={styles.hoursCellLg}>{formatHM(hours) || '0:00'}</Text>
+                          <Text style={styles.hoursCellLg}>{formatDecH(hours)}</Text>
                         </View>
                       </View>
 
@@ -1356,7 +1362,7 @@ export default function ReportEditScreen() {
                 {/* Gesamtsumme */}
                 <View style={styles.empSumRow}>
                   <Text style={styles.empSumLabel}>Gesamtstunden aller Mitarbeiter</Text>
-                  <Text style={styles.empSumValue}>{formatHM(totalAllHours) || '0:00'} h</Text>
+                  <Text style={styles.empSumValue}>{formatDecH(totalAllHours)} h</Text>
                 </View>
                 {/* Fahrzeit zu den Stunden (wie im PDF) */}
                 {(() => {
@@ -1374,11 +1380,11 @@ export default function ReportEditScreen() {
                         <Text style={[styles.empSumLabel, { color: '#0891b2', fontSize: 12 }]}>
                           + Fahrzeit{!travelPerEmployee && (distinctPersonCount > 1 || effTravelDays > 1) ? ` (Team × ${distinctPersonCount} MA${effTravelDays > 1 ? ` × ${effTravelDays} Tage` : ''})` : ''}
                         </Text>
-                        <Text style={[styles.empSumValue, { color: '#0891b2', fontSize: 13 }]}>{formatHM(travelSum) || '0:00'} h</Text>
+                        <Text style={[styles.empSumValue, { color: '#0891b2', fontSize: 13 }]}>{formatDecH(travelSum)} h</Text>
                       </View>
                       <View style={[styles.empSumRow, { backgroundColor: '#ecfeff', borderRadius: 8, paddingHorizontal: 8 }]}>
                         <Text style={[styles.empSumLabel, { color: '#0e7490' }]}>Gesamt inkl. Fahrzeit</Text>
-                        <Text style={[styles.empSumValue, { color: '#0e7490' }]}>{formatHM(totalAllHours + travelSum) || '0:00'} h</Text>
+                        <Text style={[styles.empSumValue, { color: '#0e7490' }]}>{formatDecH(totalAllHours + travelSum)} h</Text>
                       </View>
                     </>
                   );
@@ -1393,7 +1399,7 @@ export default function ReportEditScreen() {
                           <Text style={styles.roleBadgeText}>{r.role}</Text>
                           <Text style={styles.roleBadgeCount}>{r.count}×</Text>
                         </View>
-                        <Text style={styles.roleHoursText}>{formatHM(r.hours) || '0:00'} h</Text>
+                        <Text style={styles.roleHoursText}>{formatDecH(r.hours)} h</Text>
                       </View>
                     ))}
                   </View>
@@ -1496,8 +1502,8 @@ export default function ReportEditScreen() {
                   employees.map((emp) => {
                     const ea: any = emp;
                     const parts: string[] = [];
-                    if (ea.travel_to_hours) parts.push(`🛣️ Hin ${formatHM(ea.travel_to_hours)}`);
-                    if (ea.travel_back_hours) parts.push(`↩️ Rück ${formatHM(ea.travel_back_hours)}`);
+                    if (ea.travel_to_hours) parts.push(`🛣️ Hin ${formatDecH(ea.travel_to_hours)} h`);
+                    if (ea.travel_back_hours) parts.push(`↩️ Rück ${formatDecH(ea.travel_back_hours)} h`);
                     const kmSum = (ea.travel_to_km || 0) + (ea.travel_back_km || 0);
                     if (kmSum > 0) parts.push(`📏 ${String(kmSum).replace('.', ',')} km`);
                     if (ea.travel_costs) parts.push(`💶 ${String(ea.travel_costs).replace('.', ',')} €`);
@@ -1773,7 +1779,7 @@ export default function ReportEditScreen() {
                           >
                             <Ionicons name="time-outline" size={12} color="#7c3aed" />
                             <Text style={[styles.hoursInput, { color: '#7c3aed' }]}>
-                              {formatHM(m.hours) || '0:00'}
+                              {m.hours ? `${formatHM(m.hours)} = ${formatDecH(m.hours)}` : '0:00'}
                             </Text>
                             <Text style={styles.hoursUnit}>h</Text>
                           </TouchableOpacity>
@@ -2108,7 +2114,7 @@ export default function ReportEditScreen() {
                               📅 {new Date(r.entryDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}{r.rateName ? ` · ${r.rateName}` : ''}
                             </Text>
                           </View>
-                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{formatHM(r.hours) || '0:00'} h ×</Text>
+                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{formatDecH(r.hours)} h ×</Text>
                           {priceInput(`emp-${r.idx}`, r.rate, (v) => updateEmpRate(r.idx, v))}
                           <Text style={{ fontSize: 11, color: '#64748b' }}>€/h</Text>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>
@@ -2140,7 +2146,7 @@ export default function ReportEditScreen() {
                       {macRows.map(r => (
                         <View key={r.idx} style={rowStyle}>
                           <Text style={{ flex: 1, fontSize: 12, color: '#0f172a' }} numberOfLines={1}>{r.name}</Text>
-                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{formatHM(r.hours) || '0:00'} h ×</Text>
+                          <Text style={{ fontSize: 11, color: '#64748b', width: 55, textAlign: 'right' }}>{formatDecH(r.hours)} h ×</Text>
                           {priceInput(`mac-${r.idx}`, r.rate, (v) => updateMacRate(r.idx, v))}
                           <Text style={{ fontSize: 11, color: '#64748b' }}>€/h</Text>
                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#0f172a', width: 75, textAlign: 'right' }}>{eur(r.cost)}</Text>

@@ -24,6 +24,9 @@ const formatHoursHM = (hours: number | undefined | null): string => {
   return `${String(Math.round(h * 100) / 100).replace('.', ',')} h`;
 };
 
+// Kaufmännische Rundung auf 2 Nachkommastellen – angezeigte Werte = Rechenwerte
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
 const formatDate = (iso: string | undefined): string => {
   if (!iso) return '';
   try {
@@ -194,12 +197,12 @@ export const generateReportSectionHtml = (
             const distinctPersons = Math.max(1, new Set((report.employees || []).map(personKeyOf)).size);
             if (isPerEmp) {
               (report.employees || []).forEach((e: any) => {
-                travelSum += (e.travel_to_hours || 0) + (e.travel_back_hours || 0);
+                travelSum += round2((e.travel_to_hours || 0) + (e.travel_back_hours || 0));
               });
             } else {
               const oneRound = ((report as any).travel_to_hours || 0) + ((report as any).travel_back_hours || 0);
               const tDays = Math.max(1, (report as any).travel_days || 1);
-              travelSum = oneRound * distinctPersons * tDays;
+              travelSum = round2(oneRound) * distinctPersons * tDays;
             }
             const baseHours = (report.total_hours ?? report.employees.reduce((s, e) => {
               const ea = e as any;
@@ -577,16 +580,16 @@ export const generateReportSectionHtml = (
               mins -= ea.pause_minutes || 0;
               return Math.max(0, Math.round((mins / 60) * 100) / 100);
             })();
-            const travelExtra = ((ea.travel_to_hours || 0) + (ea.travel_back_hours || 0));
+            const travelExtra = round2((ea.travel_to_hours || 0) + (ea.travel_back_hours || 0));
             // Team-Fahrzeit pro Zeile: Gesamt-Fahrzeit der Person (Runde × Tage) auf ihre Einträge verteilt
             const pKey = ((ea.name || e.id || '') as string).trim().toLowerCase();
             const rowsOfPerson = Math.max(1, (report.employees || []).filter((x: any) => ((x.name || x.id || '') as string).trim().toLowerCase() === pKey).length);
-            const teamTravelTeam = (report.travel_per_employee_enabled ? 0 : ((report.travel_to_hours || 0) + (report.travel_back_hours || 0)) * Math.max(1, (report as any).travel_days || 1) / rowsOfPerson);
+            const teamTravelTeam = (report.travel_per_employee_enabled ? 0 : round2((report.travel_to_hours || 0) + (report.travel_back_hours || 0)) * Math.max(1, (report as any).travel_days || 1) / rowsOfPerson);
             const teamTravelShare = teamTravelTeam && report.travel_in_total_hours ? teamTravelTeam : 0; // pro MA der Team-Anteil zur Lohnberechnung
-            const totalHrs = calcHours + (report.travel_per_employee_enabled ? travelExtra : teamTravelShare);
+            const totalHrs = round2(calcHours + (report.travel_per_employee_enabled ? travelExtra : teamTravelShare));
             const master = empMaster.find((m: any) => (e.id && m.id === e.id) || m.name?.toLowerCase() === (e.name || '').toLowerCase());
             const rate = ea.hourly_rate != null ? ea.hourly_rate : (master?.hourly_rate || 0);
-            const cost = totalHrs * rate;
+            const cost = round2(totalHrs * rate);
             empTotal += cost;
             if (showEmp) {
               const entryDateStr = (() => {
@@ -612,7 +615,7 @@ export const generateReportSectionHtml = (
           (report.materials || []).forEach(m => {
             const master = matMaster.find((mm: any) => mm.name?.toLowerCase() === (m.name || '').toLowerCase());
             const price = (m as any).price_per_unit != null ? (m as any).price_per_unit : (master?.price_per_unit || 0);
-            const cost = (m.quantity || 0) * price;
+            const cost = round2((m.quantity || 0) * price);
             matTotal += cost;
             if (showMat) {
               matRowsHtml += `<tr>
@@ -634,8 +637,8 @@ export const generateReportSectionHtml = (
               (m.master_id && mm.id === m.master_id) || mm.name?.toLowerCase() === (m.name || '').toLowerCase()
             );
             const rate = m.hourly_rate != null ? m.hourly_rate : (master?.hourly_rate || 0);
-            const hours = m.hours || 0;
-            const cost = hours * rate;
+            const hours = round2(m.hours || 0);
+            const cost = round2(hours * rate);
             macTotal += cost;
             if (showMac) {
               macRowsHtml += `<tr>
@@ -649,11 +652,11 @@ export const generateReportSectionHtml = (
         }
 
         // === Spesen / Fahrtkosten ===
-        const travelCostsTotal = report.travel_per_employee_enabled
+        const travelCostsTotal = round2(report.travel_per_employee_enabled
           ? (report.employees || []).reduce((s, e: any) => s + (e.travel_costs || 0), 0)
-          : (((report as any).travel_costs || 0) * Math.max(1, (report as any).travel_days || 1));
+          : (((report as any).travel_costs || 0) * Math.max(1, (report as any).travel_days || 1)));
 
-        const grandTotal = empTotal + matTotal + macTotal + (showTravel ? travelCostsTotal : 0);
+        const grandTotal = round2(empTotal + matTotal + macTotal + (showTravel ? travelCostsTotal : 0));
 
         return `
           <div class="section keep-together">
@@ -704,8 +707,8 @@ export const generateReportSectionHtml = (
             ${showSum ? (() => {
               const showVat = !!(report as any).show_vat;
               const vatRate = (report as any).vat_rate != null ? (report as any).vat_rate : 19;
-              const vatAmount = showVat ? grandTotal * (vatRate / 100) : 0;
-              const brutto = grandTotal + vatAmount;
+              const vatAmount = showVat ? round2(grandTotal * (vatRate / 100)) : 0;
+              const brutto = round2(grandTotal + vatAmount);
               return `
                 <div style="margin-top:10px;padding:10px 12px;background:#f0fdf4;border:2px solid #16a34a;border-radius:6px;">
                   <table style="width:100%;font-size:11px;">

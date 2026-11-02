@@ -4,7 +4,7 @@ import {
   Alert, Modal, KeyboardAvoidingView, Platform, Switch, Image,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';

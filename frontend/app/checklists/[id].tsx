@@ -18,7 +18,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { ChecklistService, ProjectService, ChecklistTemplateService } from '../../services/LocalStorage';
 import { getFeatures } from '../../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';

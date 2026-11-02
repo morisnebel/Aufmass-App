@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
 import { writeAsStringAsync, cacheDirectory } from 'expo-file-system/legacy';
 import { readTextFile } from '../../utils/readTextFile';

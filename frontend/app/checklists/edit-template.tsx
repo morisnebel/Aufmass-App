@@ -16,7 +16,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useNavigation, Stack } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { ChecklistTemplateService } from '../../services/LocalStorage';
 import { ReferenceService, ReferenceFolder, ReferencePhoto } from '../../services/ReferenceService';
 import * as ImagePicker from 'expo-image-picker';

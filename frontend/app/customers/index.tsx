@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, Customer, ProjectAddress, ProjectService, Project, generateFullName, generateFullAddress, generateObjectNumber, isCustomerNumberDuplicate, isObjectNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, getNextAvailableProjectNumber } from '../../services/LocalStorage';
 import { useTranslation } from 'react-i18next';

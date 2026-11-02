@@ -1,0 +1,36 @@
+{
+  "summary": "SDK 57->58 regression test (web, 375x667, seeded localStorage). I found no regressions from the SDK upgrade. Icons: the Ionicons.ttf from @react-native-vector-icons/ionicons is served with HTTP 200, document.fonts reports 'Ionicons:loaded' and 24 glyph elements render as real codepoints, with no font console errors. Navigation: home -> p1 detail, Info/Photos/Sketches tabs, back to home and the direct URL /projects/p1 all work. Photo card: the edit/move/copy/delete buttons render; photo-move-ph1 -> move-target-p2 -> folder-none changes ph1 project_id to p2 in localStorage. Rapport: 'Mitarbeiter-Lohnkosten' toggle -> Live Kosten shows '9,33 h ×' and 559,80 € (no 560,00). Storage screen loads its analysis. A sweep of /settings, /customers, /checklists, /trash, /archive, /search, /employees, /materials and /machines found no red screens or 'Unable to resolve module' errors. The NEW PROJECT modal flow could not be tested as described: the 'Kunde auswählen' picker modal in projects/new.tsx can never be opened (setShowCustomerPicker(true) does not exist anywhere), so the setTimeout(300) at line 1059 is dead code. The customer selector instead pushes to /customers?selectMode=true, and that flow works up to saving the customer. Deprecated packages detected: none (no expo-av, expo-barcode-scanner, expo-background-fetch or @expo/vector-icons left). No remaining InteractionManager imports in the app; react-native-drawer-layout guards it for RN >= 0.82.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "customers/new.tsx save in selectMode (web only)", "issue": "On web, after 'Create Customer' the customer IS saved to localStorage, but the user stays on /customers/new?selectMode=true. Navigation back to the project form (handleNavigateBack) only runs in an Alert.alert button onPress, and react-native-web's Alert.alert is a no-op. This is not an SDK58 regression and native is unaffected. Reference: app/customers/new.tsx:401-426", "testID": "customer-save", "priority": "low"}
+    ],
+    "integration_issues": [
+      {"flow": "projects/new customer picker modal", "issue": "The in-page 'Kunde auswählen' picker modal (showCustomerPicker) is unreachable: nothing calls setShowCustomerPicker(true). The customer selector at line 855 does router.push('/customers?selectMode=true'). So the InteractionManager->setTimeout replacement at line 1059 cannot run. The setTimeouts at lines 272/335 are native-only (contacts import). Web shows an alert instead. Reference: app/projects/new.tsx:855,1035,1059", "affected_testIDs": ["inline-customer-save"]}
+    ],
+    "design_issues": [
+      {"screen": "customers (selectMode)", "issues": ["Two back headers stacked ('Startseite' + 'Projekteingabe'), which wastes vertical space", "The '+' add button has no testID"]},
+      {"screen": "project detail Photos tab", "issues": ["Photo card action buttons are 36x39px, below the 44px touch target", "The action row at 375px is cramped: the 'Fotos auswählen' trash icon overlaps the 'To Gallery' label", "Mixed DE/EN labels (Photos/Sketches vs Projektdetails/Zurück)"]}
+    ],
+    "react_native_issues": [
+      {"component": "shadow* style props (web)", "issue": "Cosmetic web warning '\"shadow*\" style props are deprecated. Use \"boxShadow\"' repeated in expo logs. Minor, not fixed as instructed."}
+    ]
+  },
+  "test_report_links": [".screenshots/home.png", ".screenshots/photos.png", ".screenshots/move_modal.png", ".screenshots/rapport.png", ".screenshots/storage.png"],
+  "action_items": [
+    "Decide on the dead customer picker modal in app/projects/new.tsx (lines ~1035-1140 + inline new-customer modal): either remove it or wire setShowCustomerPicker(true) to the selector. Its setTimeout(300) transition is currently never run.",
+    "(Optional, web-only) customers/new.tsx: call handleNavigateBack directly when Platform.OS === 'web', because Alert.alert is a no-op on react-native-web.",
+    "(Optional) Raise photo-card action buttons to >= 44px and fix the overlapping Photos-tab action row at 375px width."
+  ],
+  "critical_code_review_comments": [
+    "app/projects/[id].tsx is ~5900+ lines; app/reports/edit.tsx and app/projects/new.tsx are also well over 700 lines. They should be split.",
+    "Alert.alert with button callbacks is used for post-save navigation; this pattern silently fails on web."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (not requested)", "frontend": "100% of the SDK-58 regression checks that could be tested (icons, navigation, photo move, rapport calc, storage, no red screens); the new-project picker modal check was blocked because the modal is unreachable"},
+  "seed_data_creation": "localStorage only (aufmassprofi_settings/projects/photos/reports, photo_img_ph1). I created the customer 'Kunde TEST_Regression' in the test browser's localStorage only.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use wait_until='domcontentloaded' for page.goto. Leaving /reports/edit fires a beforeunload dialog, so use an async dialog handler that awaits d.accept(). The customer selector on /projects/new goes to /customers?selectMode=true. The new-customer name field placeholder is 'Last Name' when no Kundentyp is chosen.",
+  "rca_of_issue": "react-native-web 0.21.4 dist/exports/Alert/index.js is 'class Alert { static alert() {} }', so any logic inside Alert button onPress never runs on web. Before the SDK58 change, the customer picker modal in projects/new.tsx was already orphaned when the selector was changed to router.push to the customers list."
+}

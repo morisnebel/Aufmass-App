@@ -13,7 +13,7 @@ import {
   Switch,
 } from 'react-native';
 import { useFocusEffect, useNavigation } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import { readTextFile } from '../../utils/readTextFile';

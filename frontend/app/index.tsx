@@ -17,7 +17,7 @@ import {
 
 import { useRouter } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { ProjectService, CustomerService, ChecklistService, PhotoService, SketchService, ReportService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber, cleanupOrphanedStorage, migrateSketchPreviews } from '../services/LocalStorage';
 import * as DocumentPicker from 'expo-document-picker';
 import { exportProjectsToFile, importProjectsFromFile, askExportPhotoChoice, askDuplicateAction } from '../utils/projectTransfer';

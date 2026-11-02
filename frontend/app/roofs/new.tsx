@@ -13,7 +13,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { RoofService } from '../../services/LocalStorage';
 import { useTranslation } from 'react-i18next';
 

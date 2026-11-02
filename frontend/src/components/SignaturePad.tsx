@@ -8,7 +8,7 @@
 import React, { useRef, useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, PanResponder, GestureResponderEvent } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 
 // Workaround RN-SVG Fabric-Bug (SDK 57): erzwingt Canvas-Neuzeichnen pro Render
 let fabricTick = 0;

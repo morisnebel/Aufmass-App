@@ -14,11 +14,10 @@ import {
   Modal,
   FlatList,
   Pressable,
-  InteractionManager,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import * as Contacts from 'expo-contacts/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CustomerService, ProjectService, Customer, ProjectAddress, isCustomerNumberDuplicate, isProjectNumberDuplicate, getNextAvailableCustomerNumber, getNextAvailableProjectNumber, getNextAvailableObjectNumber } from '../../services/LocalStorage';
@@ -269,9 +268,8 @@ export default function NewProjectScreen() {
       // Schließe zuerst das NewCustomer Modal
       setShowNewCustomerModal(false);
       
-      // Verwende InteractionManager für bessere Performance
-      // Dies wartet bis alle Animationen abgeschlossen sind
-      InteractionManager.runAfterInteractions(async () => {
+      // Kurz warten bis die Modal-Schließanimation fertig ist (iOS-Modal-Konflikt)
+      setTimeout(async () => {
         setShowContactPicker(true);
         setLoadingContacts(true);
 
@@ -305,7 +303,7 @@ export default function NewProjectScreen() {
         } finally {
           setLoadingContacts(false);
         }
-      });
+      }, 300);
     } catch (error) {
       console.error('Error requesting contacts permission:', error);
       Alert.alert(t('common.error'), t('customers.contactsLoadError'));
@@ -333,10 +331,10 @@ export default function NewProjectScreen() {
     setShowContactPicker(false);
     setContactSearchQuery('');
     
-    // Verwende InteractionManager für bessere Performance
-    InteractionManager.runAfterInteractions(() => {
+    // Kurz warten bis die Modal-Schließanimation fertig ist
+    setTimeout(() => {
       setShowNewCustomerModal(true);
-    });
+    }, 300);
   };
 
   const filteredContacts = deviceContacts.filter(contact => {
@@ -1058,9 +1056,9 @@ export default function NewProjectScreen() {
               style={styles.newCustomerTopButton}
               onPress={() => {
                 setShowCustomerPicker(false);  // Close this modal first
-                InteractionManager.runAfterInteractions(() => {
+                setTimeout(() => {
                   setShowNewCustomerModal(true);  // Then open new customer modal
-                });
+                }, 300);
               }}
             >
               <Ionicons name="add-circle" size={24} color="#fff" />

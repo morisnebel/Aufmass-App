@@ -15,7 +15,7 @@ import {
   Animated,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import Svg, { Path, G, Text as SvgText, Line, Circle, Polygon, Defs, Marker } from 'react-native-svg';
 
 // Workaround RN-SVG Fabric-Bug (SDK 57): erzwingt Canvas-Neuzeichnen pro Render

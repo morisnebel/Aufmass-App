@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@react-native-vector-icons/ionicons';
 import { WebView } from 'react-native-webview';
 import Svg, { Path, Text as SvgText, Rect, Circle, Line, G } from 'react-native-svg';
 

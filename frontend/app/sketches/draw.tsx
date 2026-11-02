@@ -20,7 +20,7 @@ import {
   Pressable,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
-import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { styles } from '../../src/styles/sketchDrawStyles';
 import { usePreventRemove } from 'expo-router/react-navigation';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -1467,13 +1467,14 @@ export default function DrawSketchScreen() {
   const backgroundImageChangedRef = useRef(false); // Track if bg image changed since load
 
   // Schutz vor versehentlichem Verlassen (Wisch-Geste/Zurück): Nachfrage mit Speichern-Option
-  const navigation = useNavigation();
   const allowLeaveRef = useRef(false);
   const handleBackPressRef = useRef<() => void>(() => {});
-  usePreventRemove(elements.length > 0 || !!backgroundImage, ({ data }) => {
+  // Expo Router 58: `repeat()` deaktiviert die Sperre und löst die Navigation erneut aus
+  // (direktes navigation.dispatch würde wieder abgefangen -> Endlosschleife)
+  usePreventRemove(elements.length > 0 || !!backgroundImage, ({ repeat }) => {
     if (allowLeaveRef.current) {
       // Programmatische Navigation nach dem Speichern - durchlassen
-      navigation.dispatch(data.action);
+      repeat();
       return;
     }
     if (Platform.OS === 'web') {
@@ -1493,7 +1494,7 @@ export default function DrawSketchScreen() {
           style: 'destructive',
           onPress: () => {
             allowLeaveRef.current = true;
-            navigation.dispatch(data.action);
+            repeat();
           },
         },
         { text: 'Speichern', onPress: () => handleBackPressRef.current() },
@@ -9415,7 +9416,7 @@ export default function DrawSketchScreen() {
         <View style={styles.protractorOverlay} pointerEvents="box-none">
           {/* Vollbild-Drag-Bereich */}
           <View 
-            style={[StyleSheet.absoluteFillObject, { zIndex: 1, backgroundColor: 'transparent' }]}
+            style={[StyleSheet.absoluteFill, { zIndex: 1, backgroundColor: 'transparent' }]}
             collapsable={false}
             pointerEvents={Platform.OS === 'web' ? 'auto' : 'none'}
             // @ts-ignore - Web-only events
@@ -9428,7 +9429,7 @@ export default function DrawSketchScreen() {
             onTouchEnd={Platform.OS === 'web' ? handleProtractorDragEnd : undefined}
           >
             {/* Vollbild-SVG für Linien und Griffe (Wrapper-View statt Svg-Prop für pointerEvents – Fabric-Bug) */}
-            <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+            <View style={StyleSheet.absoluteFill} pointerEvents="none">
             <Svg 
               key={`prot-${fabricInvalidateTick.current++}`}
               width={screenWidth} 
@@ -9695,7 +9696,7 @@ export default function DrawSketchScreen() {
           {showProtractorHint && (
             <TouchableOpacity 
               style={{
-                ...StyleSheet.absoluteFillObject,
+                ...StyleSheet.absoluteFill,
                 backgroundColor: 'rgba(0,0,0,0.6)',
                 justifyContent: 'center',
                 alignItems: 'center',

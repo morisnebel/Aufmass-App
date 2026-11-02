@@ -1,0 +1,38 @@
+{
+  "summary": "I ran a full frontend regression on the web preview (390x844, Expo SDK 58 / RN 0.88 / expo-router 58) after the usePreventRemove, FileHandle and absoluteFill fixes. CRITICAL guard fix verified: there is no 'Maximum update depth exceeded', no red screen and no hang anywhere. I tested browser back with Cancel then OK on projects/new, customers/new, customers/[id], reports/edit and sketches/draw. Cancel always kept the page. OK always saved or left. projects/new and reports/edit returned to the previous screen. sketches/draw saved and returned to the project, with elements persisted (1, then 2 after re-edit; header back arrow and checkmark also work). On customers/new and customers/[id], OK saves the data but the user stays on the form; see the web-only Alert issue below. Disclaimer gate, home, customer create and edit, project create (data persisted), project tabs (Info/Photos/Sketches/Measurement/Area/Roof/Checklists/Notes/Documents/Rapport), photo upload via gallery file chooser (thumbnail plus edit/move/copy/delete buttons), checklist from template (tick and save persisted) and the Rapport cost line '9,33 h × 60 €/h = 559,80 €' all work. Settings, Storage, Backup, Archive, Trash, Search, Templates, Employees, Materials and Machines all render. Web backup download (Aufmassprofi_Backup_*.json) and project export (TEST_Projekt.aufmass) work. Ionicons render correctly. MAIN WEB-ONLY ISSUE: react-native-web's Alert.alert is a no-op. Every flow that navigates or confirms only inside an Alert button callback is dead on web: post-save navigation in customers/new, customers/[id], projects/new and checklists/new, and 'Aus Datei wiederherstellen' plus snapshot restore in Backup. Native is unaffected. Deprecated packages detected: none. SafeAreaView issues detected: none.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Backup restore (web)", "issue": "On web, tapping 'Aus Datei wiederherstellen' does nothing. handleRestoreFromFile only opens the file picker from an Alert.alert button callback, and Alert.alert is a no-op on react-native-web. handleRestoreSnapshot has the same problem. Reference: app/backup/index.tsx:106-120, 165-178", "testID": "n/a", "priority": "MEDIUM (web only)"},
+      {"component": "Post-save navigation (web)", "issue": "The record is saved but the screen never leaves, because router.back/replace only runs inside the Alert success callback. Tapping Save again creates a duplicate. Affected: customers/new.tsx:427 (handleNavigateBack), customers/[id].tsx:480/505, projects/new.tsx:736 (router.replace to the detail screen never happens), checklists/new.tsx:209. The same applies to the leave-guard 'OK' path on customers/new and customers/[id].", "testID": "customer-save, project-save", "priority": "MEDIUM (web only)"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "projects/new (390px)", "issues": ["The two-column rows (ZIP/City and Phone/Email) in Objektadresse overflow: the right input goes past the right screen edge."]},
+      {"screen": "projects/[id] Photos tab (390px)", "issues": ["The action row 'To Gallery' / 'Fotos auswählen' / 'Add Photo' overlaps: the To Gallery text runs under the trash icon and the subtitle is cut off ('(Löschen/Verschieben/Kopi'). In multi-select mode the 'Abbrechen' button is clipped at the right edge.", "Photo card action buttons (photo-edit/move/copy) are 36x39px, below the 44px minimum."]},
+      {"screen": "sketches/draw toolbar", "issues": ["The labels 'Line', 'Circle' and 'Rectangle' run together ('LineCircleRectangle') because each label is wider than its 38px button."]}
+    ],
+    "react_native_issues": [
+      {"component": "usePreventRemove repeat()", "issue": "Dev warning: '`repeat` or `disablePrevention` from `usePreventRemove` was called, but `preventRemove` is still `true`'. It fires on every leave from projects/new and sketches/draw. It is harmless (no loop), but the warning recommends also setting preventRemove to false (for example a `leaving` state) when allowing the leave. Reference: src/hooks/useUnsavedChangesGuard.ts:33-37,89-92; app/sketches/draw.tsx:1474-1478"}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_36.json", ".screenshots/ (sk_final, report_cost, photo_card, backup, pnew_cust)"],
+  "action_items": [
+    "Optional (web-only): add a cross-platform alert helper (window.confirm/window.alert on web, Alert.alert on native) and use it in backup/index.tsx (restore from file, restore snapshot), customers/new.tsx, customers/[id].tsx, projects/new.tsx (success → router.replace(`/projects/${id}`)) and checklists/new.tsx so web flows navigate after save. photos/new already does this.",
+    "Optional: in useUnsavedChangesGuard and sketches/draw, flip the preventRemove condition to false (state flag) when allowing the leave, to silence the expo-router 58 warning.",
+    "Fix the Objektadresse two-column input overflow in projects/new and the Photos tab action-row overlap at phone width; raise photo-card action buttons to at least 44px.",
+    "Minor: Pro feature tabs only appear after app/index.tsx has run loadProStatus/updateFeatures. Deep-linking or reloading the web page on /projects/[id] hides the Pro tabs (Rapport/Documents/Measurement). Consider loading Pro status in _layout.tsx."
+  ],
+  "critical_code_review_comments": [
+    "useUnsavedChangesGuard (web): when onSaveAndLeave exists, confirm 'OK' calls the save. If the save fails validation or only shows an Alert (customers), the user stays on the page with no feedback on web.",
+    "FileHandle: readBytesSync and writeBytesSync exist in expo-file-system 58.0.13 (File.types.d.ts:182/196), so the migration is valid. I could not exercise the native path on web.",
+    "No absoluteFillObject left. The sketch canvas overlays render correctly."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (no backend)", "frontend": "~88% (all critical flows pass; web-only Alert no-op blocks backup restore and post-save navigation)"},
+  "seed_data_creation": "localStorage only in the test browser: aufmassprofi_settings (disclaimer_accepted_at plus disclaimer_version '2026-06'), aufmassprofi_customers (cust1 TEST_Max Muster), aufmassprofi_projects (p1 TEST_Projekt), aufmassprofi_reports (r1 with employee 07:00-16:20, rate 60), aufmassprofi_checklist_templates (t1 TEST_Vorlage), aufmassprofi_pro_unlocked='true'.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Seed localStorage, then reload. Navigate home → [data-testid=project-card-p1] so that index.tsx sets the Pro Features; deep-linking skips this. Use real mouse clicks; force clicks on Text do not always fire onPress. Sketch toolbar: set scrollLeft=500 on the toolbar scroller, then Rectangle is at (280,89) and Pen at (164,89). Drawing works by mouse drag on the canvas, and 'Elemente: N' shows the count. Line tool drag did not add an element (unverified mechanism). Leave dialogs are window.confirm; use an async page.on('dialog') handler. Photo upload: photos/new → mouse click (288,150) opens a file chooser → 'Foto speichern'.",
+  "rca_of_issue": "The 'Maximum update depth' loop is fixed: repeat() is used instead of re-dispatching. Remaining web-only failures come from react-native-web 0.21.4 Alert.alert being an empty static method (node_modules/react-native-web/dist/exports/Alert/index.js:11), so button callbacks never run."
+}

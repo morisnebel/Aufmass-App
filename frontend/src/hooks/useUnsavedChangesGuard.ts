@@ -1,6 +1,5 @@
 import { useRef } from 'react';
 import { Alert, Platform } from 'react-native';
-import { useNavigation } from 'expo-router';
 import { usePreventRemove } from 'expo-router/react-navigation';
 
 interface GuardOptions {
@@ -24,16 +23,17 @@ export function useUnsavedChangesGuard(
   onSaveAndLeave?: () => void | Promise<void>,
   options?: GuardOptions,
 ) {
-  const navigation = useNavigation();
   const allowLeaveRef = useRef(false);
   const onSaveRef = useRef(onSaveAndLeave);
   onSaveRef.current = onSaveAndLeave;
   const autoSave = options?.autoSave === true;
 
-  usePreventRemove(hasUnsavedChanges, ({ data }) => {
+  // Expo Router 58: Sperre muss vor dem erneuten Dispatch deaktiviert werden
+  // (`repeat`/`disablePrevention`), sonst Endlosschleife ("Maximum update depth exceeded")
+  const disablePrevention = usePreventRemove(hasUnsavedChanges, ({ repeat }) => {
     if (allowLeaveRef.current) {
       // Programmatische Navigation nach dem Speichern - durchlassen
-      navigation.dispatch(data.action);
+      repeat();
       return;
     }
     if (autoSave && onSaveRef.current) {
@@ -51,7 +51,7 @@ export function useUnsavedChangesGuard(
         }
       } else if (window.confirm('Seite verlassen? Nicht gespeicherte Änderungen gehen verloren.')) {
         allowLeaveRef.current = true;
-        navigation.dispatch(data.action);
+        repeat();
       }
       return;
     }
@@ -62,7 +62,7 @@ export function useUnsavedChangesGuard(
         style: 'destructive',
         onPress: () => {
           allowLeaveRef.current = true;
-          navigation.dispatch(data.action);
+          repeat();
         },
       },
     ];
@@ -88,6 +88,7 @@ export function useUnsavedChangesGuard(
     /** Vor programmatischer Navigation (z.B. nach erfolgreichem Speichern) aufrufen */
     allowLeave: () => {
       allowLeaveRef.current = true;
+      disablePrevention();
     },
   };
 }

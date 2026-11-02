@@ -330,7 +330,7 @@ export const exportProjectsToFile = async (
       const withNl = line + '\n';
       for (let i = 0; i < withNl.length; i += CHUNK) {
         const bytes = encoder.encode(withNl.slice(i, i + CHUNK));
-        handle.writeBytes(bytes);
+        handle.writeBytesSync(bytes);
         sizeBytes += bytes.length;
       }
     },
@@ -728,7 +728,7 @@ const streamImportNative = async (filePath: string, state: ImportState): Promise
 
   try {
     for (;;) {
-      const bytes = handle.readBytes(CHUNK);
+      const bytes = handle.readBytesSync(CHUNK);
       const done = bytes.length === 0;
       const text = decoder.decode(bytes, done);
       if (text.length > 0) {
@@ -822,7 +822,7 @@ export const importProjectsFromFile = async (
           const probeFile = new File(filePath);
           const probeHandle = probeFile.open(FileMode.ReadOnly);
           try {
-            const probeBytes = probeHandle.readBytes(300);
+            const probeBytes = probeHandle.readBytesSync(300);
             probe = utf8BytesToString(probeBytes, probeBytes.length);
           } finally {
             probeHandle.close();

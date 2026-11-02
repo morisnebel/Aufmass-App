@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f9ff',
   },
   inactiveOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(248, 250, 252, 0.4)',
   },
 });

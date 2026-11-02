@@ -1297,7 +1297,7 @@ export const styles = StyleSheet.create({
   },
   // Winkelmesser Styles
   protractorOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: 'center',
     alignItems: 'center',
   },

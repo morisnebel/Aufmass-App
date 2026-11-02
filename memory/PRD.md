@@ -733,3 +733,14 @@
 
 - RESTORE 28.10.2026 (02.11.2026): User-Rollback hatte vermeintlich Schaden angerichtet. Auf Wunsch des Users kompletter Reset auf GitHub-Branch conflict_281026_1521 = Commit b45cbaa38 (28.10.2026 15:21 MEZ) via git reset --hard (Commit war lokal vorhanden; identisch mit Stand VOR dem SDK-58-Upgrade). DAMIT IST DAS EXPO-SDK-58-UPGRADE RUECKGAENGIG: wieder expo 57.0.31 / RN 0.86.3 / @expo/vector-icons. Alle Funktions-Fixes (559,80-Rundung, Foto-Buttons, Dezimalstunden, SQLite, v1.1.30/Build 140) sind in diesem Stand enthalten. SICHERUNG: Branch 'backup-vor-restore-20261102' (Commit 2bfa78a60) enthaelt den SDK-58-Stand - bei erneutem SDK-58-Wunsch NICHT neu migrieren, sondern diesen Branch mergen/cherry-picken. .env/Datenbanken unberuehrt (nicht getrackt). GITHUB_TOKEN (read) liegt in backend/.env fuer Repo morisnebel/Aufmass-App (ACHTUNG: ein 'r' in morisnebel). Kein Push, kein Build durchgefuehrt.
 - SDK-58 ERNEUT AKTIV (02.11.2026): Auf User-Wunsch nach dem Restore das SDK-58-Upgrade wieder eingesetzt - NICHT neu migriert, sondern via 'git checkout 0f33da467 -- frontend' den bereits getesteten SDK-58-Stand uebernommen (expo 58.0.22 / RN 0.88.1 / @react-native-vector-icons/ionicons). yarn install ok. Stand = identisch mit iteration_35-geprueftem Upgrade.
+
+## Session Nov 2026 - SDK-58-Regressionen behoben (nach Restore 28.10. + Re-Upgrade)
+Status: Stand = Commit 28.10. 15:21 (b45cbaa38) + Expo SDK 58 / RN 0.88 / expo-router 58. Kein Build, kein GitHub-Push.
+Behobene SDK-58-Regressionen (Ursachen fuer "App funktioniert nicht mehr wie am 28.10."):
+- expo-router 58 `usePreventRemove`: Callback muss `repeat()` nutzen (bzw. `disablePrevention()`), `navigation.dispatch(data.action)` wird sonst erneut abgefangen -> Endlosschleife "Maximum update depth exceeded" beim Zurueck mit ungespeicherten Aenderungen. Gefixt in `src/hooks/useUnsavedChangesGuard.ts` und `app/sketches/draw.tsx`.
+- expo-file-system 58: `FileHandle.readBytes/writeBytes` sind jetzt async -> `readBytesSync/writeBytesSync` in `utils/projectTransfer.ts` (Export/Import/Archiv) und `services/BackupService.ts`.
+- RN 0.88: `StyleSheet.absoluteFillObject` entfernt -> `StyleSheet.absoluteFill` (draw.tsx, sketchDrawStyles.ts, SignaturePad.tsx).
+- Metro-Cache (.metro-cache, 1,5 GB) geleert. Safari-Fehler "Platform.default.select is not a function" = alte Seite mit altem Bundle + neuer Lazy-Chunk nach Metro-Neustart -> Vorschau neu laden.
+Testagent iteration_36 (Web): Zurueck-Navigation ohne Schleife ueberall OK, Skizze speichert, Rapport 559,80 EUR OK, Backup/Export-Download OK.
+Bekannt, nicht geaendert (schon am 28.10. so, nur Web): Alert.alert-Buttons laufen im Web nicht (Backup-Restore/Navigation nach Speichern), Foto-Aktionszeile bei 390px eng, Pro-Tabs erst nach Start ueber Home.
+Offen: Pruefung in Expo Go auf dem iPhone durch den Nutzer (SQLite-Migration bestehender Daten, Export/Import nativ).

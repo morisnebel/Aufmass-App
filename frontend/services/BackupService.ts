@@ -190,7 +190,7 @@ const streamBackupToFile = async (
     const writeStr = (s: string) => {
       for (let i = 0; i < s.length; i += CHUNK) {
         const bytes = encoder.encode(s.slice(i, i + CHUNK));
-        handle.writeBytes(bytes);
+        handle.writeBytesSync(bytes);
         sizeBytes += bytes.length;
       }
     };

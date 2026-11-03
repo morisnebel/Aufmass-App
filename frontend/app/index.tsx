@@ -150,7 +150,6 @@ export default function HomeScreen() {
   ];
 
   const navTiles: HomeTile[] = [
-    { key: 'projects', title: 'Projekte', subtitle: 'Ordner, filtern, bearbeiten', icon: 'folder-outline', color: '#1976d2', bg: '#e3f2fd', onPress: () => router.push('/projects') },
     { key: 'customers', title: 'Kunden', subtitle: 'Adressen und Kontaktdaten', icon: 'people-outline', color: '#0284c7', bg: '#e0f2fe', onPress: () => router.push('/customers/') },
     ...(Features.showReportTab ? [
       { key: 'employees', title: 'Mitarbeiter', subtitle: 'Team und Zuordnungen', icon: 'people-circle-outline', color: '#1d4ed8', bg: '#dbeafe', onPress: () => router.push('/employees/') },

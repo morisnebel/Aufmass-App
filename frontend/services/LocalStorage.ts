@@ -349,6 +349,21 @@ const setItems = async <T>(key: string, items: T[]): Promise<void> => {
   }
 };
 
+// Projekt als „zuletzt bearbeitet“ markieren (neues Foto/Skizze/Checkliste)
+// → rückt in „Letzte Projekte“ auf der Startseite nach oben
+const touchProject = async (projectId?: string | null): Promise<void> => {
+  if (!projectId) return;
+  try {
+    const projects = await getItems<Project>(KEYS.PROJECTS);
+    const idx = projects.findIndex(p => p.id === projectId);
+    if (idx === -1) return;
+    projects[idx] = { ...projects[idx], updated_at: new Date().toISOString() };
+    await setItems(KEYS.PROJECTS, projects);
+  } catch (e) {
+    console.warn('[touchProject] Projekt-Datum nicht aktualisiert:', e);
+  }
+};
+
 // ============ CUSTOMERS ============
 export interface ProjectAddress {
   id: string;
@@ -1167,6 +1182,7 @@ export const SketchService = {
       }
     }
     await Promise.all(saveOps);
+    await touchProject(data.project_id);
 
     return { ...lightSketch, metadata: heavyMetadata };
   },
@@ -1598,19 +1614,7 @@ export const PhotoService = {
       updated_at: new Date().toISOString(),
     };
     photos.push(newPhoto);
-    // Projekt als „zuletzt bearbeitet“ markieren → rückt in „Letzte Projekte“ nach oben
-    try {
-      if (data.project_id) {
-        const projects = await getItems<Project>(KEYS.PROJECTS);
-        const idx = projects.findIndex(p => p.id === data.project_id);
-        if (idx !== -1) {
-          projects[idx] = { ...projects[idx], updated_at: newPhoto.created_at };
-          await setItems(KEYS.PROJECTS, projects);
-        }
-      }
-    } catch (e) {
-      console.warn('[PhotoService] Projekt-Datum nicht aktualisiert:', e);
-    }
+    await touchProject(data.project_id);
     await setItems(KEYS.PHOTOS, photos);
     
     // Für Rückgabe: Bilddaten wieder anhängen
@@ -1908,6 +1912,7 @@ export const ChecklistService = {
     };
     checklists.push(newChecklist);
     await Promise.all([setItems(KEYS.CHECKLISTS, checklists), ...ops]);
+    await touchProject((data as any).project_id);
     return newChecklist;
   },
 

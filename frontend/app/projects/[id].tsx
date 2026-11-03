@@ -22,7 +22,6 @@ import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from '
 import Ionicons from '@react-native-vector-icons/ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectAppointment } from '../../src/components/projects/ProjectAppointment';
-import { ProTeaser, ProLockedPill, ProFeatureKey } from '../../src/components/ProTeaser';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, EmployeeMasterService, MaterialMasterService, MachineMasterService, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage, cleanupGhostPhotos, migrateChecklistImages } from '../../services/LocalStorage';
 import { PROJECT_STATUSES, getStatusMeta, normalizeStatus } from '../../src/constants/projectStatus';
 import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
@@ -163,7 +162,6 @@ export default function ProjectDetailScreen() {
   const isPhone = Platform.OS === 'ios' ? !Platform.isPad : screenWidth < 768;
   
   const [project, setProject] = useState<Project | null>(null);
-  const [proTeaser, setProTeaser] = useState<ProFeatureKey | null>(null);
   const [, setProLoaded] = useState(0);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [roofs, setRoofs] = useState<Roof[]>([]);
@@ -2546,15 +2544,8 @@ export default function ProjectDetailScreen() {
             )}
           </TouchableOpacity>
           )}
-          {/* Basic: Pro-Funktionen sichtbar, aber gesperrt – Tipp erklärt den Nutzen */}
-          {!Features.showMessungTab && <ProLockedPill feature="messung" onPress={setProTeaser} />}
-          {!Features.showFlaechenTab && <ProLockedPill feature="flaechen" onPress={setProTeaser} />}
-          {!Features.showDachTab && <ProLockedPill feature="dach" onPress={setProTeaser} />}
-          {!Features.showDokuTab && <ProLockedPill feature="doku" onPress={setProTeaser} />}
-          {!Features.showReportTab && <ProLockedPill feature="rapport" onPress={setProTeaser} />}
         </ScrollView>
       </View>
-      <ProTeaser feature={proTeaser} onClose={() => setProTeaser(null)} />
 
       <ScrollView style={styles.content}>
         {activeTab === 'overview' && (

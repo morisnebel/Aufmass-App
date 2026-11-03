@@ -6,7 +6,7 @@ export const QUICK_START: { title: string; text: string }[] = [
   { title: 'Hinweise bestätigen', text: 'Beim ersten Start die Hinweise lesen, Häkchen setzen und „App starten“ tippen.' },
   { title: 'Firmendaten & Logo', text: 'Einstellungen → Logo, Name und PDF-Einstellungen eintragen. Erscheinen später auf allen PDFs.' },
   { title: 'Neues Projekt starten', text: 'Auf der Startseite den großen blauen Button „Neues Projekt starten“ tippen, Namen eingeben, Kunde wählen oder neu anlegen, speichern.' },
-  { title: 'Aufmaß erfassen', text: 'Im Projekt Skizzen zeichnen, Fotos aufnehmen und Checklisten ausfüllen – in Pro zusätzlich Dachflächen berechnen und Fotos vermessen.' },
+  { title: 'Aufmaß erfassen', text: 'Im Projekt Skizzen zeichnen, Fotos aufnehmen und Checklisten ausfüllen' },
   { title: 'Termin planen', text: 'Startseite „+ Termin“ oder im Projekt „Termin planen“ – mit Erinnerung und Navi-Adresse.' },
   { title: 'PDF erstellen & teilen', text: 'Im Projekt „Projekt-PDF“ wählen und per Mail, WhatsApp oder in Dateien weitergeben.' },
   { title: 'Daten sichern', text: 'Regelmäßig unter Backup „Backup erstellen & teilen“ – alle Daten liegen nur auf deinem Gerät.' },
@@ -14,13 +14,13 @@ export const QUICK_START: { title: string; text: string }[] = [
 
 export const MANUAL: ManualSection[] = [
   {
-    id: 'versionen', icon: 'ribbon-outline', color: '#d97706', title: 'Basic und Pro – was ist enthalten?',
+    id: 'versionen', icon: 'ribbon-outline', color: '#d97706', title: 'Basic und Pro – was ist enthalten?', pro: true,
     intro: 'Aufmaßprofi gibt es als Basic und als Pro. Mit „PRO“ markierte Kapitel und Schritte gibt es nur in der Pro-Version.',
     steps: [
       { text: 'Basic: Projekte, Kunden, Termine mit Erinnerungen, Skizzen mit Flächenberechnung, Fotos mit Beschriftung, Checklisten, Projekt-PDF und Backup.' },
       { text: 'Checklisten in Basic: bis zu 3 Vorlagen, 10 Hauptpunkte und 5 Unterpunkte je Checkliste.', info: 'In Pro sind Vorlagen und Punkte unbegrenzt. Dazu kommen verschachtelte Unterpunkte, Logos, Druckbild, Vorschau, Verknüpfungen, Berechnungen und Import/Export von Vorlagen.' },
       { text: 'Pro zusätzlich: Dach-Aufmaß, Flächen-Kalkulator, Fotomessung, Dokumente, Rapporte mit Mitarbeitern, Material und Maschinen, Referenzen sowie Projekte exportieren, importieren und verschieben.', pro: true },
-      { text: 'Die Pro-Version ist demnächst verfügbar. In der App erkennst du Pro-Funktionen am Schloss mit „PRO“ – ein Tipp darauf zeigt, was sie dir bringen.', info: 'Deine bisherigen Daten bleiben beim Wechsel von Basic auf Pro vollständig erhalten.' },
+      { text: 'In dieser Anleitung sind Pro-Funktionen mit „PRO“ gekennzeichnet.', info: 'Deine bisherigen Daten bleiben beim Wechsel von Basic auf Pro vollständig erhalten.' },
     ],
   },
   {
@@ -101,7 +101,7 @@ export const MANUAL: ManualSection[] = [
     intro: 'Wiederkehrende Prüfungen und Abnahmen mit Vorlagen erledigen.',
     steps: [
       { text: 'Startseite → „Checklisten“ zeigt deine Vorlagen.' },
-      { text: 'Vorlage bearbeiten oder neu anlegen: Punkte und Kategorien festlegen.', info: 'Basic: bis zu 3 Vorlagen, 10 Hauptpunkte und 5 Unterpunkte. Pro: unbegrenzt.' },
+      { text: 'Vorlage bearbeiten oder neu anlegen: Punkte und Kategorien festlegen.', info: 'In der Basic-Version: bis zu 3 Vorlagen, 10 Hauptpunkte und 5 Unterpunkte je Checkliste.' },
       { text: 'Logo, Druckbild, Vorschau, Berechnungen und Verknüpfungen in Vorlagen nutzen sowie Vorlagen importieren/exportieren.', pro: true },
       { text: 'Im Projekt „Checkliste“ → Vorlage wählen und Punkt für Punkt abhaken, Fotos und Notizen ergänzen.' },
       { text: 'Fertige Checklisten erscheinen im Projekt-PDF oder lassen sich einzeln exportieren.' },
@@ -157,16 +157,20 @@ export const MANUAL: ManualSection[] = [
     tips: ['Vor einem Handywechsel immer ein Backup erstellen und auf dem neuen Gerät wiederherstellen.'],
   },
   {
-    id: 'einstellungen', icon: 'settings-outline', color: '#546e7a', title: 'Einstellungen & Pro-Version',
+    id: 'einstellungen', icon: 'settings-outline', color: '#546e7a', title: 'Einstellungen',
     intro: 'App an deinen Betrieb anpassen.',
     steps: [
       { text: 'Sprache, Logo, PDF-Layout, Projekttypen und Werkzeugnamen anpassen.' },
       { text: 'Archiv und Papierkorb verwalten.' },
-      { text: 'Pro-Version (demnächst verfügbar): Dach-Aufmaß, Fotomessung, Rapporte, Mitarbeiter, Material und weitere Funktionen.' },
+      { text: 'Pro-Version: Dach-Aufmaß, Fotomessung, Rapporte, Mitarbeiter, Material und weitere Funktionen.', pro: true },
       { text: 'Rechtliches: Datenschutz, Haftungsausschluss und Impressum.' },
     ],
   },
 ];
+
+// Basic: Pro-Kapitel und -Schritte ausblenden
+export const getManual = (isPro: boolean): ManualSection[] =>
+  isPro ? MANUAL : MANUAL.filter(sec => !sec.pro).map(sec => ({ ...sec, steps: sec.steps.filter(st => !st.pro) }));
 
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const PRO = '<span class="pro">PRO</span>';
@@ -185,11 +189,11 @@ export const manualHtml = (isPro = false) => `<!DOCTYPE html><html><head><meta c
   section { page-break-inside: avoid; } .foot { margin-top: 24px; color: #64748b; font-size: 10px; }
 </style></head><body>
 <h1>Aufmaßprofi – Bedienungsanleitung</h1>
-<div class="sub">Die App für digitales Aufmaß · Schritt für Schritt erklärt · Deine Version: ${isPro ? 'Pro' : 'Basic'}. Mit ${PRO} markierte Funktionen gibt es nur in der Pro-Version.</div>
+<div class="sub">Die App für digitales Aufmaß · Schritt für Schritt erklärt · ${isPro ? `Deine Version: Pro. Mit ${PRO} markierte Funktionen gibt es nur in der Pro-Version.` : ''}</div>
 <div class="quick"><b>Kurzanleitung – in 7 Schritten startklar</b><ol>
 ${QUICK_START.map(q => `<li><b>${esc(q.title)}:</b> ${esc(q.text)}</li>`).join('')}
 </ol></div>
-${MANUAL.map(sec => `<section><h2>${esc(sec.title)}${sec.pro ? PRO : ''}</h2><div class="intro">${esc(sec.intro)}</div><ol class="steps">
+${getManual(isPro).map(sec => `<section><h2>${esc(sec.title)}${sec.pro ? PRO : ''}</h2><div class="intro">${esc(sec.intro)}</div><ol class="steps">
 ${sec.steps.map(st => `<li>${esc(st.text)}${st.pro ? PRO : ''}${st.info ? `<div class="info">ℹ️ ${esc(st.info)}</div>` : ''}</li>`).join('')}
 </ol>${(sec.tips || []).map(t => `<div class="tip">💡 ${esc(t)}</div>`).join('')}</section>`).join('')}
 <div class="foot">Maße und Berechnungen dienen als Unterstützung und ersetzen keine Statik, Bauplanung oder amtliche Vermessung. Alle Daten bleiben ausschließlich auf deinem Gerät.</div>

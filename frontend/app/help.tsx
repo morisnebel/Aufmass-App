@@ -8,7 +8,7 @@ import { getProStatus, loadProStatus } from '../services/FeatureFlags';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import { MANUAL, QUICK_START, manualHtml, ManualSection } from '../src/content/manual';
+import { getManual, QUICK_START, manualHtml, ManualSection } from '../src/content/manual';
 import { createPdfFile } from '../services/PdfExport';
 
 // Bedienungsanleitung: Kurzanleitung + aufklappbare Kapitel mit Erklärungen, als PDF teilbar
@@ -30,6 +30,7 @@ export default function HelpScreen() {
   const [busy, setBusy] = useState(false);
   const [isPro, setIsPro] = useState(getProStatus());
   useEffect(() => { loadProStatus().then(setIsPro).catch(() => {}); }, []);
+  const manual = useMemo(() => getManual(isPro), [isPro]);
   const [query, setQuery] = useState('');
   const router = useRouter();
   const q = query.trim().toLowerCase();
@@ -37,14 +38,14 @@ export default function HelpScreen() {
   // Suche: Kapitel mit Treffern, nur passende Schritte, Erklärung bei Treffer automatisch offen
   const results = useMemo(() => {
     if (!q) return [];
-    return MANUAL.map(sec => {
+    return manual.map(sec => {
       const secHit = has(sec.title) || has(sec.intro);
       const steps = sec.steps.map((st, idx) => ({ ...st, idx })).filter(st => secHit || has(st.text) || has(st.info));
       const tips = (sec.tips || []).filter(t => secHit || has(t));
       return { sec, steps, tips };
     }).filter(r => r.steps.length || r.tips.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q]);
+  }, [q, manual]);
   const quickHits = q ? QUICK_START.filter(x => has(x.title) || has(x.text)) : [];
 
   const restartTour = async () => {
@@ -72,7 +73,7 @@ export default function HelpScreen() {
   return (
     <ScrollView ref={scrollRef} testID="help-screen" keyboardShouldPersistTaps="handled" style={s.screen} contentContainerStyle={s.content}>
       <Stack.Screen options={{ title: 'Bedienungsanleitung' }} />
-      <View testID="help-version" style={[s.version, isPro ? s.versionPro : null]}>
+      {isPro && <View testID="help-version" style={[s.version, s.versionPro]}>
         <Ionicons name={isPro ? 'ribbon' : 'ribbon-outline'} size={22} color={isPro ? '#fff' : '#d97706'} />
         <View style={{ flex: 1 }}>
           <Text style={[s.versionTitle, isPro && { color: '#fff' }]}>Deine Version: {isPro ? 'Aufmaßprofi Pro' : 'Aufmaßprofi Basic'}</Text>
@@ -80,7 +81,7 @@ export default function HelpScreen() {
             {isPro ? 'Alle Funktionen sind freigeschaltet – auch die mit PRO markierten.' : 'Mit PRO markierte Funktionen gibt es nur in der Pro-Version – demnächst verfügbar.'}
           </Text>
         </View>
-      </View>
+      </View>}
       <TouchableOpacity testID="help-pdf" style={s.pdfBtn} onPress={sharePdf} disabled={busy} activeOpacity={0.85}>
         {busy ? <ActivityIndicator color="#fff" /> : <Ionicons name="document-text-outline" size={22} color="#fff" />}
         <Text style={s.pdfText}>{busy ? 'PDF wird erstellt…' : 'Anleitung als PDF teilen'}</Text>
@@ -148,7 +149,7 @@ export default function HelpScreen() {
       </View>
 
       <Text style={s.h2}>Ausführliche Anleitung</Text>
-      {MANUAL.map(sec => (
+      {manual.map(sec => (
         <View key={sec.id} onLayout={onChapterLayout(sec.id)}>
           <Chapter sec={sec} open={open === sec.id} onToggle={() => setOpen(open === sec.id ? null : sec.id)} />
         </View>

@@ -190,6 +190,7 @@ export default function HomeScreen() {
       { key: 'references', title: 'Referenzen', subtitle: 'Projekte und Beispielfotos', icon: 'images-outline', color: '#f57c00', bg: '#fff3e0', onPress: () => router.push('/references/') },
     ] : []),
     { key: 'backup', title: 'Backup', subtitle: 'Sichern und wiederherstellen', icon: 'cloud-upload-outline', color: '#0891b2', bg: '#cffafe', onPress: () => router.push('/backup') },
+    { key: 'help', title: 'Anleitung', subtitle: 'So funktioniert die App', icon: 'book-outline', color: '#1565c0', bg: '#dbeafe', onPress: () => router.push('/help') },
     { key: 'settings', title: 'Einstellungen', subtitle: 'App, PDF, Logo und Vorlagen', icon: 'settings-outline', color: '#546e7a', bg: '#eceff1', onPress: () => router.push('/settings') },
   ];
 

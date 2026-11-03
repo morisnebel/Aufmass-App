@@ -1119,6 +1119,20 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* ===== Hilfe ===== */}
+          <View style={[styles.section, { marginTop: 8 }]}>
+            <TouchableOpacity testID="settings-help" style={legalStyles.navRow} onPress={() => router.push('/help')} activeOpacity={0.7}>
+              <View style={[legalStyles.navIcon, { backgroundColor: '#dbeafe' }]}>
+                <Ionicons name="book-outline" size={18} color="#1565c0" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={legalStyles.navTitle}>Bedienungsanleitung</Text>
+                <Text style={legalStyles.navSub}>Kurzanleitung, Schritt für Schritt & als PDF</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
+
           {/* ===== Rechtliches & Datenschutz ===== */}
           <View style={[styles.section, { marginTop: 8 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>

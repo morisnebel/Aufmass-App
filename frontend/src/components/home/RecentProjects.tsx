@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { Project } from '../../../services/LocalStorage';
 import { getStatusMeta } from '../../constants/projectStatus';
@@ -7,13 +7,14 @@ import { cardShadow } from './HomeTiles';
 
 type Props = {
   projects: Project[];
+  covers: Record<string, string>;
   customerName: (p: Project) => string | undefined;
   onOpen: (id: string) => void;
   onShowAll: () => void;
 };
 
 // Letzte Projekte (max. 3) – alle weiteren liegen auf der Projektseite mit Ordnern
-export function RecentProjects({ projects, customerName, onOpen, onShowAll }: Props) {
+export function RecentProjects({ projects, covers, customerName, onOpen, onShowAll }: Props) {
   return (
     <View style={s.card}>
       <View style={s.header}>
@@ -30,9 +31,13 @@ export function RecentProjects({ projects, customerName, onOpen, onShowAll }: Pr
         const meta = getStatusMeta(p.status);
         return (
           <TouchableOpacity key={p.id} testID={`home-recent-${p.id}`} style={[s.row, i > 0 && s.rowBorder]} onPress={() => onOpen(p.id)}>
-            <View style={[s.thumb, { backgroundColor: meta.color + '1f' }]}>
-              <Ionicons name="home" size={22} color={meta.color} />
-            </View>
+            {covers[p.id] ? (
+              <Image testID={`home-recent-cover-${p.id}`} source={{ uri: covers[p.id] }} style={s.thumb} resizeMode="cover" />
+            ) : (
+              <View style={[s.thumb, { backgroundColor: meta.color + '1f' }]}>
+                <Ionicons name="home" size={22} color={meta.color} />
+              </View>
+            )}
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 {!!p.project_number && <Text style={s.number}>{p.project_number}</Text>}
@@ -58,7 +63,7 @@ const s = StyleSheet.create({
   empty: { color: '#64748b', fontSize: 14, paddingVertical: 12 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingVertical: 8 },
   rowBorder: { borderTopWidth: 1, borderTopColor: '#eef2f7' },
-  thumb: { width: 52, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  thumb: { width: 60, height: 48, borderRadius: 10, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   number: { fontSize: 11, fontWeight: '800', color: '#15803d', backgroundColor: '#dcfce7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' },
   name: { flexShrink: 1, fontSize: 15, fontWeight: '800', color: '#0f172a' },
   customer: { fontSize: 13, color: '#64748b', marginTop: 2 },

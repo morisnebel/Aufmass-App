@@ -50,9 +50,12 @@ export default function RootLayout() {
       <DisclaimerGate>
       <Stack
         screenOptions={{
-          headerStyle: headerBgColor ? {
-            backgroundColor: headerBgColor,
-          } : undefined,
+          // iOS 26 / SDK 58: ohne festen Hintergrund wird der Header durchsichtig und
+          // überdeckt den Inhalt (Buttons nicht drückbar) → immer undurchsichtig
+          headerTransparent: false,
+          headerStyle: {
+            backgroundColor: headerBgColor || '#f8f9fa',
+          },
           headerTintColor: headerTextColor,
           headerTitleStyle: {
             fontWeight: 'bold',

@@ -767,3 +767,6 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Neue Startseite app/index.tsx (Hero mit tageszeitabhängigem Dachbild assets/images/roof_{morning,day,evening,night}.jpg, Begrüßung mit Vorname aus Einstellungen owner_first_name bzw. erstes Wort owner_name, Status-Karten, Backup-/Speicher-Hinweise, Schnellaktionen, letzte 3 Projekte, Bereichs-Kacheln nach FeatureFlags)
 - Alte Startseite (Projektliste) jetzt app/projects/index.tsx, mit Projektordnern (services/ProjectFolders.ts, Key aufmassprofi_project_folders, Project.folder_id), Parameter ?status= / ?folder= / ?action=import
 - Sicherung: git tag sicherung-vor-startseite-2.0 + Branch backup-vor-startseite-2.0
+- Header global undurchsichtig (headerTransparent:false) – Fix für überdeckte Inhalte (Fotos/Checklisten) auf iOS 26
+- Startseite: Firmenlogo (settings.logo_data) im Kopfbereich, Vorschaufoto bei letzten Projekten (PhotoService.getCoverImages), Projektordner-Kacheln
+- Haftungsausschluss beim ersten Start als dezente kleine Karte (DisclaimerGate), blendet sich auf /legal-Seiten aus

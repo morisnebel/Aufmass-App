@@ -1512,6 +1512,27 @@ export const PhotoService = {
     return photo;
   },
 
+  // Vorschaubild je Projekt (erstes Foto) – lädt nur EIN Bild pro Projekt
+  getCoverImages: async (projectIds: string[]): Promise<Record<string, string>> => {
+    const photos = await getItems<Photo>(KEYS.PHOTOS);
+    const result: Record<string, string> = {};
+    for (const projectId of projectIds) {
+      const candidates = photos
+        .filter(p => p.project_id === projectId)
+        .sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      // Erstes Foto mit vorhandenen Bilddaten verwenden
+      for (const photo of candidates) {
+        try {
+          const img = (photo.thumbnail && photo.thumbnail.length > 100 ? photo.thumbnail : null)
+            || await storage.getItem(`photo_img_${photo.id}`)
+            || (photo.image_data && photo.image_data.length > 100 ? photo.image_data : null);
+          if (img) { result[projectId] = img; break; }
+        } catch {}
+      }
+    }
+    return result;
+  },
+
   getByProjectId: async (projectId: string): Promise<Photo[]> => {
     const photos = await getItems<Photo>(KEYS.PHOTOS);
     const projectPhotos = photos.filter(p => p.project_id === projectId);

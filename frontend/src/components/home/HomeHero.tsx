@@ -18,12 +18,13 @@ type Props = {
   firstName: string;
   isPro: boolean;
   compact: boolean;
+  companyLogo?: string | null;
   onSearch: () => void;
   onBackup: () => void;
   onSettings: () => void;
 };
 
-export function HomeHero({ period, firstName, isPro, compact, onSearch, onBackup, onSettings }: Props) {
+export function HomeHero({ period, firstName, isPro, compact, companyLogo, onSearch, onBackup, onSettings }: Props) {
   const insets = useSafeAreaInsets();
   const heroHeight = (compact ? 300 : 400) + insets.top;
   const greeting = `${GREETINGS[period]}${firstName ? `, ${firstName}` : ''}!`;
@@ -77,6 +78,12 @@ export function HomeHero({ period, firstName, isPro, compact, onSearch, onBackup
         </View>
       </View>
       <View style={{ flex: 1, minHeight: 20 }} />
+      {/* Firmenlogo aus den Einstellungen (nur wenn vorhanden) */}
+      {!!companyLogo && (
+        <View testID="home-company-logo" style={[s.companyLogoBox, compact && { width: 150, height: 72 }]}>
+          <Image source={{ uri: companyLogo }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+        </View>
+      )}
       <Text testID="home-greeting" style={[s.greeting, compact && { fontSize: 26 }]}>{greeting}</Text>
       <Text style={s.sub}>Hier ist der Überblick über deine Projekte und Aufgaben.</Text>
     </View>
@@ -98,4 +105,5 @@ const s = StyleSheet.create({
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.14)' },
   greeting: { fontSize: 34, fontWeight: '800', color: '#fff', textShadowColor: 'rgba(0,0,0,0.45)', textShadowRadius: 8 },
   sub: { fontSize: 15, color: 'rgba(255,255,255,0.92)', marginTop: 6, textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 4 },
+  companyLogoBox: { width: 220, height: 104, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.92)', padding: 10, marginBottom: 14, overflow: 'hidden' },
 });

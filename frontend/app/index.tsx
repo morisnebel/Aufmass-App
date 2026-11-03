@@ -4,7 +4,9 @@ import { View, Text, ScrollView, StyleSheet, RefreshControl, Alert, useWindowDim
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ProjectService, CustomerService, SettingsService, Project, Customer, cleanupOrphanedStorage, migrateSketchPreviews } from '../services/LocalStorage';
+import { ProjectService, CustomerService, SettingsService, PhotoService, Project, Customer, cleanupOrphanedStorage, migrateSketchPreviews } from '../services/LocalStorage';
+import { ProjectFolderService, ProjectFolder } from '../services/ProjectFolders';
+import { FolderTiles } from '../src/components/home/FolderTiles';
 import { Features, loadProStatus, updateFeatures, getProStatus } from '../services/FeatureFlags';
 import { BackupService } from '../services/BackupService';
 import { quickFreeableScan } from '../services/StorageCleanup';
@@ -38,6 +40,9 @@ export default function HomeScreen() {
   const [backupDueDays, setBackupDueDays] = useState<number | null>(null);
   const [backupRunning, setBackupRunning] = useState(false);
   const [storageFreeable, setStorageFreeable] = useState<number | null>(null);
+  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
+  const [covers, setCovers] = useState<Record<string, string>>({});
+  const [folders, setFolders] = useState<ProjectFolder[]>([]);
 
   // Einmalig beim App-Start: Papierkorb (>30 Tage), Vorschauen auslagern, verwaiste Daten aufräumen, Speicher messen
   useEffect(() => {
@@ -51,15 +56,25 @@ export default function HomeScreen() {
 
   const load = useCallback(async () => {
     try {
-      const [proStatus, projectList, customerList, settings] = await Promise.all([
+      const [proStatus, projectList, customerList, settings, folderList] = await Promise.all([
         loadProStatus(),
         ProjectService.getAll(),
         CustomerService.getAll(),
         SettingsService.get().catch(() => ({} as any)),
+        ProjectFolderService.getAll(),
       ]);
       updateFeatures();
       setIsPro(proStatus);
       setProjects(projectList);
+      setFolders(folderList);
+      setCompanyLogo((settings as any)?.logo_data || (settings as any)?.company_logo || null);
+      // Vorschaufotos der 3 letzten Projekte
+      const recentIds = projectList
+        .filter((p: Project) => normalizeStatus(p.status) !== 'archiviert')
+        .sort((a: Project, b: Project) => (b.updated_at || b.created_at || '').localeCompare(a.updated_at || a.created_at || ''))
+        .slice(0, 3)
+        .map((p: Project) => p.id);
+      PhotoService.getCoverImages(recentIds).then(setCovers).catch(() => {});
       const map: Record<string, Customer> = {};
       customerList.forEach((c: Customer) => { map[c.id] = c; });
       setCustomers(map);
@@ -99,6 +114,12 @@ export default function HomeScreen() {
   };
 
   const active = useMemo(() => projects.filter(p => normalizeStatus(p.status) !== 'archiviert'), [projects]);
+
+  const folderCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    active.forEach(p => { if (p.folder_id) counts[p.folder_id] = (counts[p.folder_id] || 0) + 1; });
+    return counts;
+  }, [active]);
 
   const stats: StatItem[] = useMemo(() => {
     const pick = ['anfrage', 'angebot', 'ausfuehrung', 'fertig'];
@@ -198,6 +219,7 @@ export default function HomeScreen() {
   const recentCard = (
     <RecentProjects
       projects={recent}
+      covers={covers}
       customerName={p => customers[p.customer_id]?.name || (p as any).bauherr_name}
       onOpen={id => router.push(`/projects/${id}`)}
       onShowAll={() => router.push('/projects')}
@@ -215,6 +237,7 @@ export default function HomeScreen() {
         period={period}
         firstName={firstName}
         isPro={isPro}
+        companyLogo={companyLogo}
         compact={!isTablet}
         onSearch={() => router.push('/search')}
         onBackup={() => router.push('/backup')}
@@ -238,6 +261,14 @@ export default function HomeScreen() {
         <View style={[s.section, isWide && { flexDirection: 'row', alignItems: 'stretch' }, { gap: 16 }]}>
           {quickActions}
           {recentCard}
+        </View>
+        <View style={s.section}>
+          <FolderTiles
+            folders={folders}
+            counts={folderCounts}
+            onOpen={id => router.push(`/projects?folder=${id}`)}
+            onManage={() => router.push('/projects')}
+          />
         </View>
         <View style={s.section}>
           <TileGrid tiles={navTiles} columns={navColumns} variant="nav" />

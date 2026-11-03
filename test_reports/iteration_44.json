@@ -1,0 +1,34 @@
+{
+  "summary": "Frontend-only test (Expo web, 375x667 plus a 768x1024 iPad check) of the 5 new items and home regression. PASS: the disclaimer is a compact bottom card on fresh localStorage, 'App starten' stays disabled (aria-disabled, grey) until the checkbox is ticked, accepting saves disclaimer_accepted_at/version, and the card does not come back after reload. Company logo: a seeded PNG data URI renders in home-company-logo (150x72 box, img naturalWidth 200); a logo uploaded in Settings (file chooser + Save) also appears on home; with no logo the element is not there. Recent-project covers: a seeded photo_img_<id> and a thumbnail both render home-recent-cover-<id>, and a project with no photo keeps the house icon. Real flow photos/new → Aus Galerie wählen → Foto speichern → home shows the cover. Folder tiles show names and counts ('1 Projekt'); tapping fB goes to /projects?folder=fB with only that folder's project and the fB chip active; 'Verwalten' goes to /projects with all projects; /projects?folder=fA filters correctly. Header overlap: on photos/new the header ends at y=64 and content starts at y=80; on checklists/new the template list and the items/Save views start below the header, and buttons can be tapped. No transparent header override found in any screen. Regression: BASIC/PRO nav tiles (PRO adds employees, materials, machines, references), stats and the 'Guten Tag, Max!' greeting all work. One functional bug found: the disclaimer links open the legal page underneath the modal.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "DisclaimerGate links (Haftungsausschluss/Datenschutz)", "issue": "router.push('/legal/haftung') runs while the RN <Modal> is still visible. The legal page loads underneath, but the full-screen backdrop and the card stay on top, so the user cannot scroll or read the page or use its header back button (checked on web: URL=/legal/haftung, disclaimer-accept still visible). On native iOS the Modal also stays above the pushed screen. Reference: /app/frontend/src/components/DisclaimerGate.tsx:79-85", "testID": "disclaimer-accept", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "DisclaimerGate", "issues": ["The Haftungsausschluss/Datenschutz/Kontakt links are about 20px tall with hitSlop 6, which is below the 44pt touch target. They also have no testIDs."]},
+      {"screen": "Projects (?folder=<id>)", "issues": ["When the screen opens from a folder tile, the FolderBar does not scroll to the active chip. On 375px the active fB chip sits mostly off-screen on the right."]},
+      {"screen": "photos/new, checklists/new, projects", "issues": ["The app falls back to English because the browser locale is en: 'Add Photo', 'New Checklist', 'Search projects...', 'New Project'. This is not a regression."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/home2_seed.py"],
+  "action_items": [
+    "DisclaimerGate: hide the Modal while a legal page is open. For example, keep a 'viewingLegal' state, set it on link press, and show the card again on focus or return. Another option is to show the legal text inside the card or a nested sheet.",
+    "DisclaimerGate: add testIDs (disclaimer-link-haftung/-datenschutz/-kontakt) and make each link at least 44pt tall (minHeight 44 or a bigger hitSlop).",
+    "Optional: PhotoService.getCoverImages should fall back to the next photo when the oldest one has no image data. Adding a photo could also update project.updated_at so the project moves into 'Letzte Projekte'.",
+    "Optional: on /projects?folder=<id>, scroll the FolderBar so the active chip is visible."
+  ],
+  "critical_code_review_comments": [
+    "getCoverImages only checks the oldest photo (sort by created_at, [0]). If that photo has no thumbnail, photo_img_ key or image_data, no cover is shown even when newer photos exist (LocalStorage.ts:1520-1528).",
+    "Adding a photo does not update the project's updated_at (verified: p5 still shows 5.1.2026), so 'Letzte Projekte' does not reflect recent photo activity.",
+    "The Settings logo is always prefixed with data:image/jpeg even for PNG picks. It still renders, but the MIME type is wrong (settings/index.tsx:320)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "95%"},
+  "seed_data_creation": "Only localStorage in the test browser contexts: TEST_ projects p1-p6, folders fA/fB, TEST_Vorlage Dach template, test photos and logo. Real-flow photos were removed afterwards. Nothing on the server.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Load the seed helper with G={}; exec(open('/app/tests/e2e/home2_seed.py').read(), G) and use G['seed'] etc. A plain exec() in the async function does not expose the names. The greeting uses settings.owner_first_name. Photo images are stored at the localStorage key photo_img_<id>. Test files: /tmp/test_photo.jpg and /tmp/logo.b64 (recreate them with PIL if missing). The checklist template key is aufmassprofi_checklist_templates."
+}

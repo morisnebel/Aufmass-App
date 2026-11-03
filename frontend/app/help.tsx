@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Alert, ActivityIndicator } from 'react-native';
-import { Stack } from 'expo-router';
+import React, { useMemo, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, StyleSheet, Platform, Alert, ActivityIndicator } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TOUR_DONE_KEY } from '../src/components/home/HomeTour';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -11,6 +13,27 @@ import { createPdfFile } from '../services/PdfExport';
 export default function HelpScreen() {
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState('');
+  const router = useRouter();
+  const q = query.trim().toLowerCase();
+  const has = (t?: string) => !!t && t.toLowerCase().includes(q);
+  // Suche: Kapitel mit Treffern, nur passende Schritte, Erklärung bei Treffer automatisch offen
+  const results = useMemo(() => {
+    if (!q) return [];
+    return MANUAL.map(sec => {
+      const secHit = has(sec.title) || has(sec.intro);
+      const steps = sec.steps.map((st, idx) => ({ ...st, idx })).filter(st => secHit || has(st.text) || has(st.info));
+      const tips = (sec.tips || []).filter(t => secHit || has(t));
+      return { sec, steps, tips };
+    }).filter(r => r.steps.length || r.tips.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+  const quickHits = q ? QUICK_START.filter(x => has(x.title) || has(x.text)) : [];
+
+  const restartTour = async () => {
+    await AsyncStorage.removeItem(TOUR_DONE_KEY);
+    router.navigate('/');
+  };
 
   const sharePdf = async () => {
     setBusy(true);
@@ -37,6 +60,51 @@ export default function HelpScreen() {
         <Text style={s.pdfText}>{busy ? 'PDF wird erstellt…' : 'Anleitung als PDF teilen'}</Text>
       </TouchableOpacity>
 
+      <View style={s.searchBox}>
+        <Ionicons name="search" size={20} color="#64748b" />
+        <TextInput testID="help-search" style={s.searchInput} value={query} onChangeText={setQuery} placeholder="In der Anleitung suchen, z. B. Backup oder Fläche" placeholderTextColor="#94a3b8" returnKeyType="search" autoCorrect={false} />
+        {!!query && (
+          <TouchableOpacity testID="help-search-clear" hitSlop={10} onPress={() => setQuery('')}><Ionicons name="close-circle" size={20} color="#94a3b8" /></TouchableOpacity>
+        )}
+      </View>
+
+      {q ? (
+        <View testID="help-results">
+          <Text style={s.h2}>{results.length + quickHits.length ? `Treffer für „${query.trim()}“` : `Keine Treffer für „${query.trim()}“`}</Text>
+          {quickHits.map(x => (
+            <View key={x.title} style={s.hit}>
+              <Text style={s.hitSec}>Kurzanleitung</Text>
+              <Text style={s.qTitle}><Hl text={x.title} q={q} /></Text>
+              <Text style={s.qText}><Hl text={x.text} q={q} /></Text>
+            </View>
+          ))}
+          {results.map(({ sec, steps, tips }) => (
+            <View key={sec.id} style={s.hit} testID={`help-hit-${sec.id}`}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <Ionicons name={sec.icon as any} size={18} color={sec.color} />
+                <Text style={s.cardTitle}><Hl text={sec.title} q={q} /></Text>
+              </View>
+              {steps.map(st => (
+                <View key={st.idx} style={s.step}>
+                  <View style={s.stepRow}>
+                    <Text style={s.stepNum}>{st.idx + 1}.</Text>
+                    <Text style={s.stepText}><Hl text={st.text} q={q} /></Text>
+                  </View>
+                  {st.info && has(st.info) && <Text style={s.info}><Hl text={st.info} q={q} /></Text>}
+                </View>
+              ))}
+              {tips.map(t => (
+                <View key={t} style={s.tip}><Ionicons name="bulb-outline" size={16} color="#d97706" /><Text style={s.tipText}><Hl text={t} q={q} /></Text></View>
+              ))}
+              <TouchableOpacity testID={`help-open-${sec.id}`} style={s.openSec} onPress={() => { setQuery(''); setOpen(sec.id); }}>
+                <Text style={s.openSecText}>Ganzes Kapitel öffnen</Text>
+                <Ionicons name="chevron-forward" size={16} color="#1976d2" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      ) : (
+      <>
       <View style={s.quick} testID="help-quickstart">
         <View style={s.quickHead}>
           <Ionicons name="flash" size={20} color="#f59e0b" />
@@ -57,9 +125,21 @@ export default function HelpScreen() {
       {MANUAL.map(sec => (
         <Chapter key={sec.id} sec={sec} open={open === sec.id} onToggle={() => setOpen(open === sec.id ? null : sec.id)} />
       ))}
+      <TouchableOpacity testID="help-restart-tour" style={s.tourBtn} onPress={restartTour}>
+        <Ionicons name="walk-outline" size={20} color="#1565c0" />
+        <Text style={s.tourText}>Erste-Schritte-Tour erneut starten</Text>
+      </TouchableOpacity>
+      </>
+      )}
       <Text style={s.foot}>Maße und Berechnungen dienen als Unterstützung und ersetzen keine Statik, Bauplanung oder amtliche Vermessung.</Text>
     </ScrollView>
   );
+}
+
+function Hl({ text, q }: { text: string; q: string }) {
+  const i = text.toLowerCase().indexOf(q);
+  if (!q || i < 0) return <>{text}</>;
+  return <>{text.slice(0, i)}<Text style={s.mark}>{text.slice(i, i + q.length)}</Text><Hl text={text.slice(i + q.length)} q={q} /></>;
 }
 
 function Chapter({ sec, open, onToggle }: { sec: ManualSection; open: boolean; onToggle: () => void }) {
@@ -128,4 +208,13 @@ const s = StyleSheet.create({
   tip: { flexDirection: 'row', gap: 8, backgroundColor: '#fff7e6', borderRadius: 8, padding: 10, marginTop: 4 },
   tipText: { flex: 1, fontSize: 14, color: '#7c4a03', lineHeight: 20 },
   foot: { marginTop: 16, fontSize: 12, color: '#64748b', textAlign: 'center' },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, minHeight: 50, borderWidth: 1, borderColor: '#cbd5e1', marginBottom: 16 },
+  searchInput: { flex: 1, fontSize: 16, color: '#0f172a', minHeight: 48 },
+  hit: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 10 },
+  hitSec: { fontSize: 12, fontWeight: '700', color: '#1976d2', marginBottom: 4 },
+  mark: { backgroundColor: '#fde68a', color: '#0f172a', fontWeight: '700' },
+  openSec: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 4, minHeight: 44 },
+  openSecText: { color: '#1976d2', fontWeight: '700', fontSize: 14 },
+  tourBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 50, borderRadius: 12, backgroundColor: '#dbeafe', marginTop: 8 },
+  tourText: { color: '#1565c0', fontWeight: '800', fontSize: 15 },
 });

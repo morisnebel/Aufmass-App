@@ -1,6 +1,6 @@
 // Startseite 2.0 – gleiches Design für BASIC und PRO, Kacheln nach vorhandenen Berechtigungen (FeatureFlags)
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, RefreshControl, Alert, useWindowDimensions, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Alert, useWindowDimensions, TouchableOpacity, DeviceEventEmitter } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,6 +21,7 @@ import { useDayPeriod } from '../src/hooks/useDayPeriod';
 import { HomeHero } from '../src/components/home/HomeHero';
 import { StatCards, StatItem } from '../src/components/home/StatCards';
 import { HomeBanner } from '../src/components/home/HomeBanner';
+import { HomeTour, tourRef, TOUR_DONE_KEY } from '../src/components/home/HomeTour';
 import { RecentProjects } from '../src/components/home/RecentProjects';
 import { TileGrid, HomeTile, cardShadow } from '../src/components/home/HomeTiles';
 
@@ -107,6 +108,18 @@ export default function HomeScreen() {
 
   // Bei jedem Fokus neu laden → Tarifwechsel und geänderter Vorname wirken sofort
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  // Erste-Schritte-Tour: nach Bestätigung der Hinweise einmalig (oder erneut aus der Anleitung gestartet)
+  const [tour, setTour] = useState(false);
+  const checkTour = useCallback(async () => {
+    const [done, settings] = await Promise.all([AsyncStorage.getItem(TOUR_DONE_KEY), SettingsService.get().catch(() => ({}))]);
+    if (!done && (settings as any)?.disclaimer_accepted_at) setTimeout(() => setTour(true), 900);
+  }, []);
+  useFocusEffect(useCallback(() => { checkTour(); }, [checkTour]));
+  useEffect(() => {
+    const sub = DeviceEventEmitter.addListener('disclaimer-accepted', checkTour);
+    return () => sub.remove();
+  }, [checkTour]);
 
   const handleBackupNow = async () => {
     if (backupRunning) return;
@@ -235,6 +248,7 @@ export default function HomeScreen() {
 
   const quickActions = (
     <View style={[s.panel, !isTablet && { padding: 12 }]}>
+      <View ref={tourRef('cta')} collapsable={false}>
       <TouchableOpacity
         testID="home-new-project-cta"
         activeOpacity={0.85}
@@ -248,6 +262,7 @@ export default function HomeScreen() {
         </View>
         <Ionicons name="arrow-forward" size={24} color="#fff" />
       </TouchableOpacity>
+      </View>
       <View style={{ flexGrow: 1, justifyContent: 'center', marginTop: 12 }}>
         <TileGrid tiles={actions} columns={actionColumns} variant="action" compact={!isTablet} />
       </View>
@@ -325,6 +340,7 @@ export default function HomeScreen() {
           <TileGrid tiles={navTiles} columns={navColumns} variant="nav" />
         </View>
       </View>
+      <HomeTour visible={tour} onClose={() => setTour(false)} />
     </ScrollView>
   );
 }

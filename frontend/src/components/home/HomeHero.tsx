@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { DayPeriod, GREETINGS } from '../../hooks/useDayPeriod';
+import { tourRef } from './HomeTour';
 
 // Lokale Dach-Hintergründe (offline verfügbar), gleiches Motiv – nur Lichtstimmung wechselt
 const BACKGROUNDS: Record<DayPeriod, any> = {
@@ -35,10 +36,12 @@ export function HomeHero({ period, firstName, isPro, compact, companyLogo, onSea
     Image.getSize(companyLogo, (w, h) => { if (w > 0 && h > 0) setLogoRatio(w / h); }, () => {});
   }, [companyLogo]);
   const greeting = `${GREETINGS[period]}${firstName ? `, ${firstName}` : ''}!`;
-  const iconBtn = (name: any, onPress: () => void, testID: string, label: string) => (
-    <TouchableOpacity testID={testID} accessibilityLabel={label} style={s.iconBtn} onPress={onPress}>
-      <Ionicons name={name} size={compact ? 20 : 22} color="#fff" />
-    </TouchableOpacity>
+  const iconBtn = (name: any, onPress: () => void, testID: string, label: string, tourKey: string) => (
+    <View ref={tourRef(tourKey)} collapsable={false}>
+      <TouchableOpacity testID={testID} accessibilityLabel={label} style={s.iconBtn} onPress={onPress}>
+        <Ionicons name={name} size={compact ? 20 : 22} color="#fff" />
+      </TouchableOpacity>
+    </View>
   );
   return (
     <View
@@ -79,9 +82,9 @@ export function HomeHero({ period, firstName, isPro, compact, companyLogo, onSea
           </View>
         </View>
         <View style={s.icons}>
-          {iconBtn('search', onSearch, 'home-search', 'Suche')}
-          {iconBtn('cloud-upload-outline', onBackup, 'home-backup', 'Backup')}
-          {iconBtn('person-circle-outline', onSettings, 'home-settings', 'Einstellungen')}
+          {iconBtn('search', onSearch, 'home-search', 'Suche', 'search')}
+          {iconBtn('cloud-upload-outline', onBackup, 'home-backup', 'Backup', 'backup')}
+          {iconBtn('person-circle-outline', onSettings, 'home-settings', 'Einstellungen', 'settings')}
         </View>
       </View>
       <View style={{ flex: 1, minHeight: 20 }} />

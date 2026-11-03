@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, Linking, DeviceEventEmitter } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { useRouter, usePathname } from 'expo-router';
@@ -49,6 +49,7 @@ export const DisclaimerGate: React.FC<{ children: React.ReactNode }> = ({ childr
         disclaimer_version: DISCLAIMER_VERSION,
       } as any);
       setNeedsConsent(false);
+      DeviceEventEmitter.emit('disclaimer-accepted');
     } catch (e) {
       console.error('[Disclaimer] Could not save consent', e);
     }

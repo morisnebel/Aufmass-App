@@ -784,3 +784,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Termin → Projekt: Adresse als Objektadresse; Navi-Auswahl Apple Karten/Google Maps/Waze; eigene Erinnerungszeit mit Kalender+Uhrzeit; Formulare Neues Projekt/Neuer Kunde: kein Überlauf, graue Platzhalter
 - Projektdetails: voller Terminplaner (ProjectAppointment) statt einfachem Datum; eigene Zeit für Erinnerung und Abfahrt über Kalender+Uhrzeit-Fenster (DateTimeSheet); Kundenauswahl nur eine Kopfzeile
 - Bedienungsanleitung: /help (Kurzanleitung + aufklappbare Kapitel mit ℹ️-Erklärungen, PDF teilen), Inhalt in src/content/manual.ts; Links in Einstellungen + Startseiten-Kachel „Anleitung“
+- Erste-Schritte-Tour (HomeTour, 6 Schritte, Key aufmassprofi_tour_done, startet nach Disclaimer, neu startbar in /help); Suche in der Anleitung mit Hervorhebung

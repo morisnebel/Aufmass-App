@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { Project } from '../../../services/LocalStorage';
 import { cardShadow } from './HomeTiles';
+import { tourRef } from './HomeTour';
 
 // Lokales Datum als YYYY-MM-DD (für Termin-Vergleich)
 export const todayKey = (d: Date = new Date()) =>
@@ -62,10 +63,12 @@ export function TodayOverview({ items, editedToday, onOpenProject, onAdd, onNavi
           <Text style={s.title}>Heute</Text>
           <Text style={s.date}>{date}</Text>
         </View>
-        <TouchableOpacity testID="home-add-appointment" style={s.addBtn} onPress={onAdd}>
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={s.addText}>Termin</Text>
-        </TouchableOpacity>
+        <View ref={tourRef('termin')} collapsable={false}>
+          <TouchableOpacity testID="home-add-appointment" style={s.addBtn} onPress={onAdd}>
+            <Ionicons name="add" size={18} color="#fff" />
+            <Text style={s.addText}>Termin</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       {items.length === 0
         ? <Text style={s.empty}>Heute keine Termine.</Text>

@@ -39,6 +39,7 @@ export default function AppointmentsScreen() {
     projects, appointments, customers,
     onOpenProject: id => router.push(`/projects/${id}`),
     onEditAppointment: a => { setEdit(a); setModal(true); },
+    setAppointments,
   }), [projects, appointments, customers, router]);
 
   const countByDay = useMemo(() => {

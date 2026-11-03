@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only test on the public web preview (390x844, de, tours done, disclaimer accepted, TEST_ data seeded only in fresh Playwright localStorage). ALL REQUESTED FLOWS PASS; 1 medium robustness issue (concurrent togglePack lost update). (1) Templates: apt-pack-tpl-Dach-Aufmaß and apt-pack-tpl-Abnahme show by default (purple, 44px). Dach adds 6 items (0/6), tapping it again adds none, Abnahme merges to 9 without duplicates (Kamera/Zollstock shared), and suggestions exclude the present items. (2) apt-pack-save-tpl opens the rename prompt. 'Fenster' creates chip apt-pack-tpl-Fenster, alert 'Vorlage gespeichert … mit 3 Punkten', and it persists in localStorage and in a new appointment. Saving the same name overwrites it (still 3 templates, 4 items). '  fenster ' overwrites case-insensitively but renames the chip to 'fenster'. An empty name closes the prompt silently. A 900ms long-press on Abnahme shows 'Vorlage löschen?' and accepting deletes it; the long-press does not also apply the template. (3) Home Heute: created TEST_Heute today 09:00 with 3 items via the UI. Badge home-today-a-<id>-packing shows 0/3 with chevron (64x44). Tap opens -packlist; ticking -pack-TEST_A gives 1/3 and line-through, and persists in LS, after reload (list collapsed) and in the edit form ('1/3 eingepackt'). 3/3 turns the badge green (rgb 220,252,231); unticking goes back to amber. Tapping the row opens the edit modal and saving the form keeps the inline ticks. (4) Week row home-week-a-TEST_wk and /appointments cal-item-/cal-up- rows tick inline; badges stay in sync between cal-item and cal-up and back on home. Linked projects (TEST_p1, TEST_p2) keep updated_at and the 'Letzte Projekte' order is unchanged. (5) Regression: add via Enter/+, case-insensitive duplicate 'KAMERA' ignored, 'leiter' hides the 'Leiter' suggestion, custom TEST_Gurt shows first in suggestions after removal, remove works, counter correct. Help dirty-check: untouched new and untouched existing (after inline tick) open /help?section=termine with no confirm. After applying a template, 'Hilfe öffnen?' appears and cancel keeps the modal with 5 items. No deprecated Expo packages.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Inline pack ticking persistence", "issue": "AppointmentService.togglePack (services/AppointmentService.ts:73-76) does read-modify-write of the whole appointments list with no serialization. Reproduced: 3 synchronous toggles (JS click on 3 items) set UI to 0/3, but storage ended at [true,true,false], and /appointments then showed 2/3. UI state and storage diverge (lost update). Normal Playwright clicks ~100ms apart did not reproduce it; risk is fast double-taps on slow native AsyncStorage.", "affected_testIDs": ["home-today-a-<id>-pack-<text>", "home-week-a-<id>-pack-<text>", "cal-item-a-<id>-pack-<text>", "cal-up-a-<id>-pack-<text>"]}
+    ],
+    "design_issues": [
+      {"screen": "AppointmentFormModal", "issues": ["Close X (apt-close) discards a dirty form (e.g. 3 packing items) without any confirm, while the help button does confirm. Inconsistent and easy to lose input.", "Saving a template with an empty name closes the prompt silently with no feedback.", "Case-insensitive overwrite renames the template to the new casing ('Fenster' -> 'fenster'). Acceptable, but maybe keep the original name."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/ui/seed_packing.js"],
+  "action_items": [
+    "MEDIUM: serialize AppointmentService.togglePack writes (promise queue/mutex), or persist the already-computed in-memory packing array for that appointment, so rapid ticks cannot lose updates.",
+    "LOW: add a dirty-check confirm (reuse the `dirty` flag) to apt-close/onRequestClose in AppointmentFormModal.",
+    "LOW: show a hint or disable OK for an empty template name in the rename prompt."
+  ],
+  "critical_code_review_comments": [
+    "agenda.ts togglePack does an optimistic setAppointments plus a separate storage read-modify-write. Concurrent calls race, so the storage can diverge from the UI (see integration issue).",
+    "AgendaRow packOpen is local per row instance, so cal-item and cal-up rows for the same appointment open independently (fine, data stays in sync)."
+  ],
+  "updated_files": ["/app/tests/ui/seed_packing.js (new test seed helper only)"],
+  "success_rate": {"backend": "N/A", "frontend": "97% (all requested flows pass; 1 robustness issue)"},
+  "seed_data_creation": "TEST_ customer/projects/appointments seeded only into ephemeral Playwright localStorage via /app/tests/ui/seed_packing.js. No real data touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use /app/tests/ui/seed_packing.js (page.evaluate(open(...).read())) to seed lang/tour keys, TEST_c1, TEST_p1..p3 (ascending updated_at), and appointment TEST_wk (tomorrow, linked to TEST_p1, items Leiter/Kamera). Then reload and accept the disclaimer. Row testIDs: home-today-a-<id>, home-week-a-<id>, cal-item-a-<id>, cal-up-a-<id>, with suffixes -packing, -packlist, -pack-<text>. Long-press on web: mouse.down, wait 900ms, mouse.up. The web Alert polyfill maps to window.confirm. Wait about 1.2s after opening the modal.",
+  "rca_of_issue": "Lost update: each togglePack awaits AsyncStorage.getItem and then setItem. When two calls overlap, both read the same old list and the later write overwrites the earlier toggle. Mitigation: chain the writes through a module-level promise (let q = Promise.resolve(); togglePack = (...) => (q = q.then(() => doToggle(...)))), or write the target state (done: boolean) instead of flipping it."
+}

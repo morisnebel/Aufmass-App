@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@react-native-vector-icons/ionicons';
-import { PackItem, PACKING_RECENT_KEY } from '../../../services/AppointmentService';
+import { PackItem, PACKING_RECENT_KEY, PackTemplate, PackTemplates } from '../../../services/AppointmentService';
+import { RenamePromptModal } from '../RenamePromptModal';
 
 // Checkliste „Mitnehmen“ für einen Termin – mit Vorschlägen und zuletzt genutzten Einträgen
 const DEFAULTS = ['Leiter', 'Zollstock', 'Laser-Entfernungsmesser', 'Tablet/Handy geladen', 'Werkzeugkoffer', 'Musterziegel', 'Kamera', 'Angebotsunterlagen', 'Schutzausrüstung'];
@@ -13,9 +14,35 @@ type Props = { items: PackItem[]; onChange: (items: PackItem[]) => void; onFocus
 export function PackingList({ items, onChange, onFocusInput }: Props) {
   const [text, setText] = useState('');
   const [recent, setRecent] = useState<string[]>([]);
+  const [templates, setTemplates] = useState<PackTemplate[]>([]);
+  const [naming, setNaming] = useState(false);
   useEffect(() => {
     AsyncStorage.getItem(PACKING_RECENT_KEY).then(r => setRecent(r ? JSON.parse(r) : [])).catch(() => {});
+    PackTemplates.getAll().then(setTemplates);
   }, []);
+
+  // Vorlage übernehmen: fehlende Punkte ergänzen
+  const applyTemplate = (tpl: PackTemplate) => {
+    const have = new Set(items.map(i => i.text.toLowerCase()));
+    const add = tpl.items.filter(t => !have.has(t.toLowerCase())).map(t => ({ id: newId(), text: t, done: false }));
+    onChange([...items, ...add]);
+  };
+  const saveTemplate = (name: string) => {
+    const n = name.trim();
+    if (!n) { Alert.alert('Name fehlt', 'Bitte einen Namen für die Vorlage eingeben.'); return; }
+    setNaming(false);
+    if (!items.length) return;
+    const existing = templates.find(t => t.name.toLowerCase() === n.toLowerCase());
+    const tpl: PackTemplate = { id: existing?.id || `tpl_${Date.now()}`, name: existing?.name || n, items: items.map(i => i.text) };
+    const next = existing ? templates.map(t => (t.id === tpl.id ? tpl : t)) : [...templates, tpl];
+    setTemplates(next);
+    PackTemplates.saveAll(next).catch(() => {});
+    Alert.alert('Vorlage gespeichert', `„${n}“ mit ${tpl.items.length} Punkten.`);
+  };
+  const deleteTemplate = (tpl: PackTemplate) => Alert.alert('Vorlage löschen?', `„${tpl.name}“ wird entfernt.`, [
+    { text: 'Abbrechen', style: 'cancel' },
+    { text: 'Löschen', style: 'destructive', onPress: () => { const next = templates.filter(t => t.id !== tpl.id); setTemplates(next); PackTemplates.saveAll(next).catch(() => {}); } },
+  ]);
 
   const add = (raw: string) => {
     const t = raw.trim();
@@ -43,6 +70,16 @@ export function PackingList({ items, onChange, onFocusInput }: Props) {
         <Text style={s.label}>Mitnehmen</Text>
         {items.length > 0 && <Text testID="apt-packing-count" style={s.count}>{done}/{items.length} eingepackt</Text>}
       </View>
+      {templates.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 6, paddingBottom: 6 }}>
+          {templates.map(t => (
+            <TouchableOpacity key={t.id} testID={`apt-pack-tpl-${t.name}`} style={s.tpl} onPress={() => applyTemplate(t)} onLongPress={() => deleteTemplate(t)} delayLongPress={500}>
+              <Ionicons name="list-outline" size={15} color="#7c3aed" />
+              <Text style={s.tplText}>{t.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
       {items.map(i => (
         <View key={i.id} style={s.item}>
           <TouchableOpacity testID={`apt-pack-toggle-${i.text}`} style={s.check} onPress={() => toggle(i.id)} hitSlop={6}>
@@ -81,6 +118,20 @@ export function PackingList({ items, onChange, onFocusInput }: Props) {
           ))}
         </ScrollView>
       )}
+      {items.length > 0 && (
+        <TouchableOpacity testID="apt-pack-save-tpl" style={s.saveTpl} onPress={() => setNaming(true)}>
+          <Ionicons name="bookmark-outline" size={16} color="#7c3aed" />
+          <Text style={s.saveTplText}>Liste als Vorlage speichern</Text>
+        </TouchableOpacity>
+      )}
+      <RenamePromptModal
+        visible={naming}
+        title="Vorlage speichern"
+        message="Name der Mitnehmen-Vorlage, z. B. „Dach-Aufmaß“. Gleicher Name überschreibt die Vorlage."
+        defaultValue=""
+        onCancel={() => setNaming(false)}
+        onSubmit={saveTemplate}
+      />
     </View>
   );
 }
@@ -99,4 +150,8 @@ const s = StyleSheet.create({
   addBtn: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#1976d2', alignItems: 'center', justifyContent: 'center' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 2, minHeight: 44, paddingHorizontal: 12, borderRadius: 22, backgroundColor: '#eff6ff' },
   chipText: { fontSize: 13, color: '#1976d2', fontWeight: '600' },
+  tpl: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44, paddingHorizontal: 12, borderRadius: 22, backgroundColor: '#f3e8ff' },
+  tplText: { fontSize: 13, color: '#6d28d9', fontWeight: '700' },
+  saveTpl: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 44, marginTop: 4 },
+  saveTplText: { fontSize: 13, color: '#7c3aed', fontWeight: '700' },
 });

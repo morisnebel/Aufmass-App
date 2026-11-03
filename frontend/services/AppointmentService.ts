@@ -3,8 +3,25 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const APPOINTMENTS_KEY = 'aufmassprofi_appointments';
 export const PACKING_RECENT_KEY = 'aufmassprofi_packing_recent';
+export const PACKING_TEMPLATES_KEY = 'aufmassprofi_packing_templates';
 
 export interface PackItem { id: string; text: string; done: boolean }
+export interface PackTemplate { id: string; name: string; items: string[] }
+
+// Mitnehmen-Vorlagen (beim ersten Mal mit Beispielen gefüllt)
+const DEFAULT_TEMPLATES: PackTemplate[] = [
+  { id: 'tpl_dach', name: 'Dach-Aufmaß', items: ['Leiter', 'Zollstock', 'Laser-Entfernungsmesser', 'Kamera', 'Musterziegel', 'Schutzausrüstung'] },
+  { id: 'tpl_abnahme', name: 'Abnahme', items: ['Abnahmeprotokoll', 'Tablet/Handy geladen', 'Kamera', 'Zollstock', 'Taschenlampe'] },
+];
+export const PackTemplates = {
+  getAll: async (): Promise<PackTemplate[]> => {
+    try {
+      const raw = await AsyncStorage.getItem(PACKING_TEMPLATES_KEY);
+      return raw ? JSON.parse(raw) : DEFAULT_TEMPLATES;
+    } catch { return DEFAULT_TEMPLATES; }
+  },
+  saveAll: (list: PackTemplate[]) => AsyncStorage.setItem(PACKING_TEMPLATES_KEY, JSON.stringify(list)),
+};
 
 export interface Appointment {
   id: string;
@@ -36,6 +53,7 @@ const readAll = async (): Promise<Appointment[]> => {
   }
 };
 const writeAll = (list: Appointment[]) => AsyncStorage.setItem(APPOINTMENTS_KEY, JSON.stringify(list));
+let packQueue: Promise<void> = Promise.resolve();
 
 export const AppointmentService = {
   getAll: readAll,
@@ -50,6 +68,15 @@ export const AppointmentService = {
     await writeAll(existing ? list.map(a => (a.id === item.id ? item : a)) : [...list, item]);
     await syncProjects([item.project_id, existing?.project_id]);
     return item;
+  },
+
+  // Mitnehmen-Punkt direkt abhaken (ohne Projekt-Sync); Schreibvorgänge nacheinander, Zielwert statt Umschalten
+  setPackDone: (aptId: string, itemId: string, done: boolean): Promise<void> => {
+    packQueue = packQueue.then(async () => {
+      const list = await readAll();
+      await writeAll(list.map(a => (a.id !== aptId ? a : { ...a, packing: (a.packing || []).map(p => (p.id === itemId ? { ...p, done } : p)) })));
+    }).catch(() => {});
+    return packQueue;
   },
 
   remove: async (id: string): Promise<void> => {

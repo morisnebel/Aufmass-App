@@ -147,6 +147,13 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   const current = JSON.stringify({ title, dateText, time, address, note, travel, remindBefore, customerId, projectId, packing, remindAt: remindAt?.getTime(), departAt: departAt?.getTime() });
   const dirty = !!baseline.current && current !== baseline.current;
   currentRef.current = current;
+  // Schließen ohne Speichern: bei Änderungen nachfragen
+  const requestClose = () => (dirty
+    ? Alert.alert('Änderungen verwerfen?', 'Deine Eingaben werden nicht gespeichert.', [
+        { text: 'Weiter bearbeiten', style: 'cancel' },
+        { text: 'Verwerfen', style: 'destructive', onPress: onClose },
+      ])
+    : onClose());
   const departure = date && normTime && travel > 0 ? departureTime(date, normTime, travel) : null;
   // Startwert für Kalender/Uhrzeit-Rad
   const pickerValue = (() => {
@@ -235,13 +242,13 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={requestClose}>
       <View style={s.backdrop}>
         <View style={[s.sheet, kb > 0 && { marginBottom: kb, paddingBottom: 10, maxHeight: winH - kb - insets.top - 8 }]}>
           <View style={s.head}>
             <Text style={[s.title, { flex: 1 }]}>{initial ? 'Termin bearbeiten' : 'Neuer Termin'}</Text>
             <HelpButton section="termine" onBeforeOpen={onClose} testID="apt-help" confirmLeave={dirty ? 'Das Termin-Formular wird geschlossen und deine Eingaben gehen verloren. Tipp: Erst speichern, dann die Hilfe öffnen.' : undefined} />
-            <TouchableOpacity testID="apt-close" onPress={onClose} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={26} color="#334155" /></TouchableOpacity>
+            <TouchableOpacity testID="apt-close" onPress={requestClose} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={26} color="#334155" /></TouchableOpacity>
           </View>
           <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
             <Text style={s.label}>Projekt (optional)</Text>

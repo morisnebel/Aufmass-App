@@ -174,6 +174,7 @@ export default function HomeScreen() {
     customers,
     onOpenProject: id => router.push(`/projects/${id}`),
     onEditAppointment: a => { setEditAppointment(a); setAppointmentModal(true); },
+    setAppointments,
   }), [active, appointments, customers, router]);
   const todayItems = useMemo(() => agenda.filter(i => i.date === today), [agenda, today]);
   const weekItems = useMemo(() => {

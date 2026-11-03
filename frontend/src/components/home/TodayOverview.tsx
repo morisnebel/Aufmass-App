@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { Project } from '../../../services/LocalStorage';
+import { PackItem } from '../../../services/AppointmentService';
 import { cardShadow } from './HomeTiles';
 import { tourRef } from './HomeTour';
 
@@ -20,11 +21,16 @@ export type AgendaItem = {
   note?: string;
   hasReminder?: boolean;
   packing?: { done: number; total: number };
+  packItems?: PackItem[];
+  onTogglePack?: (itemId: string) => void;
   onPress: () => void;
 };
 
 export function AgendaRow({ item, onNavigate, testID }: { item: AgendaItem; onNavigate: (a: string) => void; testID: string }) {
+  const [packOpen, setPackOpen] = useState(false);
+  const allDone = !!item.packing && item.packing.done === item.packing.total;
   return (
+    <View>
     <View style={s.row}>
       <TouchableOpacity testID={testID} style={s.rowMain} onPress={item.onPress}>
         <View style={s.timeBox}>
@@ -34,19 +40,37 @@ export function AgendaRow({ item, onNavigate, testID }: { item: AgendaItem; onNa
           <Text style={s.name} numberOfLines={1}>{item.title}</Text>
           {!!(item.subtitle || item.note) && <Text style={s.sub} numberOfLines={1}>{[item.subtitle, item.note].filter(Boolean).join(' · ')}</Text>}
         </View>
-        {!!item.packing?.total && (
-          <View testID={`${testID}-packing`} accessibilityLabel={`${item.packing.done} von ${item.packing.total} Sachen eingepackt`} style={[s.pack, item.packing.done === item.packing.total && { backgroundColor: '#dcfce7' }]}>
-            <Ionicons name="bag-check-outline" size={13} color={item.packing.done === item.packing.total ? '#16a34a' : '#b45309'} />
-            <Text style={[s.packText, item.packing.done === item.packing.total && { color: '#16a34a' }]}>{item.packing.done}/{item.packing.total}</Text>
-          </View>
-        )}
         {item.hasReminder && <Ionicons name="notifications-outline" size={16} color="#0369a1" />}
       </TouchableOpacity>
+      {!!item.packing?.total && (
+        <TouchableOpacity
+          testID={`${testID}-packing`}
+          accessibilityLabel={`${item.packing.done} von ${item.packing.total} Sachen eingepackt – Liste ${packOpen ? 'schließen' : 'öffnen'}`}
+          disabled={!item.onTogglePack}
+          onPress={() => setPackOpen(!packOpen)}
+          style={[s.pack, allDone && { backgroundColor: '#dcfce7' }, packOpen && s.packOpen]}
+        >
+          <Ionicons name="bag-check-outline" size={14} color={allDone ? '#16a34a' : '#b45309'} />
+          <Text style={[s.packText, allDone && { color: '#16a34a' }]}>{item.packing.done}/{item.packing.total}</Text>
+          {!!item.onTogglePack && <Ionicons name={packOpen ? 'chevron-up' : 'chevron-down'} size={12} color={allDone ? '#16a34a' : '#b45309'} />}
+        </TouchableOpacity>
+      )}
       {!!item.address && (
         <TouchableOpacity testID={`${testID}-navi`} style={s.navi} onPress={() => onNavigate(item.address!)} accessibilityLabel="Navigation starten">
           <Ionicons name="navigate" size={20} color="#fff" />
         </TouchableOpacity>
       )}
+    </View>
+    {packOpen && item.packItems && item.onTogglePack && (
+      <View testID={`${testID}-packlist`} style={s.packList}>
+        {item.packItems.map(p => (
+          <TouchableOpacity key={p.id} testID={`${testID}-pack-${p.text}`} style={s.packItem} onPress={() => item.onTogglePack!(p.id)}>
+            <Ionicons name={p.done ? 'checkbox' : 'square-outline'} size={22} color={p.done ? '#16a34a' : '#64748b'} />
+            <Text style={[s.packItemText, p.done && s.packItemDone]}>{p.text}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    )}
     </View>
   );
 }
@@ -97,8 +121,13 @@ export function TodayOverview({ items, editedToday, onOpenProject, onAdd, onNavi
 }
 
 const s = StyleSheet.create({
-  pack: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#fef3c7', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 },
-  packText: { fontSize: 11, fontWeight: '800', color: '#b45309' },
+  pack: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#fef3c7', borderRadius: 12, paddingHorizontal: 8, minHeight: 44, minWidth: 56, justifyContent: 'center', marginLeft: 6 },
+  packOpen: { borderWidth: 1.5, borderColor: '#f59e0b' },
+  packText: { fontSize: 12, fontWeight: '800', color: '#b45309' },
+  packList: { marginTop: -2, marginBottom: 8, marginLeft: 8, paddingLeft: 10, borderLeftWidth: 3, borderLeftColor: '#fde68a' },
+  packItem: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
+  packItemText: { fontSize: 15, color: '#0f172a', flex: 1 },
+  packItemDone: { color: '#94a3b8', textDecorationLine: 'line-through' },
 
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, ...cardShadow },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },

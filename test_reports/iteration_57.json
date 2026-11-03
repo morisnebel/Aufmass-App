@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only test at 390x844 (de) of the sketch video demo, the updated sketch tour, the extended manual and sketch regressions. ALL PASS. (1) sketch-help opens the sketch-demo modal 'Skizze in 20 Sekunden', which plays automatically. sketch-demo-title moved through Linie zeichnen -> Maß eintragen -> Fläche & Raumname -> Zoomen -> Rückgängig & Speichern at about 3.6s per scene, and the progress bar went from 2.7% to 99.99%. At the end the play button shows 'Nochmal', and tapping it restarts at scene 1 (3%). Pause stops the bar (3.33% -> 3.33% over 2.5s) and the label changes to 'Weiter'. Resume moves the bar again. Dots 0..4 jump to the correct scene (3->Zoomen, 1->Maß, 4->Rückgängig, 2->Fläche, 0->Linie). sketch-demo-manual closes the modal and opens /help?section=skizzen with 'Skizzen zeichnen' expanded. sketch-demo-close closes the modal. Touch targets: close 44x44, play/manual 166x48, dots 32x32. (2) Fresh user (localStorage cleared) opening /sketches/draw directly: only the welcome dialog shows, with no home-tour on top. After accepting, the 7-step sketch tour starts. On the last step, tour-final-action '▶ Video ansehen' closes the tour, sets aufmassprofi_sketch_tour_done=1 and opens sketch-demo. The tour did not come back after a reload. (3) /help: searching 'Polygon' returns help-hit-skizzen. The chapter has 14 steps (checked in manual.ts) and 5 info buttons, and info 5 shows the +Pkt/-Pkt text. (4) Regression: sketch-save-button is fully visible at 390px (x=334, w=40). Drawing a line with the Linie tool works (Elemente 0->1->2), undo gives 1, and saving shows 'Skizze wurde gespeichert' with the sketch persisted under project p1.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "SketchDemo scene 5", "issues": ["LOW: the undo icon (a grey circle at the top left of the stage) is hard to recognise when it is not highlighted, because it is drawn at opacity 0.35 on a light background."]},
+      {"screen": "SketchDemo opened from the tour", "issues": ["LOW: the 'Los geht’s' button (used when onOpenManual is not set) has no testID."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/setup_snippet.py", "/app/tests/e2e/help_tour_notes.md"],
+  "action_items": [
+    "Optional: add testID 'sketch-demo-start' to the 'Los geht’s' button in SketchDemo.tsx:171.",
+    "Optional: make the undo icon in demo scene 5 more visible when it is not highlighted."
+  ],
+  "critical_code_review_comments": [
+    "SketchTour.tsx:44-53: check() can run twice (once on mount, once on the 'disclaimer-accepted' event) and overwrites the single timer variable `t`. The cleanup then clears only the last timer. This is harmless in practice because visible is just set to true.",
+    "SketchDemo heading says '20 Sekunden', but TOTAL is 18s (5 x 3.6s). This is cosmetic only."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "Only in the browser's localStorage, using SEED_JS (project p1). Each browser_automation context is fresh, so nothing persists.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "To use the Line tool: SCROLL_JS(732) gives x; click (x, 89). If line was already active, a 'Linientyp wählen' picker opens; click get_by_text('Linie', exact=True).last, then drag with the mouse at y about 420. Register dialog handlers as async functions that await d.accept(); a sync lambda hangs the page. SketchDemo progress: read the inline style width (%) of the 4px-high bar inside [data-testid=sketch-demo]."
+}

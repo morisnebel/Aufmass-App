@@ -25,7 +25,7 @@ export function HomeTour({ visible, onClose }: { visible: boolean; onClose: () =
 }
 
 // Allgemeine Spotlight-Tour (Startseite, Skizze …)
-export function SpotlightTour({ visible, onClose, steps: STEPS, storageKey }: { visible: boolean; onClose: () => void; steps: TourStep[]; storageKey: string }) {
+export function SpotlightTour({ visible, onClose, steps: STEPS, storageKey, finalAction }: { visible: boolean; onClose: () => void; steps: TourStep[]; storageKey: string; finalAction?: { label: string; onPress: () => void } }) {
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const { width: W, height: H } = useWindowDimensions();
@@ -74,9 +74,15 @@ export function SpotlightTour({ visible, onClose, steps: STEPS, storageKey }: { 
           <Text style={s.title}>{step.title}</Text>
           <Text style={s.text}>{step.text}</Text>
           <View style={s.row}>
+            {finalAction && i === STEPS.length - 1 ? (
+              <TouchableOpacity testID="tour-final-action" style={s.skip} onPress={() => { finish(); finalAction.onPress(); }}>
+                <Text style={[s.skipText, { color: '#1565c0' }]}>{finalAction.label}</Text>
+              </TouchableOpacity>
+            ) : (
             <TouchableOpacity testID="tour-skip" style={s.skip} onPress={finish} disabled={i === STEPS.length - 1}>
               <Text style={s.skipText}>{i < STEPS.length - 1 ? 'Überspringen' : ''}</Text>
             </TouchableOpacity>
+            )}
             <View style={s.dots}>
               {STEPS.map((_, k) => <View key={k} style={[s.dot, k === i && s.dotOn]} />)}
             </View>

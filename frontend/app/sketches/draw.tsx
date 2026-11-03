@@ -40,7 +40,8 @@ import { deepCloneElement, simplifyPath, DrawElement, FontFamily, FONT_FAMILIES,
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
 import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared } from '../../src/sketch/polygonArea';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
-import { SketchTour, SketchHelpButton } from '../../src/components/SketchTour';
+import { SketchTour } from '../../src/components/SketchTour';
+import { HelpButton } from '../../src/components/HelpButton';
 import { tourRef } from '../../src/components/home/HomeTour';
 import Svg, { 
   Path, 
@@ -6129,7 +6130,7 @@ export default function DrawSketchScreen() {
           <Text style={styles.pdfSizeHeaderLabel}>PDF</Text>
         </TouchableOpacity>
         <View ref={tourRef('sk-help')} collapsable={false} style={{ marginHorizontal: 4 }}>
-          <SketchHelpButton />
+          <HelpButton section="skizzen" light testID="sketch-help" />
         </View>
         <View ref={tourRef('sk-save')} collapsable={false}>
         <TouchableOpacity testID="sketch-save-button" onPress={saveSketch} style={styles.headerButton} disabled={loading}>

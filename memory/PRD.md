@@ -790,3 +790,9 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Mitnehmen-Vorlagen (PackTemplates, Key aufmassprofi_packing_templates, Standard: Dach-Aufmaß, Abnahme; speichern/überschreiben/lang drücken = löschen); Abhaken direkt in Agenda (Badge aufklappen, AppointmentService.togglePack ohne Projekt-Sync)
 - Nutzerwunsch: Pro-Funktionen in Basic wieder komplett ausgeblendet (ProTeaser entfernt); Anleitung zeigt in Basic keine Pro-Kapitel/-Schritte (getManual(isPro)), auch im PDF
 - Skizzen-Kapitel erweitert (14 Schritte); animierte Video-Demo SketchDemoModal (5 Szenen, SVG, offline) über ? im Skizzen-Editor (SketchHelpButton) und am Ende der Skizzen-Tour („▶ Video ansehen“, SpotlightTour.finalAction)
+- Erklärvideo wieder entfernt (später neu); Skizzen-Anleitung korrigiert: Maße ändern Linien nicht, m² nur bei geschlossenem Grundriss mit allen Seitenmaßen; Build vorbereitet: Version 1.1.31, iOS buildNumber 141, Android versionCode 141
+
+## Status (Juni 2026)
+- Erklärvideo für Skizze entfernt (passte nicht zur Skizze, später neu)
+- Version 1.1.31 (Build 141) bereit für TestFlight
+- Backlog: automatische qm-Anzeige in Skizze (später), neues Erklärvideo

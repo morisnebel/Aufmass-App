@@ -63,14 +63,14 @@ export const MANUAL: ManualSection[] = [
   },
   {
     id: 'skizzen', icon: 'create-outline', color: '#7b1fa2', title: 'Skizzen zeichnen',
-    intro: 'Grundrisse, Ansichten und Dachskizzen mit echten Maßen direkt auf dem Handy oder Tablet zeichnen. Tipp: Über das ? im Skizzen-Editor startest du eine kurze Video-Demo.',
+    intro: 'Grundrisse, Ansichten und Dachskizzen mit echten Maßen direkt auf dem Handy oder Tablet zeichnen.',
     steps: [
       { text: 'Im Projekt „Skizze“ → neue Skizze anlegen und oben einen Titel vergeben (z. B. „EG Grundriss“).' },
       { text: 'Werkzeugleiste: Stift (frei), Linie, Rechteck, Kreis, Polygon (Fläche aus Punkten), Maßlinie, Text und Foto. Auf dem Handy die Leiste seitlich wischen.', info: 'Das aktive Werkzeug ist farbig hervorgehoben. Unter Einstellungen → „Skizzen-Werkzeuge benennen“ kannst du die Namen an deine Begriffe anpassen.' },
       { text: 'Linie zeichnen: Werkzeug „Linie“ wählen, Finger am Startpunkt aufsetzen und zum Endpunkt ziehen.', info: 'Mit „Winkel“ rasten Linien in festen Winkelschritten ein (z. B. 90°, 45°). Das Raster hilft zusätzlich, sauber gerade zu zeichnen.' },
-      { text: 'Maße eintragen: Linie antippen → „Maß eingeben“ und die echte Länge eintragen (z. B. 4,50). Die Linie passt sich an, angrenzende Linien bleiben verbunden.', info: 'Du kannst Meter oder Zentimeter eingeben. Über „Winkel anpassen“ lässt sich der Winkel einer Linie exakt setzen.' },
+      { text: 'Maße eintragen: Linie oder Grundriss-Seite antippen → „Maß eingeben“ und die echte Länge eintragen (z. B. 4,50 m). Das Maß wird an der Linie angezeigt – die gezeichnete Länge ändert sich dabei nicht.', info: 'Du kannst m, cm oder mm eingeben. Über „Winkel anpassen“ lässt sich der Winkel einer Linie exakt setzen.' },
       { text: 'Maßlinie: zeigt einen Abstand mit Pfeilspitzen an, ohne die Zeichnung zu verändern – ideal für Fenster, Türen oder Abstände.' },
-      { text: 'Flächen: Rechteck aufziehen oder mit „Polygon“ Punkt für Punkt eine Fläche setzen und schließen. Die Fläche in m² wird automatisch berechnet.', info: 'Beim Polygon fügst du mit „+Pkt“ Punkte hinzu und entfernst sie mit „-Pkt“. Ein Polygon braucht mindestens 3 Punkte.' },
+      { text: 'Flächen (m²): Raum mit dem Grundriss-Werkzeug Ecke für Ecke zeichnen und mit „Schließen“ abschließen. Dann jede Seite antippen und ihr Maß eintragen.', info: 'Die m² werden erst berechnet, wenn der Grundriss geschlossen ist und ALLE Seiten ein Maß haben – aus deinen Maßen, nicht aus der gezeichneten Größe. Rechtecke, Kreise und freie Linien bekommen keine m²-Berechnung. Mit „+Pkt“ / „-Pkt“ fügst du Ecken hinzu oder entfernst sie.' },
       { text: 'Raumname: Fläche antippen und umbenennen, z. B. „Wohnzimmer“. Name und m² erscheinen direkt im Grundriss.', info: 'Die Flächen-Summen aller Räume stehen gruppiert im Projekt-PDF.' },
       { text: 'Text & Notizen: Mit „Text“ Beschriftungen setzen (Schriftart, Größe, Farbe wählbar). „Notizen zur Skizze“ speichert Hinweise, die nicht in der Zeichnung stehen sollen.' },
       { text: 'Bearbeiten: Element antippen → verschieben, „Stil ändern“ (Farbe, Strichstärke) oder „Element löschen“. „Alles löschen“ leert die Seite nach Rückfrage.' },

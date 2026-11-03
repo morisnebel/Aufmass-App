@@ -5423,6 +5423,33 @@ export default function DrawSketchScreen() {
                   >
                     {labelText}
                   </SvgText>
+                  {/* Raumname rechts neben dem S-Kreis (mit weißem Rand für Lesbarkeit) */}
+                  {!!element.name && (
+                    <G>
+                      <SvgText
+                        x={labelX + scaledLabelRadius + 3}
+                        y={labelY + scaledLabelFontSize * 0.35}
+                        fill="#fff"
+                        stroke="#fff"
+                        strokeWidth={scaledLabelStroke * 2.5}
+                        fontSize={scaledLabelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                      >
+                        {element.name}
+                      </SvgText>
+                      <SvgText
+                        x={labelX + scaledLabelRadius + 3}
+                        y={labelY + scaledLabelFontSize * 0.35}
+                        fill={labelColor}
+                        fontSize={scaledLabelFontSize}
+                        fontWeight="bold"
+                        textAnchor="start"
+                      >
+                        {element.name}
+                      </SvgText>
+                    </G>
+                  )}
                   {/* Transparenter Kreis als Touch-Target für Verschieben (größer als sichtbarer Kreis) */}
                   <Circle
                     cx={labelX}
@@ -5835,7 +5862,7 @@ export default function DrawSketchScreen() {
       elements, canvasHeight, screenWidth, legendPosition,
       lineSegmentMeasurements, measureLineStyles, polygonAreaVisible,
       getPolylineElementsWithMeasurements, calculatePolygonAreaM2,
-      formatAreaM2, calculateTotalLfmForElement,
+      formatAreaM2, calculateTotalLfmForElement, labelOffsets,
     });
 
   const saveSketch = async () => {

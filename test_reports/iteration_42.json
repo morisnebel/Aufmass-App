@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only test of the room name shown next to the S circle on the sketch, run in Chromium web preview at 390x844 with seeded storage (setup_snippet.py) on /sketches/draw?projectId=p1. 0 pageerrors. PASS: after build_square (5/4/5/4 m) and renaming legend-row-0 to 'Wohnzimmer', the canvas shows 2 SvgText 'Wohnzimmer' (white halo #fff stroke + #1976d2 fill) 7.8px right of the S1 circle on the same baseline (dy 0), inside the polygon. Legend shows 'S1 Wohnzimmer = 18 lfm • 20,00 m²'. PASS: dragging the S1 circle in Edit mode (+60,+40) moves the name by exactly (+60,+40); the dashed connector line appears. PASS: renaming to '' removes both name texts from the canvas and the legend goes back to 'S1 = 18 lfm • 20,00 m²'. PASS: saved SVG (aufmassprofi_sketches, base64 data URI) contains <text x=centerX+22 ...>Wohnzimmer</text> twice (halo + colour) next to S1 at the same y. 'Bad & <WC>' is escaped (&amp; &lt; &gt;) and the SVG parses without parsererror. Regression PASS: polygon drawing, measurement input, m² display and legend rename all work. Minor findings: (1) the exported SVG ignores labelOffsets, so S1 and the name sit at the polygon centre in the preview/PDF even after the user moved the label on the canvas (this was already true before; it is just more visible now). (2) Long names are not truncated: in the export, 'Wohnzimmer mit Essbereich' runs from x 207 to 380 while the polygon right edge is at 310, so it crosses the border and the right '4m' dimension text. On the canvas it ends at 309 for a 5 m wide room.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "sketchSvg.ts polyline label export", "issue": "The export puts the S circle and the room name at the polygon centroid and ignores labelOffsets. A label moved on the canvas therefore appears in a different place in the preview/PDF. Reference: /app/frontend/src/sketch/sketchSvg.ts:432-449", "testID": "sketch-save-button", "priority": "LOW"},
+      {"component": "Room name text (export + canvas)", "issue": "Long names are not truncated or wrapped. In the export (font 14) 'Wohnzimmer mit Essbereich' goes past the polygon edge (text right 380 vs polygon right 310) and overlaps the right dimension label. Small rooms will overlap even with short names.", "testID": "legend-row-0", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [{"screen": "Sketch editor", "issues": ["When the polygon is selected in Edit mode, the orange move handle at the centre covers the S1 circle, and the name starts directly next to the handle. This was already the case before."]}],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/room_name_label_test.py"],
+  "action_items": [
+    "LOW: apply labelOffsets[el.id] to centerX/centerY of the S circle, name and m² box in sketchSvg.ts so the export matches the canvas. labelOffsets is already stored in the sketch metadata.",
+    "LOW: optionally truncate long room names (e.g. max ~14 chars + '…') or scale the font in the export/canvas to avoid overlapping polygon edges and dimension labels."
+  ],
+  "critical_code_review_comments": [
+    "draw.tsx:5427-5452 positions the name at labelX + scaledLabelRadius + 3 with zoom-scaled font. It follows the drag offset correctly.",
+    "sketchSvg.ts:445-449 escapes & < > correctly, but does not escape quotes. That is fine for text nodes."
+  ],
+  "updated_files": ["/app/tests/e2e/room_name_label_test.py"],
+  "success_rate": {"backend": "N/A", "frontend": "100% of requested checks (5/5)"},
+  "seed_data_creation": "localStorage only via SEED_JS (TEST_Max Muster / TEST_Projekt p1) in the browser automation context",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Reuse /app/tests/e2e/room_name_label_test.py: exec it, then await run(page). It seeds, draws the square, renames, drags S1 and checks the saved SVG. FIND_JS(name) returns bounding rects of svg text with exact content. SAVED_SVG_JS decodes all base64 SVG data URIs in localStorage. The 'GO_BACK was not handled' toast after saving comes from opening the draw URL directly without history; it is a test artifact."
+}

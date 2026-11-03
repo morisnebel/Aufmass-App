@@ -761,3 +761,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Rechner: Umbenennen von Grund-/Abzugsflächen über eigenes Eingabefenster (RenamePromptModal) auf allen Plattformen
 - Skizze: Haupt-Zeichenfläche wird während eines Strichs aus Cache wiederverwendet (große Skizzen flüssig)
 - Skizze: Grundrisse benennen über Tipp in der Übersicht-Legende (element.name) – Name in Legende, Vorschau-SVG und PDF-Flächenübersicht
+- Skizze: Raumname wird rechts neben dem S-Kreis im Grundriss angezeigt (Canvas + Vorschau/PDF)

@@ -14,6 +14,7 @@ export interface PreviewSvgContext {
   calculatePolygonAreaM2: (el: any) => number;
   formatAreaM2: (n: number) => string;
   calculateTotalLfmForElement: (el: any) => number;
+  labelOffsets?: { [id: string]: { x: number; y: number } };
 }
 
 export function buildPreviewSvg(ctx: PreviewSvgContext): string {
@@ -21,7 +22,7 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
     elements, canvasHeight, screenWidth, legendPosition,
     lineSegmentMeasurements, measureLineStyles, polygonAreaVisible,
     getPolylineElementsWithMeasurements, calculatePolygonAreaM2,
-    formatAreaM2, calculateTotalLfmForElement,
+    formatAreaM2, calculateTotalLfmForElement, labelOffsets = {},
   } = ctx;
     // NEW ARCHITECTURE: Use viewBox for scaling instead of transforming coordinates
     // This preserves original element sizes (especially text) and lets the browser handle scaling
@@ -433,14 +434,22 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
         if (labelIndex !== -1) {
           const sumX = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.x, 0);
           const sumY = points.reduce((acc: number, pt: { x: number; y: number }) => acc + pt.y, 0);
-          const centerX = sumX / points.length;
-          const centerY = sumY / points.length;
+          // Verschobenes Label (wie auf der Skizze) übernehmen
+          const lblOffset = labelOffsets[el.id] || { x: 0, y: 0 };
+          const centerX = sumX / points.length + lblOffset.x;
+          const centerY = sumY / points.length + lblOffset.y;
           const labelText = `S${labelIndex + 1}`;
           
           // Label circle background
           svgElements += `<circle cx="${centerX}" cy="${centerY}" r="18" fill="${expStyle.color}" stroke="#fff" stroke-width="2"/>`;
           // Label text
           svgElements += `<text x="${centerX}" y="${centerY + 5}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
+          // Raumname rechts neben dem S-Kreis
+          if (el.name) {
+            const safeName = String(el.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            svgElements += `<text x="${centerX + 22}" y="${centerY + 5}" fill="#fff" stroke="#fff" stroke-width="3" font-size="14" font-weight="bold" text-anchor="start">${safeName}</text>`;
+            svgElements += `<text x="${centerX + 22}" y="${centerY + 5}" fill="${expStyle.color}" font-size="14" font-weight="bold" text-anchor="start">${safeName}</text>`;
+          }
           
           // Flächenanzeige (m²) unter dem Label wenn aktiviert
           if (polygonAreaVisible[el.id]) {

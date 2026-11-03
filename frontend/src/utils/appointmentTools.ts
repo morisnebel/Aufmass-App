@@ -87,7 +87,7 @@ export const scheduleDepartureReminder = async (opts: {
 
 // Normale Terminerinnerung zu einem festen Zeitpunkt (X Min vorher oder frei gewählt)
 export const scheduleAppointmentReminder = async (opts: {
-  title: string; date: string; time: string; at: Date; address?: string;
+  title: string; date: string; time: string; at: Date; address?: string; heading?: string;
 }): Promise<string | null> => {
   if (Platform.OS === 'web') return null;
   const at = opts.at;
@@ -99,7 +99,7 @@ export const scheduleAppointmentReminder = async (opts: {
   const [y, m, d] = opts.date.split('-');
   return Notifications.scheduleNotificationAsync({
     content: {
-      title: `Termin: ${opts.title}`,
+      title: opts.heading || `Termin: ${opts.title}`,
       body: `${d}.${m}.${y}${opts.time ? ` um ${opts.time} Uhr` : ''}${opts.address ? ` · ${opts.address}` : ''}`,
       data: { address: opts.address || '' },
     },

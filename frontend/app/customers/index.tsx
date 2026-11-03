@@ -663,22 +663,14 @@ export default function CustomersScreen() {
   return (
     <View style={styles.container}>
       {/* Header mit Zurück-Button (immer sichtbar, nicht nur im selectMode) */}
+      {/* Eine Kopfzeile: im Auswahlmodus zurück zur Projekteingabe, sonst zur Startseite */}
       <View style={styles.mainHeader}>
-        <TouchableOpacity onPress={() => router.push('/')} style={styles.backButtonMain}>
+        <TouchableOpacity testID="customers-back" onPress={() => (selectMode ? router.back() : router.push('/'))} style={styles.backButtonMain}>
           <Ionicons name="arrow-back" size={24} color="#1976d2" />
         </TouchableOpacity>
-        <Text style={styles.mainHeaderTitle}>Startseite</Text>
+        <Text style={styles.mainHeaderTitle}>{selectMode ? 'Kunde auswählen' : 'Startseite'}</Text>
         <View style={{ width: 40 }} />
       </View>
-      
-      {selectMode && (
-        <View style={styles.selectModeHeader}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#1976d2" />
-          </TouchableOpacity>
-          <Text style={styles.selectModeTitle}>Projekteingabe</Text>
-        </View>
-      )}
       <View style={styles.header}>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#666" />

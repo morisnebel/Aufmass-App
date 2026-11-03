@@ -21,7 +21,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { AppointmentPicker } from '../../src/components/projects/AppointmentPicker';
+import { ProjectAppointment } from '../../src/components/projects/ProjectAppointment';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, EmployeeMasterService, MaterialMasterService, MachineMasterService, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage, cleanupGhostPhotos, migrateChecklistImages } from '../../services/LocalStorage';
 import { PROJECT_STATUSES, getStatusMeta, normalizeStatus } from '../../src/constants/projectStatus';
 import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
@@ -2657,16 +2657,8 @@ export default function ProjectDetailScreen() {
                 </TouchableOpacity>
               </View>
 
-              {/* Termin (erscheint am Tag in der Heute-Übersicht der Startseite) */}
-              <AppointmentPicker
-                date={(project as any)?.appointment_date}
-                time={(project as any)?.appointment_time}
-                onSave={async (appointment_date, appointment_time) => {
-                  const projectId = Array.isArray(id) ? id[0] : id;
-                  await ProjectService.update(projectId, { appointment_date, appointment_time } as any);
-                  await loadProjectData();
-                }}
-              />
+              {/* Termin – voller Terminplaner (erscheint auf der Startseite und im Kalender) */}
+              {project && <ProjectAppointment project={project} onChanged={loadProjectData} />}
               
               {/* Bauherr-Daten */}
               <View style={styles.sectionDivider} />

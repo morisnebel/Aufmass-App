@@ -12,9 +12,9 @@ export function buildAgenda(opts: {
   onEditAppointment: (a: Appointment) => void;
 }): AgendaItem[] {
   const { projects, appointments, customers, onOpenProject, onEditAppointment } = opts;
-  // Projekt-Termin nicht doppelt zeigen, wenn ein verknüpfter eigener Termin am selben Tag existiert
-  const linked = new Set(appointments.filter(a => a.project_id).map(a => `${a.project_id}|${a.date}`));
-  const fromProjects: AgendaItem[] = projects.filter(p => !!p.appointment_date && !linked.has(`${p.id}|${p.appointment_date}`)).map(p => ({
+  // Projekt-Termin nicht doppelt zeigen, wenn es verknüpfte eigene Termine gibt
+  const linked = new Set(appointments.filter(a => a.project_id).map(a => a.project_id));
+  const fromProjects: AgendaItem[] = projects.filter(p => !!p.appointment_date && !linked.has(p.id)).map(p => ({
     key: `p-${p.id}`,
     title: p.name,
     subtitle: customers[p.customer_id]?.name,

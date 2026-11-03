@@ -7,18 +7,10 @@ import { Project, Customer, generateFullAddress } from '../../../services/LocalS
 import { Appointment, AppointmentService } from '../../../services/AppointmentService';
 import { scheduleDepartureReminder, scheduleAppointmentReminder, cancelReminder, departureTime } from '../../utils/appointmentTools';
 import { todayKey } from './TodayOverview';
+import { DateTimeSheet, pickDateTimeAndroid, fmtDateTime } from './DateTimeSheet';
 
 const TRAVEL_OPTIONS = [0, 15, 30, 45, 60, 90];
 const REMIND_OPTIONS: [number, string][] = [[0, 'Keine'], [15, '15 Min'], [30, '30 Min'], [60, '1 Std'], [120, '2 Std'], [1440, '1 Tag'], [-1, 'Eigene Zeit']];
-const pad = (n: number) => String(n).padStart(2, '0');
-const fmtDateTime = (d: Date) => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const parseDateTime = (t: string): Date | null => {
-  const m = t.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})$/);
-  if (!m) return null;
-  if (Number(m[4]) > 23 || Number(m[5]) > 59) return null;
-  const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4]), Number(m[5]));
-  return d.getDate() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 ? d : null;
-};
 const toDisplay = (k: string) => { const [y, m, d] = k.split('-'); return `${d}.${m}.${y}`; };
 const parseDate = (t: string): string | null => {
   const m = t.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);
@@ -29,7 +21,9 @@ const parseDate = (t: string): string | null => {
   return todayKey(d);
 };
 export const projectAddress = (p?: Project, c?: Customer) =>
-  (p?.address || '').trim() || (c ? generateFullAddress(c.street, c.zip, c.city) || c.address || '' : '');
+  (p ? generateFullAddress(p.objekt_street, p.objekt_plz, p.objekt_city) : '') ||
+  (p?.address || '').trim() ||
+  (c ? generateFullAddress(c.street, c.zip, c.city) || c.address || '' : '');
 
 type Props = {
   visible: boolean;
@@ -40,10 +34,12 @@ type Props = {
   onSaved: () => void;
   onCreateProject?: (a: Appointment) => void;
   initialDate?: string; // Vorbelegung für neuen Termin (z. B. aus dem Kalender)
+  initialTime?: string | null;
+  initialProjectId?: string | null; // Termin direkt aus einem Projekt anlegen
 };
 
 // Termin direkt von der Startseite anlegen/bearbeiten – mit Notiz, Navi-Adresse und Abfahrts-Erinnerung
-export function AppointmentFormModal({ visible, initial, projects, customers, onClose, onSaved, onCreateProject, initialDate }: Props) {
+export function AppointmentFormModal({ visible, initial, projects, customers, onClose, onSaved, onCreateProject, initialDate, initialTime, initialProjectId }: Props) {
   const [picker, setPicker] = useState<'date' | 'time' | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -54,8 +50,8 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   const [travel, setTravel] = useState(0);
   const [remindBefore, setRemindBefore] = useState(0);
   const [remindAt, setRemindAt] = useState<Date | null>(null);
-  const [remindPicker, setRemindPicker] = useState<'date' | 'time' | null>(null);
-  const [remindText, setRemindText] = useState('');
+  const [departAt, setDepartAt] = useState<Date | null>(null);
+  const [sheet, setSheet] = useState<'remind' | 'depart' | null>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [custOpen, setCustOpen] = useState(false);
   const [custQuery, setCustQuery] = useState('');
@@ -80,22 +76,23 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   useEffect(() => {
     if (!visible) return;
     setPicker(null);
-    setProjectId(initial?.project_id || null);
-    setTitle(initial?.title || '');
+    setSheet(null);
+    const proj = !initial && initialProjectId ? projects.find(p => p.id === initialProjectId) : undefined;
+    setProjectId(initial?.project_id || initialProjectId || null);
+    setTitle(initial?.title || proj?.name || '');
     setDateText(toDisplay(initial?.date || initialDate || todayKey()));
-    setTime(initial?.time || '');
-    setAddress(initial?.address || '');
+    setTime(initial?.time || initialTime || '');
+    setAddress(initial?.address || (proj ? projectAddress(proj, customers[proj.customer_id]) : ''));
     setNote(initial?.note || '');
     setTravel(initial?.travel_minutes || 0);
     setRemindBefore(initial?.remind_before || 0);
-    const ra = initial?.remind_at ? new Date(initial.remind_at) : null;
-    setRemindAt(ra);
-    setRemindText(ra ? fmtDateTime(ra) : '');
-    setRemindPicker(null);
-    setCustomerId(initial?.customer_id || null);
+    setRemindAt(initial?.remind_at ? new Date(initial.remind_at) : null);
+    setDepartAt(initial?.depart_at ? new Date(initial.depart_at) : null);
+    setCustomerId(initial?.customer_id || proj?.customer_id || null);
     setCustOpen(false);
     setCustQuery('');
-  }, [visible, initial, initialDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, initial, initialDate, initialTime, initialProjectId]);
 
   const customerList = useMemo(() => {
     const q = custQuery.trim().toLowerCase();
@@ -145,14 +142,46 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     return new Date(y, m - 1, d, hh, mm);
   })();
 
+  // Eigene Zeit: Kalender + Uhrzeit öffnen (Android: System-Dialoge, iOS/Web: Fenster)
+  const defaultCustom = () => {
+    const base = new Date(pickerValue.getTime() - 60 * 60000);
+    return base.getTime() > Date.now() ? base : new Date(Math.ceil((Date.now() + 60 * 60000) / 300000) * 300000);
+  };
+  const applyCustom = (kind: 'remind' | 'depart', d: Date) => {
+    if (kind === 'remind') { setRemindAt(d); setRemindBefore(-1); } else { setDepartAt(d); setTravel(-1); }
+    setSheet(null);
+  };
+  const openCustom = (kind: 'remind' | 'depart') => {
+    Keyboard.dismiss();
+    const current = (kind === 'remind' ? remindAt : departAt) || defaultCustom();
+    if (Platform.OS === 'android') pickDateTimeAndroid(current, d => applyCustom(kind, d));
+    else setSheet(kind);
+  };
+  // Fehlt die Termin-Uhrzeit, direkt die Uhrzeit-Auswahl öffnen
+  const needTime = () => {
+    if (normTime) return false;
+    if (Platform.OS !== 'web') { setPicker('time'); setTimeout(() => scrollRef.current?.scrollTo({ y: fieldY.current.date || 0, animated: true }), 50); }
+    else Alert.alert('Uhrzeit fehlt', 'Bitte zuerst die Uhrzeit des Termins eintragen.');
+    return true;
+  };
+  const chooseRemind = (m: number) => { setRemindBefore(m); if (m > 0) needTime(); };
+  const chooseTravel = (m: number) => { setTravel(m); if (m > 0) needTime(); };
+
   const save = async () => {
     if (!title.trim()) { Alert.alert('Titel fehlt', 'Bitte einen Titel eingeben oder ein Projekt wählen.'); return; }
     if (!date) { Alert.alert('Ungültiges Datum', 'Bitte im Format TT.MM.JJJJ eingeben, z. B. 05.11.2026.'); return; }
     if (!validTime) { Alert.alert('Ungültige Uhrzeit', 'Bitte als HH:MM eingeben, z. B. 08:30.'); return; }
     if ((travel > 0 || remindBefore > 0) && !normTime) { Alert.alert('Uhrzeit fehlt', 'Für Erinnerungen brauche ich die Uhrzeit des Termins.'); return; }
-    const customAt = remindBefore === -1 ? (Platform.OS === 'web' ? parseDateTime(remindText) : remindAt) : null;
-    if (remindBefore === -1 && !customAt) { Alert.alert('Erinnerungszeit fehlt', 'Bitte Datum und Uhrzeit für die Erinnerung wählen (TT.MM.JJJJ HH:MM).'); return; }
-    if (customAt && customAt.getTime() <= Date.now()) { Alert.alert('Erinnerung liegt in der Vergangenheit', 'Bitte eine Erinnerungszeit in der Zukunft wählen.'); return; }
+    const customAt = remindBefore === -1 ? remindAt : null;
+    const customDepart = travel === -1 ? departAt : null;
+    if ((remindBefore === -1 && !customAt) || (travel === -1 && !customDepart)) { Alert.alert('Zeit fehlt', 'Bitte Datum und Uhrzeit für die Erinnerung wählen.'); return; }
+    if ((customAt && customAt.getTime() <= Date.now()) || (customDepart && customDepart.getTime() <= Date.now())) { Alert.alert('Erinnerung liegt in der Vergangenheit', 'Bitte eine Zeit in der Zukunft wählen.'); return; }
+    if (normTime) {
+      const [ay, am, ad] = date.split('-').map(Number);
+      const [ah, amin] = normTime.split(':').map(Number);
+      const start = new Date(ay, am - 1, ad, ah, amin).getTime();
+      if ((customAt && customAt.getTime() > start) || (customDepart && customDepart.getTime() > start)) { Alert.alert('Erinnerung nach dem Termin', 'Die gewählte Erinnerungs- oder Abfahrtszeit liegt nach Terminbeginn.'); return; }
+    }
     const [ry, rm, rd] = date.split('-').map(Number);
     const [rh, rmin] = (normTime || '08:00').split(':').map(Number);
     const remindTime = customAt || (remindBefore > 0 ? new Date(new Date(ry, rm - 1, rd, rh, rmin).getTime() - remindBefore * 60000) : null);
@@ -160,7 +189,9 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     try {
       await cancelReminder(initial?.reminder_id);
       await cancelReminder(initial?.remind_id);
-      const reminderId = travel > 0 && normTime
+      const reminderId = customDepart
+        ? await scheduleAppointmentReminder({ heading: `Zeit loszufahren: ${title.trim()}`, title: title.trim(), date, time: normTime || '', at: customDepart, address: address.trim() })
+        : travel > 0 && normTime
         ? await scheduleDepartureReminder({ title: title.trim(), date, time: normTime, travelMinutes: travel, address: address.trim() })
         : null;
       const remindId = remindTime
@@ -168,10 +199,10 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
         : null;
       await AppointmentService.save({
         id: initial?.id, title: title.trim(), date, time: normTime, project_id: projectId, customer_id: customerId,
-        address: address.trim(), note: note.trim(), travel_minutes: travel || null, reminder_id: reminderId,
+        address: address.trim(), note: note.trim(), travel_minutes: travel || null, reminder_id: reminderId, depart_at: customDepart ? customDepart.toISOString() : null,
         remind_before: remindBefore || null, remind_id: remindId, remind_at: customAt ? customAt.toISOString() : null,
       });
-      if (Platform.OS !== 'web' && ((travel > 0 && !reminderId) || (remindTime && !remindId))) {
+      if (Platform.OS !== 'web' && ((travel !== 0 && !reminderId) || (remindTime && !remindId))) {
         Alert.alert('Termin gespeichert', 'Mindestens eine Erinnerungszeit liegt schon in der Vergangenheit oder Mitteilungen sind aus – dafür wurde keine Erinnerung geplant.');
       }
       onSaved();
@@ -212,7 +243,7 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             <Text style={s.label}>Titel</Text>
             <TextInput testID="apt-title" style={s.input} value={title} onChangeText={setTitle} placeholderTextColor="#94a3b8" placeholder="z. B. Aufmaß Dach Müller" />
 
-            <Text style={s.label}>Datum</Text>
+            <Text style={s.label} onLayout={trackY('date')}>Datum</Text>
             <View style={s.row}>
               {[['Heute', 0], ['Morgen', 1], ['Übermorgen', 2]].map(([l, n]) => (
                 <TouchableOpacity key={l as string} testID={`apt-quick-${n}`} style={s.quick} onPress={() => quickDate(n as number)}>
@@ -305,78 +336,24 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             <Text style={s.label}>Erinnerung vor dem Termin</Text>
             <View style={[s.row, { flexWrap: 'wrap' }]}>
               {REMIND_OPTIONS.map(([m, l]) => (
-                <TouchableOpacity key={m} testID={`apt-remind-${m}`} style={[s.chip, remindBefore === m && s.chipOn]} onPress={() => {
-                  setRemindBefore(m);
-                  if (m === -1 && Platform.OS !== 'web') {
-                    Keyboard.dismiss();
-                    if (!remindAt) {
-                      // Startwert: 1 Std vor Termin (oder morgen 08:00)
-                      const base = new Date(pickerValue.getTime() - 60 * 60000);
-                      setRemindAt(base.getTime() > Date.now() ? base : new Date(Date.now() + 60 * 60000));
-                    }
-                    setRemindPicker('date');
-                  } else setRemindPicker(null);
-                }}>
+                <TouchableOpacity key={m} testID={`apt-remind-${m}`} style={[s.chip, remindBefore === m && s.chipOn]} onPress={() => (m === -1 ? openCustom('remind') : chooseRemind(m))}>
                   {m === -1 && <Ionicons name="calendar-outline" size={14} color={remindBefore === m ? '#fff' : '#334155'} style={{ marginRight: 4 }} />}
-                  <Text style={[s.chipText, remindBefore === m && s.chipTextOn]}>{l}</Text>
+                  <Text style={[s.chipText, remindBefore === m && s.chipTextOn]}>{m === -1 && remindBefore === -1 && remindAt ? fmtDateTime(remindAt).slice(0, 16) : l}</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            {remindBefore === -1 && (Platform.OS === 'web' ? (
-              <TextInput testID="apt-remind-custom" style={[s.input, { marginTop: 8 }]} value={remindText} onChangeText={setRemindText} placeholderTextColor="#94a3b8" placeholder="TT.MM.JJJJ HH:MM" />
-            ) : (
-              <>
-                <View style={[s.row, { marginTop: 8 }]}>
-                  <TouchableOpacity testID="apt-remind-date" style={[s.input, s.pickBtn, { flex: 1.4 }, remindPicker === 'date' && s.pickOn]} onPress={() => setRemindPicker(remindPicker === 'date' ? null : 'date')}>
-                    <Ionicons name="calendar-outline" size={18} color="#1976d2" />
-                    <Text style={s.pickText}>{remindAt ? fmtDateTime(remindAt).slice(0, 10) : 'Datum'}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity testID="apt-remind-time" style={[s.input, s.pickBtn, { flex: 1 }, remindPicker === 'time' && s.pickOn]} onPress={() => setRemindPicker(remindPicker === 'time' ? null : 'time')}>
-                    <Ionicons name="alarm-outline" size={18} color="#1976d2" />
-                    <Text style={s.pickText}>{remindAt ? fmtDateTime(remindAt).slice(11) : 'Uhrzeit'}</Text>
-                  </TouchableOpacity>
-                </View>
-                {remindPicker && (
-                  <View style={Platform.OS === 'ios' ? s.pickerBox : undefined}>
-                    <DateTimePicker
-                      value={remindAt || new Date()}
-                      mode={remindPicker}
-                      display={Platform.OS === 'ios' ? (remindPicker === 'date' ? 'inline' : 'spinner') : 'default'}
-                      locale="de-DE"
-                      is24Hour
-                      minuteInterval={5}
-                      themeVariant="light"
-                      accentColor="#1976d2"
-                      onChange={(e, d) => {
-                        const step = remindPicker;
-                        if (Platform.OS === 'android') setRemindPicker(null);
-                        if (!d || e.type === 'dismissed') return;
-                        const cur = remindAt || new Date();
-                        const next = new Date(cur);
-                        if (step === 'date') next.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
-                        else next.setHours(d.getHours(), d.getMinutes(), 0, 0);
-                        setRemindAt(next);
-                        // Nach dem Datum direkt die Uhrzeit wählen
-                        if (step === 'date') setTimeout(() => setRemindPicker('time'), Platform.OS === 'android' ? 300 : 0);
-                      }}
-                    />
-                    {Platform.OS === 'ios' && remindPicker === 'time' && (
-                      <TouchableOpacity style={s.pickDone} onPress={() => setRemindPicker(null)}>
-                        <Text style={s.pickDoneText}>Fertig</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </>
-            ))}
 
             <Text style={s.label}>Fahrzeit → Erinnerung zum Losfahren</Text>
             <View style={[s.row, { flexWrap: 'wrap' }]}>
               {TRAVEL_OPTIONS.map(m => (
-                <TouchableOpacity key={m} testID={`apt-travel-${m}`} style={[s.chip, travel === m && s.chipOn]} onPress={() => setTravel(m)}>
+                <TouchableOpacity key={m} testID={`apt-travel-${m}`} style={[s.chip, travel === m && s.chipOn]} onPress={() => chooseTravel(m)}>
                   <Text style={[s.chipText, travel === m && s.chipTextOn]}>{m === 0 ? 'Keine' : `${m} Min`}</Text>
                 </TouchableOpacity>
               ))}
+              <TouchableOpacity testID="apt-travel--1" style={[s.chip, travel === -1 && s.chipOn]} onPress={() => openCustom('depart')}>
+                <Ionicons name="calendar-outline" size={14} color={travel === -1 ? '#fff' : '#334155'} style={{ marginRight: 4 }} />
+                <Text style={[s.chipText, travel === -1 && s.chipTextOn]}>{travel === -1 && departAt ? `Los: ${fmtDateTime(departAt)}` : 'Abfahrt wählen'}</Text>
+              </TouchableOpacity>
             </View>
             {departure && (
               <Text testID="apt-departure-info" style={s.hint}>
@@ -401,6 +378,13 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             </TouchableOpacity>
           </View>
         </View>
+        <DateTimeSheet
+          visible={!!sheet}
+          title={sheet === 'depart' ? 'Wann willst du losfahren?' : 'Wann soll ich dich erinnern?'}
+          value={(sheet === 'depart' ? departAt : remindAt) || defaultCustom()}
+          onCancel={() => setSheet(null)}
+          onConfirm={d => applyCustom(sheet === 'depart' ? 'depart' : 'remind', d)}
+        />
       </View>
     </Modal>
   );

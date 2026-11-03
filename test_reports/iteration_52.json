@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only retest of the iteration_51 fixes on the web preview (390x844, app_language='de', welcome dialog accepted, browser date 2026-11-03). MEDIUM fix PASS: 'Termin planen' prefills the Objektadresse 'Baustellenweg 3, 80999 München' and not the customer's home address. LOW fix PASS: a custom reminder (05.11 07:45) or departure (04.11 11:00) later than the 04.11 10:00 start shows the alert 'Erinnerung nach dem Termin' and nothing is saved; a valid departure at 09:00 saves. LOW fix PASS: typing '04.11.2026 06:15' and then pressing dt-quick-2 gives '05.11.2026 06:15'. Regression PASS: dt-sheet covers the full viewport (0,0,390x844) and the inner box is exactly centred (centre y 422 = 422); /customers shows a single 'Startseite' header; /customers?selectMode=true shows a single 'Kunde auswählen' header; 'Aus Kunden' fills the title 'Lena TEST_Berger' and the address 'Lindenweg 7, 80331 München'. HIGH fix is MOSTLY PASS. Created in the project for Morgen 09:30, then moved on Home to Übermorgen: Home shows one entry (home-week-a-<id>, no p- entry), /appointments shows one entry, project.appointment_date = 2026-11-05 09:30, and the project chip shows 'Do., 05.11.26, 09:30 Uhr'. Deleting on Home clears storage (appointments = [], project.appointment_date = null), and the project page afterwards shows no chip and the button 'Termin planen'. REMAINING BUG: right after deleting on Home, a ghost row home-week-p-proj_TEST_1 is still shown until the Home screen reloads or regains focus. The cause is that Home's onSaved only refreshes appointments, not projects. Move and delete on /appointments are fully correct, because that screen calls load(). No deprecated Expo packages were found in the reviewed files.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Home AppointmentFormModal onSaved (stale projects state)", "issue": "REPRODUCED: create an appointment in the project (Morgen 09:30), go to Home, move it to Übermorgen, then delete it on Home. Home still shows the ghost row home-week-p-proj_TEST_1 (Do 05.11 09:30), although localStorage already has project.appointment_date = null and no appointments. The ghost disappears after a reload. Root cause: app/index.tsx:307 onSaved={() => { setAppointmentModal(false); AppointmentService.getAll().then(setAppointments); }} reloads only the appointments. The `projects` state keeps the old appointment_date. With no linked appointment left, buildAgenda shows the project item again. Fix: call load() (as app/appointments.tsx:131 does), or also reload ProjectService.getAll(). Reference: /app/frontend/app/index.tsx:307", "testID": "home-week-p-<projectId>", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [".screenshots/home_after_move.jpg", ".screenshots/sheet_overlay.jpg", ".screenshots/customers.jpg", ".screenshots/customers_select.jpg", ".screenshots/home_ghost.jpg", "/app/tests/ui/iteration_52_appointment_sync.md"],
+  "action_items": [
+    "HIGH: In app/index.tsx:307 the AppointmentFormModal onSaved must reload projects too, e.g. `onSaved={() => { setAppointmentModal(false); load(); }}`. Otherwise deleting a project-linked appointment on Home leaves a ghost project entry until Home regains focus.",
+    "LOW: syncProjects (services/AppointmentService.ts:70) uses ProjectService.update, which bumps project.updated_at. Every appointment save or delete therefore marks the project as edited: it shows under 'Heute bearbeitet', moves up in 'Letzte Projekte', and may count as changed since the last export. Consider a write that keeps updated_at, like ProjectService.setFolder does."
+  ],
+  "critical_code_review_comments": [
+    "syncProjects overwrites a legacy project.appointment_date (set without a linked appointment) as soon as any linked appointment is saved, even one created from Home for a different date. The old legacy date is then lost and not migrated into an appointment. This is acceptable if intended.",
+    "syncProjects only takes future or today appointments (a.date >= today). If only past linked appointments exist, project.appointment_date becomes null. That is fine for the agenda, but project lists that show 'last appointment' will lose it.",
+    "The 'Erinnerung nach dem Termin' check only runs when the appointment has a time (normTime). For an all-day appointment, a custom reminder days after the appointment date is still accepted.",
+    "The dynamic import('./LocalStorage') inside syncProjects avoids a circular import, and errors are silently swallowed (try {} catch {}). Consider at least a console.warn.",
+    "No deprecated packages (expo-av / expo-barcode-scanner / expo-background-fetch) were found in the reviewed files."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "92% (11/12 checks pass; the Home delete still shows a stale ghost until the screen refreshes)"},
+  "seed_data_creation": "Each run used a fresh browser context with only localStorage seeded: cust_TEST_1, proj_TEST_1 (Objektadresse Baustellenweg 3, 80999 München), plus apt_TEST_1 and apt_TEST_2 in the last run. Nothing was persisted server-side.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The modal slides in, so wait about 1s after opening it and use scrollIntoView before clicking (otherwise 'Element is outside of the viewport'). The web Alert polyfill maps Alert.alert to window.alert/confirm, so use page.on('dialog') to accept. To reproduce the ghost, Home must have loaded the project WITH appointment_date (open Home after creating the appointment in the project), then delete without a reload.",
+  "rca_of_issue": "The ghost entry after deleting on Home: AppointmentService.remove correctly clears project.appointment_date in storage, but Home's onSaved (app/index.tsx:307) refreshes only `appointments`. buildAgenda uses the stale `projects` state, which still has appointment_date, and since no linked appointment remains, the project item is rendered. Mitigation: call load() in onSaved."
+}

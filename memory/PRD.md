@@ -782,3 +782,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Offen: Navi + Losfahr-Erinnerung für Termine, iPhone-Test des Termin-Formulars
 - Termin-Formular: eigene Tastatur-Steuerung (Notiz sichtbar), Kunde wählen für Adresse, normale Terminerinnerung (15 Min–1 Tag), Kunde wird beim „Projekt erstellen“ übernommen
 - Termin → Projekt: Adresse als Objektadresse; Navi-Auswahl Apple Karten/Google Maps/Waze; eigene Erinnerungszeit mit Kalender+Uhrzeit; Formulare Neues Projekt/Neuer Kunde: kein Überlauf, graue Platzhalter
+- Projektdetails: voller Terminplaner (ProjectAppointment) statt einfachem Datum; eigene Zeit für Erinnerung und Abfahrt über Kalender+Uhrzeit-Fenster (DateTimeSheet); Kundenauswahl nur eine Kopfzeile

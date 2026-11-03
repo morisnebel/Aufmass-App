@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only retest of the iteration 45 issues (mobile web 390x844, Pro, localStorage seed). All three items PASS. (1) FolderDropOverlay z-order: during a drag, elementFromPoint at the center of every drop target (fA, fB, Ohne Ordner, Neuer Ordner) returns the target itself. Pointer-events were temporarily forced to auto so the pointerEvents=none overlay could be hit-tested. elementFromPoint at the center of the archive-suggest-banner returns drop-target-fB, and the screenshots show the panel painted above the banner, KPI chips, folder chips and search bar. (2) Drag and press: drop on fB moved p3 into fB; drop on Ohne Ordner cleared p1; drop outside left p4 unchanged; drop on Neuer Ordner showed the prompt and created 'TEST_Drag Neu' with p5 inside. After every drop the URL stayed /projects. A long press without moving (800ms) entered selection mode with p3 selected (checkbox checked, blue border). A normal tap opened /projects/p3. (3) AppointmentPicker: '25:99' and '12:60' showed the alert 'Ungültige Uhrzeit'; '31.02.2026' and 'abc' showed 'Ungültiges Datum'. In all four cases nothing was saved and the modal stayed open. Valid '05.11.2026' + '8:30' saved as 2026-11-05 / 08:30 and the chip reads 'Do., 05.11.26, 08:30 Uhr'. Also checked: '06.11.26' with no time saves without a time.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AppointmentPicker web date (AppointmentPicker.tsx:36)", "issue": "The regex accepts a 3-digit year: '05.11.202' would be saved as year 202 and toKey gives '202-11-05'. This is an edge case and was found by code review only, not tested.", "testID": "appointment-date-input", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Projects drag overlay", "issues": ["The ghost card is centered on the finger, so it covers the label of the hovered drop target. The target is still highlighted by color and scale. Cosmetic: consider offsetting the ghost above the finger."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/home2_seed.py", "/app/tests/e2e/drag_folder_helpers.py"],
+  "action_items": [
+    "Optional: in AppointmentPicker, restrict the year to 2 or 4 digits (\\d{2}|\\d{4}).",
+    "Optional: offset the drag ghost so it does not cover the hovered target's label."
+  ],
+  "critical_code_review_comments": [
+    "The overlay root has pointerEvents='none', so a plain elementFromPoint skips it. That is intended: hit-testing uses measureInWindow rects. Future tests must force pointer-events:auto to check paint order.",
+    "makeDragGesture(item) is still rebuilt per card per render (from iteration 45, minor)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% (all requested retest items)"},
+  "seed_data_creation": "Only localStorage in the test browser contexts: TEST_ projects p1-p6, folders fA/fB, 'TEST_Drag Neu' folder, a Termin on p3. Nothing on the server.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Use /app/tests/e2e/home2_seed.py plus drag_folder_helpers.py. To verify overlay paint order, inject the style '*{pointer-events:auto !important}', call elementFromPoint, then remove the style. Alerts on web go through window.alert (webAlertPolyfill), so capture them with page.on('dialog'). Termin modal testIDs: project-appointment, appointment-date-input, appointment-time-input, appointment-save. The web clock is Nov 2026.",
+  "rca_of_issue": ""
+}

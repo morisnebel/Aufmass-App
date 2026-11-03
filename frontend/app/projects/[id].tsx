@@ -21,6 +21,7 @@ import {
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { AppointmentPicker } from '../../src/components/projects/AppointmentPicker';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, EmployeeMasterService, MaterialMasterService, MachineMasterService, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage, cleanupGhostPhotos, migrateChecklistImages } from '../../services/LocalStorage';
 import { PROJECT_STATUSES, getStatusMeta, normalizeStatus } from '../../src/constants/projectStatus';
 import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
@@ -2655,6 +2656,17 @@ export default function ProjectDetailScreen() {
                   <Ionicons name="calendar" size={18} color={project?.project_type_date ? '#4caf50' : '#999'} />
                 </TouchableOpacity>
               </View>
+
+              {/* Termin (erscheint am Tag in der Heute-Übersicht der Startseite) */}
+              <AppointmentPicker
+                date={(project as any)?.appointment_date}
+                time={(project as any)?.appointment_time}
+                onSave={async (appointment_date, appointment_time) => {
+                  const projectId = Array.isArray(id) ? id[0] : id;
+                  await ProjectService.update(projectId, { appointment_date, appointment_time } as any);
+                  await loadProjectData();
+                }}
+              />
               
               {/* Bauherr-Daten */}
               <View style={styles.sectionDivider} />

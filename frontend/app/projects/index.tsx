@@ -20,6 +20,8 @@ import { useFocusEffect } from 'expo-router';
 import { ProjectFolderService, ProjectFolder } from '../../services/ProjectFolders';
 import { FolderBar, FOLDER_ALL, FOLDER_NONE } from '../../src/components/projects/FolderBar';
 import { FolderPickerModal } from '../../src/components/projects/FolderPickerModal';
+import { FolderDropOverlay, DROP_NONE, DROP_NEW } from '../../src/components/projects/FolderDropOverlay';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { ProjectService, CustomerService, ChecklistService, PhotoService, SketchService, ReportService, MachineMasterService, MachineMaster, MaterialMasterService, MaterialMaster, Project, Customer, SettingsService, getNextAvailableProjectNumber, cleanupOrphanedStorage, migrateSketchPreviews } from '../../services/LocalStorage';
@@ -180,7 +182,44 @@ export default function HomeScreen() {
     loadFolders();
   };
 
+  // ===== Gedrückthalten + Ziehen auf Ordner =====
+  const containerRef = React.useRef<any>(null);
+  const containerOrigin = React.useRef({ x: 0, y: 0 });
+  const [dragProject, setDragProject] = useState<{ id: string; name: string } | null>(null);
+  const [dragPos, setDragPos] = useState({ x: 0, y: 0 });
+  const dropTargetRef = React.useRef<string | null>(null);
+  const onDropHover = useCallback((id: string | null) => { dropTargetRef.current = id; }, []);
+
+  const finishDrag = (item: Project, moved: boolean) => {
+    const target = dropTargetRef.current;
+    setDragProject(null);
+    dropTargetRef.current = null;
+    if (!moved) {
+      // Nur gedrückt gehalten → Mehrfachauswahl wie bisher
+      if (!selectionMode) { setSelectionMode(true); toggleProjectSelection(item.id); }
+      return;
+    }
+    if (!target) return;
+    if (target === DROP_NEW) setFolderNamePrompt({ id: null, name: '', moveIds: [item.id] });
+    else moveProjectsToFolder([item.id], target === DROP_NONE ? null : target);
+  };
+
+  const makeDragGesture = (item: Project) =>
+    Gesture.Pan()
+      .activateAfterLongPress(450)
+      .enabled(!selectionMode)
+      .runOnJS(true)
+      .onStart(e => {
+        containerRef.current?.measureInWindow((x: number, y: number) => { containerOrigin.current = { x, y }; });
+        setDragProject({ id: item.id, name: item.name });
+        setDragPos({ x: e.absoluteX, y: e.absoluteY });
+      })
+      .onUpdate(e => setDragPos({ x: e.absoluteX, y: e.absoluteY }))
+      .onEnd(e => finishDrag(item, Math.abs(e.translationX) + Math.abs(e.translationY) > 12))
+      .onFinalize((_, success) => { if (!success) { setDragProject(null); dropTargetRef.current = null; } });
+
   const folderCounts = useMemo(() => {
+    // (Ordner-Zähler)
     const visible = projects.filter(p => normalizeStatus(p.status) !== 'archiviert' || activeFilter === 'archiviert');
     const counts: Record<string, number> = { [FOLDER_ALL]: visible.length, [FOLDER_NONE]: 0 };
     visible.forEach(p => {
@@ -927,9 +966,10 @@ export default function HomeScreen() {
     const isSelected = selectedProjects.has(item.id);
     
     return (
+      <GestureDetector gesture={makeDragGesture(item)}>
       <TouchableOpacity
         testID={`project-card-${item.id}`}
-        style={[styles.projectCard, isSelected && styles.projectCardSelected]}
+        style={[styles.projectCard, isSelected && styles.projectCardSelected, dragProject?.id === item.id && { opacity: 0.4 }]}
         onPress={() => {
           if (selectionMode) {
             toggleProjectSelection(item.id);
@@ -937,12 +977,8 @@ export default function HomeScreen() {
             router.push(`/projects/${item.id}`);
           }
         }}
-        onLongPress={() => {
-          if (!selectionMode) {
-            setSelectionMode(true);
-            toggleProjectSelection(item.id);
-          }
-        }}
+        // Gedrückthalten: ohne Bewegung → Mehrfachauswahl, mit Bewegung → auf Ordner ziehen (siehe makeDragGesture)
+        onLongPress={() => {}} delayLongPress={450}
       >
         <View style={styles.projectHeader}>
           {selectionMode ? (
@@ -1039,6 +1075,7 @@ export default function HomeScreen() {
           </View>
         </View>
       </TouchableOpacity>
+      </GestureDetector>
     );
   };
 
@@ -1631,7 +1668,11 @@ export default function HomeScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View
+      style={styles.container}
+      ref={containerRef}
+      onLayout={() => containerRef.current?.measureInWindow((x: number, y: number) => { containerOrigin.current = { x, y }; })}
+    >
       {/* Processing Overlay */}
       {isProcessing && (
         <View style={styles.processingOverlay}>
@@ -1703,6 +1744,16 @@ export default function HomeScreen() {
         onPick={(folderId) => { const ids = folderPickFor || []; setFolderPickFor(null); moveProjectsToFolder(ids, folderId); }}
         onNewFolder={() => { const ids = folderPickFor || []; setFolderPickFor(null); setFolderNamePrompt({ id: null, name: '', moveIds: ids }); }}
       />
+      {/* Ziehen auf Ordner: über allem anderen (nach der Liste gerendert) */}
+      {dragProject && (
+        <FolderDropOverlay
+          folders={folders}
+          projectName={dragProject.name}
+          pos={dragPos}
+          origin={containerOrigin.current}
+          onHover={onDropHover}
+        />
+      )}
       <RenamePromptModal
         visible={!!folderNamePrompt}
         title={folderNamePrompt?.id ? 'Ordner umbenennen' : 'Neuer Ordner'}

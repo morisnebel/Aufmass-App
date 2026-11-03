@@ -18,7 +18,7 @@ type Props = {
 
 export function FolderBar({ folders, counts, active, onSelect, onAdd, onManage }: Props) {
   // Ausgewählten Ordner automatisch in den sichtbaren Bereich scrollen
-  const scrollRef = React.useRef<ScrollView>(null);
+  const scrollRef = React.useRef<any>(null);
   const chipX = React.useRef<Record<string, { x: number; w: number }>>({});
   const viewW = React.useRef(0);
   const scrollToActive = React.useCallback(() => {

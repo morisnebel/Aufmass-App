@@ -703,6 +703,9 @@ export interface Project {
   remarks?: string;
   // Projektordner (siehe services/ProjectFolders.ts), leer = ohne Ordner
   folder_id?: string | null;
+  // Termin (YYYY-MM-DD, lokales Datum) + optionale Uhrzeit (HH:MM) → Heute-Übersicht
+  appointment_date?: string | null;
+  appointment_time?: string | null;
   // Projektart (Überschrift für PDF)
   project_type?: string; // z.B. "Sturmschaden", "Wartung", "Neueindeckung"
   project_type_date?: string; // Optionales Datum für die Überschrift (ISO-String)

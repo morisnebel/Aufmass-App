@@ -1,0 +1,35 @@
+{
+  "summary": "Frontend tests on mobile web (390x844, Pro). Heute-Übersicht and Termin work: 'Heute' + 08:30 saved, shown under Termine as '08:30 Uhr' and sorted by time; tomorrow's Termin not listed; Entfernen works; 'Heute bearbeitet' max 5, no duplicates, archived hidden; tapping a row opens the project. 'Projekte' tile is gone and the other 7 tiles are present. Drag-to-folder moved projects correctly (fA/fB, Ohne Ordner, Neuer Ordner via prompt, persists after reload, release outside does nothing). One CRITICAL bug: every drag or long-press release also fired the card's onPress. A drop navigated to /projects/<id>, and a still long-press entered selection but left the card unselected (toggled twice). I fixed it in projects/index.tsx and verified it. Remaining: the drop panel renders underneath the list header (z-order). Projektart regression works.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Project card drag/long-press (app/projects/index.tsx ~L970)", "issue": "FIXED BY T1: The TouchableOpacity onPress fired on mouse-up after the RNGH Pan gesture. Any drop (also outside the targets) opened the project detail. Drop on 'Neuer Ordner' showed the name prompt on top of the detail screen. A long press without moving entered selection mode, but the card ended up unselected because onPress toggled it again. Reproduced 4/4 times. Fix: add onLongPress={() => {}} delayLongPress={400} to the card. Pressability then suppresses onPress after a long press. Verified: drop stays on /projects, long press selects the card, normal tap still navigates.", "testID": "project-card-<id>", "priority": "CRITICAL"},
+      {"component": "FolderDropOverlay z-order", "issue": "The overlay is rendered as the first child of the container with absoluteFill and no zIndex or elevation. Later siblings (archive-suggest-banner, search bar, chips) paint on top of the drop panel and the ghost card. elementFromPoint at the center of drop-target-fB returned 'archive-suggest-banner', and the screenshot shows the targets hidden behind the banner and search bar. Drops still work, because hit-testing uses the measured rects, but the user cannot see the targets. Reference: app/projects/index.tsx:1676, FolderDropOverlay.tsx:50", "testID": "drop-target-*", "priority": "HIGH"},
+      {"component": "AppointmentPicker time validation", "issue": "The regex /^\\d{1,2}:\\d{2}$/ accepts invalid times: '25:99' was saved and shown as '25:99 Uhr'. Reference: AppointmentPicker.tsx:39", "testID": "appointment-time-input", "priority": "LOW"},
+      {"component": "AppointmentPicker web date", "issue": "An unparseable date such as 'abc' silently falls back to the previous or today's date without feedback. '31.02.2026' would roll over to March via new Date. Reference: AppointmentPicker.tsx:35-38", "testID": "appointment-date-input", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Project detail (web)", "issues": ["The Projektart 'Datum' picker shows an empty modal on web (only Löschen/Fertig) because DateTimePicker is not supported on web. This existed before and is not caused by this change; AppointmentPicker already handles web with a TextInput."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/home2_seed.py", "/app/tests/e2e/drag_folder_helpers.py"],
+  "action_items": [
+    "Review and keep T1's fix in app/projects/index.tsx: onLongPress={() => {}} delayLongPress={400} on the project card TouchableOpacity. Optionally align it to 450ms to remove the 400-450ms dead zone where a release does nothing.",
+    "Render FolderDropOverlay above the list: move it after the FlatList in the JSX, or give its root zIndex: 1000 and elevation: 20. Re-check at 390px with the archive banner visible.",
+    "AppointmentPicker: validate hours 0-23 and minutes 0-59. Show an error for an invalid or unparseable TT.MM.JJJJ date, and reject rollover dates instead of saving silently."
+  ],
+  "critical_code_review_comments": [
+    "makeDragGesture(item) builds a new Gesture object for every card on every render (including each dragPos update during a drag). Consider memoizing per item, or a single gesture with item lookup, for long lists.",
+    "TodayOverview's date and todayKey are computed per render; the card does not refresh at midnight if the app stays open (minor).",
+    "Setting a Termin bumps updated_at. A project with a Termin tomorrow therefore also appears under 'Heute bearbeitet' today. This is consistent with the spec, just noting it."
+  ],
+  "updated_files": ["/app/frontend/app/projects/index.tsx (added onLongPress noop + delayLongPress=400 to the project card TouchableOpacity)", "/app/tests/e2e/drag_folder_helpers.py (new)"],
+  "success_rate": {"backend": "N/A", "frontend": "90% (after the T1 fix; the overlay z-order is still open)"},
+  "seed_data_creation": "Only localStorage in the test browser contexts: TEST_ projects p1-p9, folders fA/fB, 'TEST_Neu Drag' folder, settings project_type_options TEST_Wartung/TEST_Reparatur. Nothing on the server.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Load helpers with G={}; exec(open('/app/tests/e2e/home2_seed.py').read(), G). Drag via /app/tests/e2e/drag_folder_helpers.py. The card must be inside the viewport (scroll_into_view first), or the overlay never appears. Hold at least 700ms, then move, then move to the drop-target center, then mouse.up. Check page.url afterwards: it must stay /projects. RenamePromptModal input testID is rename-prompt-input, confirm with text 'OK'. The web system clock is in Nov 2026.",
+  "rca_of_issue": "On web, RNGH Pan activation does not cancel the RN-web Pressability press on the underlying TouchableOpacity. Because the card no longer had onLongPress, Pressability treated mouse-up after any hold as a press and called onPress. That navigated to the project, or toggled the selection a second time. Adding an onLongPress handler makes Pressability skip onPress once the long-press delay has passed. Verified in the browser after hot reload."
+}

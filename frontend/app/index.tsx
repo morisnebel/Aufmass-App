@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProjectService, CustomerService, SettingsService, PhotoService, Project, Customer, cleanupOrphanedStorage, migrateSketchPreviews } from '../services/LocalStorage';
 import { ProjectFolderService, ProjectFolder } from '../services/ProjectFolders';
 import { FolderTiles } from '../src/components/home/FolderTiles';
+import { TodayOverview, todayKey } from '../src/components/home/TodayOverview';
 import { Features, loadProStatus, updateFeatures, getProStatus } from '../services/FeatureFlags';
 import { BackupService } from '../services/BackupService';
 import { quickFreeableScan } from '../services/StorageCleanup';
@@ -141,6 +142,19 @@ export default function HomeScreen() {
     [active]
   );
 
+  // Heute-Übersicht: Termine heute (Feld „Termin“) + heute bearbeitete Projekte
+  const today = todayKey();
+  const appointmentsToday = useMemo(
+    () => active.filter(p => p.appointment_date === today)
+      .sort((a, b) => (a.appointment_time || '99').localeCompare(b.appointment_time || '99')),
+    [active, today]
+  );
+  const editedToday = useMemo(
+    () => active.filter(p => p.appointment_date !== today && p.updated_at && todayKey(new Date(p.updated_at)) === today)
+      .sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || '')).slice(0, 5),
+    [active, today]
+  );
+
   // Schnellaktionen – nur vorhandene Funktionen; Import nur wenn im Tarif freigeschaltet
   const actions: HomeTile[] = [
     { key: 'new-project', title: 'Neues Projekt', icon: 'add', color: '#fff', bg: '#1565c0', onPress: () => router.push('/projects/new') },
@@ -257,6 +271,14 @@ export default function HomeScreen() {
         {(backupDueDays !== null || storageFreeable !== null) && (
           <View style={[s.section, isTablet && { flexDirection: 'row' }, { gap: 12 }]}>{banners}</View>
         )}
+        <View style={s.section}>
+          <TodayOverview
+            appointments={appointmentsToday}
+            editedToday={editedToday}
+            customerName={p => customers[p.customer_id]?.name || (p as any).bauherr_name}
+            onOpen={id => router.push(`/projects/${id}`)}
+          />
+        </View>
         <View style={[s.section, isWide && { flexDirection: 'row', alignItems: 'stretch' }, { gap: 16 }]}>
           {quickActions}
           {recentCard}

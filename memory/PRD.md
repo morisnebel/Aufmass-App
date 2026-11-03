@@ -772,3 +772,5 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Haftungsausschluss beim ersten Start als dezente kleine Karte (DisclaimerGate), blendet sich auf /legal-Seiten aus
 - Neues Foto setzt updated_at des Projekts (rückt in Letzte Projekte nach oben); FolderBar scrollt zum aktiven Ordner
 - touchProject(): neue Skizze/Checkliste/Foto setzt updated_at des Projekts; Kachel 'Projekte' von Startseite entfernt
+- Projekt-Termin (appointment_date/time, AppointmentPicker im Projekt), Heute-Übersicht auf Startseite (Termine heute + heute bearbeitet)
+- Projekte per Gedrückthalten+Ziehen auf Ordner (RNGH Pan activateAfterLongPress, FolderDropOverlay); ohne Bewegung = Mehrfachauswahl; GestureHandlerRootView in _layout

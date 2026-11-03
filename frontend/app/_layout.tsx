@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, LogBox, Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardDismissButton } from '../components/KeyboardDismissButton';
 import { AppNameHeader } from '../services/FeatureFlags';
 import { SketchService, migrateChecklistImages, migrateDocumentImages } from '../services/LocalStorage';
@@ -45,7 +46,7 @@ export default function RootLayout() {
   }, []);
   return (
     <ErrorBoundary>
-    <View style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="auto" />
       <DisclaimerGate>
       <Stack
@@ -184,7 +185,7 @@ export default function RootLayout() {
       </Stack>
       </DisclaimerGate>
       <KeyboardDismissButton />
-    </View>
+    </GestureHandlerRootView>
     </ErrorBoundary>
   );
 }

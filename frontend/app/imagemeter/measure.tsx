@@ -1016,7 +1016,9 @@ export default function ImageMeterMeasureScreen() {
           onResponderRelease={handleTouchEnd}
           onTouchEnd={(e) => { if (!isDraggingRef.current && !justDraggedRef.current && (drawMode === 'area' || drawMode === 'angle' || drawMode === 'component' || drawMode === 'rect' || drawMode === 'none')) handleCanvasTap(e); }}
         >
-          <Svg key={`meas-${fabricTick++}`} style={StyleSheet.absoluteFill}>
+          {/* Touch-Ziel bleibt der Container (SVG remountet pro Render) */}
+          <View style={{ ...StyleSheet.absoluteFill, pointerEvents: 'none' }} collapsable={false}>
+          <Svg key={`meas-${fabricTick++}`} width="100%" height="100%" style={StyleSheet.absoluteFill}>
             {measurements.map(renderLine)}
             {areaMeasurements.map(renderArea)}
             {angleMeasurements.map(renderAngle)}
@@ -1088,6 +1090,7 @@ export default function ImageMeterMeasureScreen() {
             })()}
             <Circle key={`inv-${fabricTick++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
           </Svg>
+          </View>
         </View>
 
         {/* ===== REAL MAGNIFIER LENS — zoomed image view ===== */}

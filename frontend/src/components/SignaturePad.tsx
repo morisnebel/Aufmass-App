@@ -141,12 +141,15 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({
         style={[styles.canvas, { height }, isActive && styles.canvasActive]}
         {...(isActive ? panResponder.panHandlers : {})}
       >
+        {/* Touch-Ziel bleibt der Container (SVG remountet pro Render) */}
+        <View style={{ ...StyleSheet.absoluteFill, pointerEvents: 'none' }} collapsable={false}>
         <Svg key={`sig-${fabricTick++}`} width="100%" height="100%">
           {paths.map((d, i) => (
             <Path key={i} d={d} stroke="#1a237e" strokeWidth={2.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
           ))}
           <Path key={`inv-${fabricTick++}`} d="M -9999 -9999" stroke="none" fill="none" />
         </Svg>
+        </View>
         {isEmpty && (
           <View pointerEvents="none" style={styles.placeholderContainer}>
             <Ionicons name={isActive ? 'create' : 'create-outline'} size={28} color={isActive ? '#1976d2' : '#bbb'} />

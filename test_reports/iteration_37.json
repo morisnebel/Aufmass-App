@@ -1,0 +1,40 @@
+{
+  "summary": "Web regression for the canvas pointerEvents:'none' wrapper change (390x844, Chromium, with mouse and CDP-touch simulation). The wrapper change itself caused no regression: there were no red screens, no 'Maximum update depth' errors and no 'is not a function' errors on any canvas. Working: Sketch Pen, Rectangle and Circle drag (Elemente count increments); the Measure Line drag opens the 'Bemaßungspfeil' modal, and entering 5,5 then Add renders the arrow with the '5,5' label; tapping a shape in Edit mode shows 'Ausgewählt'; touch-dragging a shape moves it smoothly (rect moved +80/+100 px step by step); inserting an image via Photo from Gallery works, it is auto-selected, and in Position mode both touch and mouse drags move it; Save (checkmark) returns to the project, and reopening restores all 3 elements and the image position. Photo annotate: after 'Zeichnen', mouse and touch strokes appear. SignaturePad: after 'Unterschrift', mouse and touch strokes appear. Area calculator: 4 taps plus closing produce NETTO 6.00 m². ImageMeter: dragging opens 'Maß eingeben', and Hinzufügen adds '1 Messung 2,5 cm'. BUGS: (1) ImageMeter measurement lines are invisible on web because the Svg has no width/height. (2) Sketch on web: inserted images paint over the drawing layer (z-order), so lines and measure lines drawn over a photo are hidden. (3) In Sketch Edit mode a desktop-mouse drag moves the shape only by the first mousemove step; touch works. (4) ImageMeter screens show an extra raw 'imagemeter/measure' stack header. Documents annotation was not tested on web because the PDF renderer is a WebView; the code review found the same Svg-sizing bug as ImageMeter. Deprecated packages detected: none checked beyond the files in scope. SafeAreaView issues detected: none in the files in scope.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ImageMeter measure SVG overlay", "issue": "The <Svg key=meas-...> at app/imagemeter/measure.tsx:1021 has only style={StyleSheet.absoluteFill} and no width/height props. On web the <svg> element is a replaced element, so it falls back to its intrinsic 300x150 size. Measurement lines, areas and labels outside that 300x150 box are clipped and invisible. The measurement IS created ('1 Messung 2,5 cm' appears in the list, and the line exists in the DOM at y=360 while the svg ends at y=340). Setting width/height to 100% in devtools made the line and label appear (verified).", "testID": "n/a", "priority": "HIGH"},
+      {"component": "Sketch editor image z-order (web)", "issue": "The image layer Svg (app/sketches/draw.tsx ~7086) is position:absolute, and the main drawing Svg (~7110) is position:static (computed). In CSS, positioned elements paint above static ones, so inserted photos and backgrounds cover pen strokes, measure lines and the grid on web. A measure line '2,25' drawn over the image exists in the DOM but is not visible. Native is not affected (sibling order defines z-order). Fix: give the main Svg style position:'relative' (or zIndex:1), or make both absolute.", "testID": "n/a", "priority": "MEDIUM"},
+      {"component": "Sketch editor select-drag with mouse (web)", "issue": "In Edit mode, a desktop mouse drag of a rect moves it only by the first mousemove delta (for example +10/+12 px for an 80/100 drag) and then it stays put. React hook state shows that dragMode/dragStart are set only on the first move (the responder grant is delayed until the move, not the mousedown), and later moves are not applied. The CDP touch drag works perfectly, so this is likely a web-mouse-only problem in the react-native-web responder. Pen and shape creation with the mouse work.", "testID": "n/a", "priority": "LOW"},
+      {"component": "ImageMeter routes header", "issue": "imagemeter/new, imagemeter/measure and imagemeter/index are not registered in app/_layout.tsx. A default stack header with the raw title 'imagemeter/measure' is shown above the custom blue header, which duplicates the header and takes about 64px.", "testID": "n/a", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Photo annotate save (web)", "issue": "Speichern shows success only via Alert.alert, so on web the user stays on the annotate screen. This is the known Alert no-op on web.", "affected_testIDs": []}
+    ],
+    "design_issues": [
+      {"screen": "Sketch editor", "issues": ["An inserted 200x150 photo is placed at 400x300 with x=100, so it extends off the 390px-wide canvas on a phone; consider fitting it to the canvas width."]},
+      {"screen": "Project Area tab empty state", "issues": ["The empty-state icon and text are left-aligned and unstyled, unlike the other tabs."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/canvas_regression_notes.md", "/app/tests/e2e/setup_snippet.py", ".screenshots/ (sk_measure, sk_moved, sk_img, sk_img_measure, sk_reopen, sk_zorder, ann_drawn, sig2, calc1, im3, im_fixprobe)"],
+  "action_items": [
+    "HIGH: app/imagemeter/measure.tsx:1021 – add width=\"100%\" height=\"100%\" (or containerDimensions.width/height) to the measurement <Svg>, which currently only has style absoluteFill. Do the same in app/documents/view.tsx:1853 (<Svg key=docanno-...> has the same pattern).",
+    "MEDIUM: app/sketches/draw.tsx main canvas <Svg> (~line 7110): add position:'relative' (or zIndex above the image layer) so drawings and measure lines render above inserted images on web.",
+    "MEDIUM: Register the imagemeter routes in app/_layout.tsx with headerShown:false (or set it in each screen) to remove the duplicate raw 'imagemeter/measure' header.",
+    "LOW: Investigate why a web mouse drag in sketch Edit mode applies only the first move step (touch is fine). Possibly the select-mode onTouchStart is not called on mousedown or the responder is released after the first re-render.",
+    "LOW: Calculator console error '<svg> attribute height: A negative value is not valid (\"-200\")' appears after closing a polygon (app/calculator/new.tsx); clamp computed heights."
+  ],
+  "critical_code_review_comments": [
+    "The wrapper approach (a pointerEvents:'none' View around the remounting Svg) is sound. The container stays the responder target (elementFromPoint returns the container div, and the DOM node is stable during drags).",
+    "Svg elements that rely on style absoluteFill without width/height break on web; SignaturePad (width/height 100%), annotate and calculator pass explicit sizes and are fine.",
+    "Files are very large (draw.tsx 9.8k lines, calculator/new.tsx 9k lines); splitting is advised."
+  ],
+  "updated_files": ["/app/tests/e2e/canvas_regression_notes.md", "/app/tests/e2e/setup_snippet.py"],
+  "success_rate": {"backend": "N/A", "frontend": "about 80% (16/20 checks pass; 4 bugs found, 1 of them HIGH)"},
+  "seed_data_creation": "Only in the test browser's localStorage: aufmassprofi_settings (disclaimer), aufmassprofi_customers (cust1), aufmassprofi_projects (p1 TEST_Projekt), aufmassprofi_pro_unlocked=true.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "See /app/tests/e2e/canvas_regression_notes.md for tool x positions and flows. Use CDP Input.dispatchTouchEvent to simulate iPhone touch; mouse drags behave differently in sketch Edit mode. Wait about 8s on home before opening project-card-p1, otherwise Pro tabs (Area etc.) are sometimes missing. Deep links to /calculator/new and /imagemeter/new work after visiting the project once. In the sketch editor, images are intentionally ignored in Edit mode (findElementAtPoint skips images) and are moved with the Position tool / Photo Mode.",
+  "rca_of_issue": "ImageMeter invisible lines: an <svg> without width/height attributes is a CSS replaced element, so even with position:absolute and inset 0 it keeps its intrinsic 300x150 size, and content outside it is clipped. Sketch image z-order: the image layer Svg is absolute and the main Svg is static, so per the CSS painting order the positioned element paints on top."
+}

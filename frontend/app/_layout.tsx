@@ -134,6 +134,9 @@ export default function RootLayout() {
           name="documents/view" 
           options={{ title: t('screenTitles.document'), headerShown: false }} 
         />
+        <Stack.Screen name="imagemeter/index" options={{ headerShown: false }} />
+        <Stack.Screen name="imagemeter/new" options={{ headerShown: false }} />
+        <Stack.Screen name="imagemeter/measure" options={{ headerShown: false }} />
         <Stack.Screen 
           name="calculator/index" 
           options={{ title: t('screenTitles.areaCalculations') }} 

@@ -7063,6 +7063,14 @@ export default function DrawSketchScreen() {
             }
           }}
         >
+        {/* Zeichen-Ebenen sind NICHT touch-fähig: Touch-Ziel ist immer der stabile
+            Canvas-Container (Responder). Sonst wird auf iOS (SDK 58) die SVG-Ebene zum
+            Touch-Ziel und der Remount pro Render (Fabric-Workaround) bricht die laufende
+            Geste ab -> Bilder/Maßlinien lassen sich nicht ziehen. */}
+        <View
+          style={{ width: screenWidth, height: canvasHeight, pointerEvents: 'none' }}
+          collapsable={false}
+        >
         {/* Statische Bild-Ebene (Hintergrund + eingefügte Fotos): eigener Svg-Layer,
             der NUR remountet wenn sich die Bilder selbst ändern – verhindert das
             Flackern der Fotos beim Zeichnen (Haupt-Canvas remountet pro Änderung) */}
@@ -7104,7 +7112,7 @@ export default function DrawSketchScreen() {
           key={Platform.OS === 'web' ? 'canvas' : `canvas-${fabricInvalidateTick.current++}`}
           width={screenWidth}
           height={canvasHeight}
-          style={[styles.svg, { backgroundColor: 'transparent' }]}
+          style={[styles.svg, { backgroundColor: 'transparent', position: 'relative', zIndex: 1 }]}
           viewBox={Platform.OS === 'android' && androidViewBox.w > 0
             ? `${androidViewBox.x} ${androidViewBox.y} ${androidViewBox.w} ${androidViewBox.h}`
             : `0 0 ${screenWidth} ${canvasHeight}`
@@ -7259,6 +7267,7 @@ export default function DrawSketchScreen() {
             <Circle key={`inv-${fabricInvalidateTick.current++}`} cx={-99999} cy={-99999} r={0.1} fill="none" stroke="none" opacity={0} />
           )}
         </Svg>
+        </View>
 
         {/* Info overlay - mit eigenem Responder damit Buttons funktionieren */}
         <View 

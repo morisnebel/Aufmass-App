@@ -1113,6 +1113,8 @@ export default function AnnotatePhotoScreen() {
               }
             }}
           >
+            {/* Touch-Ziel bleibt der Container (SVG remountet pro Render) */}
+            <View style={{ ...StyleSheet.absoluteFill, pointerEvents: 'none' }} collapsable={false}>
             <Svg key={`anno-${fabricTick++}`} height={canvasDimensions.height || 400} width={canvasDimensions.width || SCREEN_WIDTH} style={{ position: 'absolute', top: 0, left: 0 }}>
               {/* Draw paths */}
               {paths.map((p, index) => (
@@ -1278,6 +1280,7 @@ export default function AnnotatePhotoScreen() {
               })}
               <Circle key={`inv-${fabricTick++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
             </Svg>
+            </View>
           </View>
         </View>
         </Animated.View>

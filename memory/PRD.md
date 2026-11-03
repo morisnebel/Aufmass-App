@@ -744,3 +744,10 @@ Behobene SDK-58-Regressionen (Ursachen fuer "App funktioniert nicht mehr wie am 
 Testagent iteration_36 (Web): Zurueck-Navigation ohne Schleife ueberall OK, Skizze speichert, Rapport 559,80 EUR OK, Backup/Export-Download OK.
 Bekannt, nicht geaendert (schon am 28.10. so, nur Web): Alert.alert-Buttons laufen im Web nicht (Backup-Restore/Navigation nach Speichern), Foto-Aktionszeile bei 390px eng, Pro-Tabs erst nach Start ueber Home.
 Offen: Pruefung in Expo Go auf dem iPhone durch den Nutzer (SQLite-Migration bestehender Daten, Export/Import nativ).
+
+## Session Nov 2026 Teil 2 - Skizze: Bilder positionieren / Masslinien ziehen (iOS, SDK 58)
+Ursache (Hypothese, auf iOS nicht direkt pruefbar): Seit SDK 58 wird die SVG-Ebene selbst zum Touch-Ziel; da die SVG-Canvas pro Render remountet wird (Fabric-Redraw-Workaround aus Sep 2026), bricht iOS die laufende Geste ab -> Move-Events fehlen, Bild/Masslinie laesst sich nicht ziehen (Log: nur "Setting drag mode to move", danach nichts).
+Fix: Alle Zeichen-SVG-Ebenen in einen View mit style.pointerEvents:'none' gewickelt -> Touch-Ziel ist immer der stabile Container-Responder. Dateien: app/sketches/draw.tsx, app/photos/annotate.tsx, app/imagemeter/measure.tsx, app/documents/view.tsx, src/components/SignaturePad.tsx, app/calculator/new.tsx.
+Zusaetzlich (Web): ImageMeter/Dokument-SVG width/height 100% (Linien waren im Web unsichtbar); Haupt-SVG der Skizze position:relative/zIndex 1 (Fotos deckten im Web Zeichnungen ab); imagemeter-Routen in _layout.tsx mit headerShown:false (doppelter Header).
+Testagent iteration_37 (Web, Maus + simulierter Touch): Stift/Formen/Masslinie/Verschieben/Bild einfuegen+verschieben/Speichern OK; Foto-Anmerkung, Unterschrift, Flaechenrechner, ImageMeter OK.
+Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: Remount-Workaround (fabricInvalidateTick) testweise deaktivieren, da RN 0.88 den Props-Propagation-Bug evtl. behoben hat.

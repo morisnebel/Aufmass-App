@@ -4608,6 +4608,8 @@ export default function AreaCalculatorEditor() {
           handleCanvasTouch(event);
         }}
       >
+        {/* Touch-Ziel bleibt der Container (SVG remountet pro Render) */}
+        <View style={{ width: canvasWidth, height: canvasHeight, pointerEvents: 'none' }} collapsable={false}>
         <Svg key={`calc-${fabricTick++}`} width={canvasWidth} height={canvasHeight}>
           {/* Zoom/Pan transformation group */}
           <G transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoomLevel})`}>
@@ -5647,6 +5649,7 @@ export default function AreaCalculatorEditor() {
           </G>{/* End of zoom/pan transformation group */}
           <Circle key={`inv-${fabricTick++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
         </Svg>
+        </View>
         
         {/* Reference Image Overlay - Top Right Corner */}
         {backgroundImage && (

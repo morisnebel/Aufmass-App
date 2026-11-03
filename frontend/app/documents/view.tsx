@@ -1848,7 +1848,9 @@ export default function DocumentViewScreen() {
                         resizeMode="contain"
                       />
                     )}
-                    <Svg key={`docanno-${fabricTick++}`} style={StyleSheet.absoluteFill}>
+                    {/* Touch-Ziel bleibt der Container (SVG remountet pro Render) */}
+                    <View style={{ ...StyleSheet.absoluteFill, pointerEvents: 'none' }} collapsable={false}>
+                    <Svg key={`docanno-${fabricTick++}`} width="100%" height="100%" style={StyleSheet.absoluteFill}>
                       {paths.map((p, i) => (
                         <Path key={i} d={p.path} stroke={p.color} strokeWidth={p.strokeWidth} fill="none" opacity={p.opacity} strokeLinecap="round" />
                       ))}
@@ -1990,6 +1992,7 @@ export default function DocumentViewScreen() {
                       })()}
                       <Circle key={`inv-${fabricTick++}`} cx={-9999} cy={-9999} r={0.1} fill="none" stroke="none" opacity={0} />
                     </Svg>
+                    </View>
                   </View>
                 </ScrollView>
               </ScrollView>

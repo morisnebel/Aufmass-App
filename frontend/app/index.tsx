@@ -22,6 +22,7 @@ import { HomeHero } from '../src/components/home/HomeHero';
 import { StatCards, StatItem } from '../src/components/home/StatCards';
 import { HomeBanner } from '../src/components/home/HomeBanner';
 import { HomeTour, tourRef, TOUR_DONE_KEY } from '../src/components/home/HomeTour';
+import { ProTeaser, ProFeatureKey } from '../src/components/ProTeaser';
 import { RecentProjects } from '../src/components/home/RecentProjects';
 import { TileGrid, HomeTile, cardShadow } from '../src/components/home/HomeTiles';
 
@@ -111,6 +112,7 @@ export default function HomeScreen() {
 
   // Erste-Schritte-Tour: nach Bestätigung der Hinweise einmalig (oder erneut aus der Anleitung gestartet)
   const [tour, setTour] = useState(false);
+  const [proTeaser, setProTeaser] = useState<ProFeatureKey | null>(null);
   const checkTour = useCallback(async () => {
     const [done, settings] = await Promise.all([AsyncStorage.getItem(TOUR_DONE_KEY), SettingsService.get().catch(() => ({}))]);
     if (!done && (settings as any)?.disclaimer_accepted_at) setTimeout(() => setTour(true), 900);
@@ -194,6 +196,9 @@ export default function HomeScreen() {
 
   const navTiles: HomeTile[] = [
     { key: 'customers', title: 'Kunden', subtitle: 'Adressen und Kontaktdaten', icon: 'people-outline', color: '#0284c7', bg: '#e0f2fe', onPress: () => router.push('/customers/') },
+    ...(Features.showReportTab ? [] : [
+      { key: 'pro-team', title: 'Team & Material', subtitle: '★ PRO – demnächst verfügbar', icon: 'lock-closed-outline', color: '#d97706', bg: '#fff7e6', onPress: () => setProTeaser('team') },
+    ]),
     ...(Features.showReportTab ? [
       { key: 'employees', title: 'Mitarbeiter', subtitle: 'Team und Zuordnungen', icon: 'people-circle-outline', color: '#1d4ed8', bg: '#dbeafe', onPress: () => router.push('/employees/') },
       { key: 'materials', title: 'Material', subtitle: 'Materiallisten und Bestand', icon: 'cube-outline', color: '#d97706', bg: '#fef3c7', onPress: () => router.push('/materials/') },
@@ -341,6 +346,7 @@ export default function HomeScreen() {
         </View>
       </View>
       <HomeTour visible={tour} onClose={() => setTour(false)} />
+      <ProTeaser feature={proTeaser} onClose={() => setProTeaser(null)} />
     </ScrollView>
   );
 }

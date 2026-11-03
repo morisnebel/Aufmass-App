@@ -2,6 +2,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const APPOINTMENTS_KEY = 'aufmassprofi_appointments';
+export const PACKING_RECENT_KEY = 'aufmassprofi_packing_recent';
+
+export interface PackItem { id: string; text: string; done: boolean }
 
 export interface Appointment {
   id: string;
@@ -16,6 +19,7 @@ export interface Appointment {
   remind_before?: number | null; // normale Terminerinnerung (Minuten vor Beginn, -1 = eigene Zeit)
   remind_at?: string | null; // eigene Erinnerungszeit (ISO)
   depart_at?: string | null; // eigene Abfahrtszeit (ISO), travel_minutes = -1
+  packing?: PackItem[]; // Checkliste: was mitnehmen
   remind_id?: string | null;
   customer_id?: string | null;
   created_at: string;

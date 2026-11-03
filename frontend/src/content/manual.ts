@@ -20,7 +20,7 @@ export const MANUAL: ManualSection[] = [
       { text: 'Basic: Projekte, Kunden, Termine mit Erinnerungen, Skizzen mit Flächenberechnung, Fotos mit Beschriftung, Checklisten, Projekt-PDF und Backup.' },
       { text: 'Checklisten in Basic: bis zu 3 Vorlagen, 10 Hauptpunkte und 5 Unterpunkte je Checkliste.', info: 'In Pro sind Vorlagen und Punkte unbegrenzt. Dazu kommen verschachtelte Unterpunkte, Logos, Druckbild, Vorschau, Verknüpfungen, Berechnungen und Import/Export von Vorlagen.' },
       { text: 'Pro zusätzlich: Dach-Aufmaß, Flächen-Kalkulator, Fotomessung, Dokumente, Rapporte mit Mitarbeitern, Material und Maschinen, Referenzen sowie Projekte exportieren, importieren und verschieben.', pro: true },
-      { text: 'Pro freischalten: Einstellungen öffnen, ganz nach unten scrollen, „Erweitert…“ tippen und den Freischaltcode eingeben. Danach stehen alle Pro-Funktionen sofort zur Verfügung.', info: 'Deine bisherigen Daten bleiben beim Wechsel von Basic auf Pro vollständig erhalten.' },
+      { text: 'Die Pro-Version ist demnächst verfügbar. In der App erkennst du Pro-Funktionen am Schloss mit „PRO“ – ein Tipp darauf zeigt, was sie dir bringen.', info: 'Deine bisherigen Daten bleiben beim Wechsel von Basic auf Pro vollständig erhalten.' },
     ],
   },
   {
@@ -113,7 +113,8 @@ export const MANUAL: ManualSection[] = [
     steps: [
       { text: 'Startseite „+ Termin“ oder im Projekt „Termin planen“.' },
       { text: 'Optional ein Projekt wählen, Titel eingeben, Datum (Heute/Morgen/Übermorgen oder Kalender) und Uhrzeit setzen.' },
-      { text: 'Notiz eintragen, z. B. „Leiter mitnehmen“.' },
+      { text: 'Notiz eintragen, z. B. „Kunde vorher anrufen“.' },
+      { text: '„Mitnehmen“: Checkliste, was du zum Termin brauchst – eigene Einträge tippen oder Vorschläge wie Leiter, Zollstock antippen. Abhaken, sobald eingepackt.', info: 'Deine eigenen Einträge merkt sich die App als Vorschlag. Was noch nicht abgehakt ist, steht auch in der Erinnerung. Auf der Startseite zeigt ein Taschen-Symbol, wie viel schon eingepackt ist (z. B. 2/5).' },
       { text: 'Adresse fürs Navi eintragen oder über „Aus Kunden“ übernehmen.' },
       { text: '„Erinnerung vor dem Termin“: 15 Min bis 1 Tag vorher oder „Eigene Zeit“ mit Kalender und Uhrzeit.', info: 'Erinnerungen kommen als Mitteilung aufs Handy – auch wenn die App geschlossen ist. Die App fragt dafür einmalig um Erlaubnis.' },
       { text: '„Fahrzeit“: Die App erinnert dich rechtzeitig zum Losfahren (Fahrzeit + 10 Min Puffer) – oder du wählst mit „Abfahrt wählen“ eine feste Zeit.' },
@@ -160,7 +161,7 @@ export const MANUAL: ManualSection[] = [
     steps: [
       { text: 'Sprache, Logo, PDF-Layout, Projekttypen und Werkzeugnamen anpassen.' },
       { text: 'Archiv und Papierkorb verwalten.' },
-      { text: 'Pro-Version: unter „Erweitert…“ den Freischaltcode eingeben, um Dach-Aufmaß, Fotomessung, Rapporte, Mitarbeiter, Material und weitere Funktionen zu nutzen.' },
+      { text: 'Pro-Version (demnächst verfügbar): Dach-Aufmaß, Fotomessung, Rapporte, Mitarbeiter, Material und weitere Funktionen.' },
       { text: 'Rechtliches: Datenschutz, Haftungsausschluss und Impressum.' },
     ],
   },

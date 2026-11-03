@@ -66,7 +66,7 @@ const ensurePermission = async (): Promise<boolean> => {
 
 // Plant die Abfahrts-Erinnerung; gibt die ID zurück (oder null, wenn nicht möglich)
 export const scheduleDepartureReminder = async (opts: {
-  title: string; date: string; time: string; travelMinutes: number; address?: string;
+  title: string; date: string; time: string; travelMinutes: number; address?: string; packing?: string;
 }): Promise<string | null> => {
   if (Platform.OS === 'web') return null;
   const at = departureTime(opts.date, opts.time, opts.travelMinutes);
@@ -78,7 +78,7 @@ export const scheduleDepartureReminder = async (opts: {
   return Notifications.scheduleNotificationAsync({
     content: {
       title: `Zeit loszufahren: ${opts.title}`,
-      body: `Termin um ${opts.time} Uhr${opts.address ? ` · ${opts.address}` : ''} (ca. ${opts.travelMinutes} Min. Fahrt)`,
+      body: `Termin um ${opts.time} Uhr${opts.address ? ` · ${opts.address}` : ''} (ca. ${opts.travelMinutes} Min. Fahrt)${opts.packing ? `\nMitnehmen: ${opts.packing}` : ''}`,
       data: { address: opts.address || '' },
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: 'termine' },
@@ -87,7 +87,7 @@ export const scheduleDepartureReminder = async (opts: {
 
 // Normale Terminerinnerung zu einem festen Zeitpunkt (X Min vorher oder frei gewählt)
 export const scheduleAppointmentReminder = async (opts: {
-  title: string; date: string; time: string; at: Date; address?: string; heading?: string;
+  title: string; date: string; time: string; at: Date; address?: string; heading?: string; packing?: string;
 }): Promise<string | null> => {
   if (Platform.OS === 'web') return null;
   const at = opts.at;
@@ -100,7 +100,7 @@ export const scheduleAppointmentReminder = async (opts: {
   return Notifications.scheduleNotificationAsync({
     content: {
       title: opts.heading || `Termin: ${opts.title}`,
-      body: `${d}.${m}.${y}${opts.time ? ` um ${opts.time} Uhr` : ''}${opts.address ? ` · ${opts.address}` : ''}`,
+      body: `${d}.${m}.${y}${opts.time ? ` um ${opts.time} Uhr` : ''}${opts.address ? ` · ${opts.address}` : ''}${opts.packing ? `\nMitnehmen: ${opts.packing}` : ''}`,
       data: { address: opts.address || '' },
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: 'termine' },

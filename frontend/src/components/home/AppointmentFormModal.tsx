@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Project, Customer, generateFullAddress } from '../../../services/LocalStorage';
-import { Appointment, AppointmentService } from '../../../services/AppointmentService';
+import { Appointment, AppointmentService, PackItem } from '../../../services/AppointmentService';
+import { PackingList } from './PackingList';
 import { scheduleDepartureReminder, scheduleAppointmentReminder, cancelReminder, departureTime } from '../../utils/appointmentTools';
 import { todayKey } from './TodayOverview';
 import { DateTimeSheet, pickDateTimeAndroid, fmtDateTime } from './DateTimeSheet';
@@ -53,6 +54,9 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   const [remindAt, setRemindAt] = useState<Date | null>(null);
   const [departAt, setDepartAt] = useState<Date | null>(null);
   const [sheet, setSheet] = useState<'remind' | 'depart' | null>(null);
+  const [packing, setPacking] = useState<PackItem[]>([]);
+  const baseline = useRef('');
+  const currentRef = useRef('');
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [custOpen, setCustOpen] = useState(false);
   const [custQuery, setCustQuery] = useState('');
@@ -90,6 +94,10 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     setRemindAt(initial?.remind_at ? new Date(initial.remind_at) : null);
     setDepartAt(initial?.depart_at ? new Date(initial.depart_at) : null);
     setCustomerId(initial?.customer_id || proj?.customer_id || null);
+    setPacking(initial?.packing || []);
+    baseline.current = '';
+    // Ausgangszustand merken, sobald die Felder gesetzt sind
+    setTimeout(() => { baseline.current = currentRef.current; }, 0);
     setCustOpen(false);
     setCustQuery('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,6 +143,10 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   const validTime = !time.trim() || (!!tm && Number(tm[1]) < 24 && Number(tm[2]) < 60);
   const normTime = tm ? `${tm[1].padStart(2, '0')}:${tm[2]}` : null;
   const date = parseDate(dateText);
+  // Ungespeicherte Änderungen gegenüber dem Zustand beim Öffnen?
+  const current = JSON.stringify({ title, dateText, time, address, note, travel, remindBefore, customerId, projectId, packing, remindAt: remindAt?.getTime(), departAt: departAt?.getTime() });
+  const dirty = !!baseline.current && current !== baseline.current;
+  currentRef.current = current;
   const departure = date && normTime && travel > 0 ? departureTime(date, normTime, travel) : null;
   // Startwert für Kalender/Uhrzeit-Rad
   const pickerValue = (() => {
@@ -187,21 +199,23 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     const [rh, rmin] = (normTime || '08:00').split(':').map(Number);
     const remindTime = customAt || (remindBefore > 0 ? new Date(new Date(ry, rm - 1, rd, rh, rmin).getTime() - remindBefore * 60000) : null);
     setSaving(true);
+    const packList = packing.filter(p => !p.done).map(p => p.text).join(', ');
     try {
       await cancelReminder(initial?.reminder_id);
       await cancelReminder(initial?.remind_id);
       const reminderId = customDepart
-        ? await scheduleAppointmentReminder({ heading: `Zeit loszufahren: ${title.trim()}`, title: title.trim(), date, time: normTime || '', at: customDepart, address: address.trim() })
+        ? await scheduleAppointmentReminder({ heading: `Zeit loszufahren: ${title.trim()}`, title: title.trim(), date, time: normTime || '', at: customDepart, address: address.trim(), packing: packList })
         : travel > 0 && normTime
-        ? await scheduleDepartureReminder({ title: title.trim(), date, time: normTime, travelMinutes: travel, address: address.trim() })
+        ? await scheduleDepartureReminder({ title: title.trim(), date, time: normTime, travelMinutes: travel, address: address.trim(), packing: packList })
         : null;
       const remindId = remindTime
-        ? await scheduleAppointmentReminder({ title: title.trim(), date, time: normTime || '', at: remindTime, address: address.trim() })
+        ? await scheduleAppointmentReminder({ title: title.trim(), date, time: normTime || '', at: remindTime, address: address.trim(), packing: packList })
         : null;
       await AppointmentService.save({
         id: initial?.id, title: title.trim(), date, time: normTime, project_id: projectId, customer_id: customerId,
         address: address.trim(), note: note.trim(), travel_minutes: travel || null, reminder_id: reminderId, depart_at: customDepart ? customDepart.toISOString() : null,
         remind_before: remindBefore || null, remind_id: remindId, remind_at: customAt ? customAt.toISOString() : null,
+        packing,
       });
       if (Platform.OS !== 'web' && ((travel !== 0 && !reminderId) || (remindTime && !remindId))) {
         Alert.alert('Termin gespeichert', 'Mindestens eine Erinnerungszeit liegt schon in der Vergangenheit oder Mitteilungen sind aus – dafür wurde keine Erinnerung geplant.');
@@ -226,7 +240,7 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
         <View style={[s.sheet, kb > 0 && { marginBottom: kb, paddingBottom: 10, maxHeight: winH - kb - insets.top - 8 }]}>
           <View style={s.head}>
             <Text style={[s.title, { flex: 1 }]}>{initial ? 'Termin bearbeiten' : 'Neuer Termin'}</Text>
-            <HelpButton section="termine" onBeforeOpen={onClose} testID="apt-help" />
+            <HelpButton section="termine" onBeforeOpen={onClose} testID="apt-help" confirmLeave={dirty ? 'Das Termin-Formular wird geschlossen und deine Eingaben gehen verloren. Tipp: Erst speichern, dann die Hilfe öffnen.' : undefined} />
             <TouchableOpacity testID="apt-close" onPress={onClose} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={26} color="#334155" /></TouchableOpacity>
           </View>
           <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
@@ -304,7 +318,11 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             )}
 
             <Text style={s.label} onLayout={trackY('note')}>Notiz</Text>
-            <TextInput testID="apt-note" style={[s.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: 10 }]} value={note} onChangeText={setNote} onFocus={() => focusField('note')} placeholderTextColor="#94a3b8" placeholder="z. B. Leiter mitnehmen, Kunde vorher anrufen" multiline />
+            <TextInput testID="apt-note" style={[s.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: 10 }]} value={note} onChangeText={setNote} onFocus={() => focusField('note')} placeholderTextColor="#94a3b8" placeholder="z. B. Kunde vorher anrufen" multiline />
+
+            <View onLayout={trackY('packing')}>
+              <PackingList items={packing} onChange={setPacking} onFocusInput={() => focusField('packing')} />
+            </View>
 
             <View style={s.labelRow} onLayout={trackY('address')}>
               <Text style={[s.label, { marginTop: 0, marginBottom: 0 }]}>Adresse fürs Navi</Text>

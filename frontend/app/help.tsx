@@ -77,7 +77,7 @@ export default function HelpScreen() {
         <View style={{ flex: 1 }}>
           <Text style={[s.versionTitle, isPro && { color: '#fff' }]}>Deine Version: {isPro ? 'Aufmaßprofi Pro' : 'Aufmaßprofi Basic'}</Text>
           <Text style={[s.versionText, isPro && { color: '#fef3c7' }]}>
-            {isPro ? 'Alle Funktionen sind freigeschaltet – auch die mit PRO markierten.' : 'Mit PRO markierte Funktionen gibt es nur in der Pro-Version. Freischalten: Einstellungen → „Erweitert…“.'}
+            {isPro ? 'Alle Funktionen sind freigeschaltet – auch die mit PRO markierten.' : 'Mit PRO markierte Funktionen gibt es nur in der Pro-Version – demnächst verfügbar.'}
           </Text>
         </View>
       </View>

@@ -19,6 +19,7 @@ export type AgendaItem = {
   address?: string;
   note?: string;
   hasReminder?: boolean;
+  packing?: { done: number; total: number };
   onPress: () => void;
 };
 
@@ -33,6 +34,12 @@ export function AgendaRow({ item, onNavigate, testID }: { item: AgendaItem; onNa
           <Text style={s.name} numberOfLines={1}>{item.title}</Text>
           {!!(item.subtitle || item.note) && <Text style={s.sub} numberOfLines={1}>{[item.subtitle, item.note].filter(Boolean).join(' · ')}</Text>}
         </View>
+        {!!item.packing?.total && (
+          <View testID={`${testID}-packing`} accessibilityLabel={`${item.packing.done} von ${item.packing.total} Sachen eingepackt`} style={[s.pack, item.packing.done === item.packing.total && { backgroundColor: '#dcfce7' }]}>
+            <Ionicons name="bag-check-outline" size={13} color={item.packing.done === item.packing.total ? '#16a34a' : '#b45309'} />
+            <Text style={[s.packText, item.packing.done === item.packing.total && { color: '#16a34a' }]}>{item.packing.done}/{item.packing.total}</Text>
+          </View>
+        )}
         {item.hasReminder && <Ionicons name="notifications-outline" size={16} color="#0369a1" />}
       </TouchableOpacity>
       {!!item.address && (
@@ -90,6 +97,9 @@ export function TodayOverview({ items, editedToday, onOpenProject, onAdd, onNavi
 }
 
 const s = StyleSheet.create({
+  pack: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#fef3c7', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2, marginRight: 6 },
+  packText: { fontSize: 11, fontWeight: '800', color: '#b45309' },
+
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, ...cardShadow },
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   title: { fontSize: 18, fontWeight: '800', color: '#0f172a' },

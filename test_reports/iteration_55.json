@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only test on the public web preview (390x844, de, tours done, disclaimer accepted; TEST_ customer/project seeded only into each fresh Playwright localStorage). ALL REQUESTED FLOWS PASS. (1) 'Mitnehmen' checklist: apt-packing sits between Notiz and Adresse. Adding via apt-pack-add and via Enter both work and clear the input. A duplicate ('  akku ' vs 'Akku') is ignored. Chips apt-pack-suggest-Leiter/Zollstock add the item and disappear from suggestions. Toggling gives a checkbox, line-through and grey text, and the counter goes 0/4 -> 1/4 eingepackt. Remove works (1/3). Custom entries ('TEST_Gerüstplan', 'Akku') show first among the suggestions of a new appointment. (2) After saving, the home today row shows badge home-today-a-<id>-packing '1/3'. Reopening keeps all 3 items and their done state. When all are done the badge turns green (3/3, bg #dcfce7) and stays after a reload. The week row shows home-week-a-<id>-packing '1/2'. /appointments shows cal-item-…-packing and cal-up-…-packing. The project 'Termin planen' form has the checklist and saves it. (3) Help dirty-check, 12/12 cases pass. Confirm 'Hilfe öffnen?' appears for: address only, packing chip only, typed packing item, date-only (Morgen), project chip, project form + packing, and toggling an item on an existing appointment. Cancel keeps the modal and its input; accept goes to /help?section=termine. No confirm for: untouched new form, add-then-remove (back to the snapshot), project-prefilled title/address untouched, and an existing appointment opened untouched. (4) Pro gating: Basic direct load of /projects/<id> shows all 5 pro-locked-* pills and pro-locked-dach opens pro-teaser. After the PROFI2024 unlock, page.goto and reload of /projects/<id> show 0 locked pills (also at 1.2s, no flash) and real tabs Messung/Fläche/Dach/Doku/Rapport. Minor: the project page appointment chip has no packing badge, suggestion chips are 36px tall, and the recent-suggestion case handling is off. No deprecated Expo packages found.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "ProjectAppointment chip (src/components/projects/ProjectAppointment.tsx:54-63)", "issue": "A saved project appointment with packing items shows no done/total packing badge on the project page chip (project-appointment-<id>). Home and /appointments do show it, so this is inconsistent.", "testID": "project-appointment-<id>", "priority": "LOW"},
+      {"component": "PackingList recent suggestions (src/components/home/PackingList.tsx:26,36)", "issue": "DEFAULTS.includes(t) is case-sensitive. Adding 'leiter' saves it to recent, so later appointments suggest both 'leiter' and 'Leiter'. The dedupe in suggestions (arr.indexOf(v) === idx) is case-sensitive too.", "testID": "apt-pack-suggest-<text>", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Appointment modal – Mitnehmen", "issues": ["Suggestion chips (s.chip, PackingList.tsx:100) are 36px tall, below the 44px minimum touch target. Every other control in the modal is 44px.", "The packing badge (bag icon + '1/3') has no accessibilityLabel, so screen readers only read '1/3'."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [".screenshots/packing.png", ".screenshots/badge.png", ".screenshots/appointments.png", ".screenshots/project_apt.png", ".screenshots/pro_direct.png"],
+  "action_items": [
+    "LOW: show the packing done/total badge on project-appointment-<id> chips in ProjectAppointment.tsx, the same way AgendaRow does.",
+    "LOW: in PackingList.add, compare to DEFAULTS case-insensitively, and dedupe suggestions case-insensitively.",
+    "LOW: raise the PackingList suggestion chip minHeight to 44."
+  ],
+  "critical_code_review_comments": [
+    "The PackingList testIDs embed the raw item text (spaces, '/'), which makes them fragile for automation. Consider apt-pack-toggle-<id> with a text fallback.",
+    "Baseline snapshot is captured via setTimeout(0) after the reset setStates. It works on web, but it relies on React committing before the timer fires. A useEffect keyed on a 'resetToken' after render would be more deterministic.",
+    "app/projects/[id].tsx is still about 6142 lines and should be split."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% of requested flows (3 low-priority findings)"},
+  "seed_data_creation": "TEST_Kunde (TEST_c1) and TEST_Projekt (TEST_p1) were injected only into isolated Playwright browser localStorage. They are discarded with each context. No user data touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Each browser_automation run has fresh localStorage. Set app_language/tour keys plus aufmassprofi_customers/aufmassprofi_projects JSON arrays (project needs id, customer_id, name, status 'active', objekt_* fields), then reload, then click disclaimer-checkbox and disclaimer-accept. Wait about 1s after opening the appointment modal (slide animation), otherwise clicks fail with 'outside of viewport'. The web Alert maps to window.confirm (accept = action). Pro unlock: /settings, then settings-pro-unlock-open, settings-pro-code-input, settings-pro-code-submit. The Fläche tab label is 'Fläche' (de.json)."
+}

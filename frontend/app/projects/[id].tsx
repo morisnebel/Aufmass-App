@@ -22,6 +22,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from '
 import Ionicons from '@react-native-vector-icons/ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectAppointment } from '../../src/components/projects/ProjectAppointment';
+import { ProTeaser, ProLockedPill, ProFeatureKey } from '../../src/components/ProTeaser';
 import { ProjectService, CustomerService, RoofService, PhotoService, SketchService, ChecklistService, SettingsService, DocumentService, Document, ChecklistTemplateService, AreaCalculationService, AreaCalculation, LineCategoryService, LineCategory, ReportService, Report, EmployeeMasterService, MaterialMasterService, MachineMasterService, isProjectNumberDuplicate, isCustomerNumberDuplicate, isObjectNumberDuplicateInProject, getNextAvailableProjectNumber, getNextAvailableCustomerNumber, getNextAvailableObjectNumber, setLastUsedProjectType, getLastUsedProjectType, loadAllProjectDataFast, migratePhotoStorage, cleanupGhostPhotos, migrateChecklistImages } from '../../services/LocalStorage';
 import { PROJECT_STATUSES, getStatusMeta, normalizeStatus } from '../../src/constants/projectStatus';
 import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
@@ -31,7 +32,7 @@ import PdfPreviewModal from '../../src/components/project/PdfPreviewModal';
 import { createPdfFile } from '../../services/PdfExport';
 import { styles } from '../../src/styles/projectDetailStyles';
 import { ReferenceService, ReferencePhoto } from '../../services/ReferenceService';
-import { Features } from '../../services/FeatureFlags';
+import { Features, loadProStatus, updateFeatures } from '../../services/FeatureFlags';
 import { isPro, getProStatus } from '../../services/FeatureFlags';
 import { useTranslation } from 'react-i18next';
 import * as Print from 'expo-print';
@@ -162,6 +163,8 @@ export default function ProjectDetailScreen() {
   const isPhone = Platform.OS === 'ios' ? !Platform.isPad : screenWidth < 768;
   
   const [project, setProject] = useState<Project | null>(null);
+  const [proTeaser, setProTeaser] = useState<ProFeatureKey | null>(null);
+  const [, setProLoaded] = useState(0);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [roofs, setRoofs] = useState<Roof[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -169,6 +172,10 @@ export default function ProjectDetailScreen() {
   // Memo-/Notiz-Texte der Skizzen (für gruppierte Anzeige unter der Vorschau)
   const [sketchElementNotes, setSketchElementNotes] = useState<Record<string, { pointer: string[]; memo: string[] }>>({});
   const [sketchLabelCfg, setSketchLabelCfg] = useState<{ pointerName: string; memoName: string }>({ pointerName: 'Memo', memoName: 'Notiz' });
+  useEffect(() => {
+    // Pro-Status sicher laden (z. B. bei Direktaufruf), damit Pro-Reiter korrekt erscheinen
+    loadProStatus().then(() => { updateFeatures(); setProLoaded(x => x + 1); }).catch(() => {});
+  }, []);
   useEffect(() => {
     const loadSketchElementNotes = async () => {
       try {
@@ -2539,8 +2546,15 @@ export default function ProjectDetailScreen() {
             )}
           </TouchableOpacity>
           )}
+          {/* Basic: Pro-Funktionen sichtbar, aber gesperrt – Tipp erklärt den Nutzen */}
+          {!Features.showMessungTab && <ProLockedPill feature="messung" onPress={setProTeaser} />}
+          {!Features.showFlaechenTab && <ProLockedPill feature="flaechen" onPress={setProTeaser} />}
+          {!Features.showDachTab && <ProLockedPill feature="dach" onPress={setProTeaser} />}
+          {!Features.showDokuTab && <ProLockedPill feature="doku" onPress={setProTeaser} />}
+          {!Features.showReportTab && <ProLockedPill feature="rapport" onPress={setProTeaser} />}
         </ScrollView>
       </View>
+      <ProTeaser feature={proTeaser} onClose={() => setProTeaser(null)} />
 
       <ScrollView style={styles.content}>
         {activeTab === 'overview' && (

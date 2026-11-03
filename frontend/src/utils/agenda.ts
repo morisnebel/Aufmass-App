@@ -31,7 +31,8 @@ export function buildAgenda(opts: {
     time: a.time,
     address: a.address,
     note: a.note,
-    hasReminder: !!a.reminder_id,
+    hasReminder: !!(a.reminder_id || a.remind_id),
+    packing: a.packing?.length ? { done: a.packing.filter(p => p.done).length, total: a.packing.length } : undefined,
     onPress: () => onEditAppointment(a),
   }));
   return [...fromProjects, ...fromAppointments]

@@ -1,17 +1,21 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 
 // Kleines „?“ – öffnet direkt das passende Kapitel der Bedienungsanleitung
-export function HelpButton({ section, onBeforeOpen, light, testID }: { section: string; onBeforeOpen?: () => void; light?: boolean; testID?: string }) {
+// confirmLeave: vorher nachfragen (z. B. wenn ungespeicherte Eingaben verloren gehen würden)
+export function HelpButton({ section, onBeforeOpen, light, testID, confirmLeave }: { section: string; onBeforeOpen?: () => void; light?: boolean; testID?: string; confirmLeave?: string }) {
   const router = useRouter();
+  const open = () => { onBeforeOpen?.(); router.push({ pathname: '/help', params: { section } }); };
   return (
     <TouchableOpacity
       testID={testID || `help-btn-${section}`}
       accessibilityLabel="Hilfe öffnen"
       hitSlop={8}
       style={[s.btn, light ? s.light : s.dark]}
-      onPress={() => { onBeforeOpen?.(); router.push({ pathname: '/help', params: { section } }); }}
+      onPress={() => confirmLeave
+        ? Alert.alert('Hilfe öffnen?', confirmLeave, [{ text: 'Abbrechen', style: 'cancel' }, { text: 'Hilfe öffnen', style: 'destructive', onPress: open }])
+        : open()}
     >
       <Text style={[s.text, { color: light ? '#fff' : '#1976d2' }]}>?</Text>
     </TouchableOpacity>

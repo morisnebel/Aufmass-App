@@ -786,3 +786,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Bedienungsanleitung: /help (Kurzanleitung + aufklappbare Kapitel mit ℹ️-Erklärungen, PDF teilen), Inhalt in src/content/manual.ts; Links in Einstellungen + Startseiten-Kachel „Anleitung“
 - Erste-Schritte-Tour (HomeTour, 6 Schritte, Key aufmassprofi_tour_done, startet nach Disclaimer, neu startbar in /help); Suche in der Anleitung mit Hervorhebung
 - Hilfe-?: Termin (apt-help), Backup (backup-help), Skizze (sketch-help) öffnen /help?section=…; Skizzen-Tour (aufmassprofi_sketch_tour_done); Anleitung mit Basic/Pro-Kennzeichnung (PRO-Badges, Kapitel „Basic und Pro“, Versionskarte, PDF mit PRO)
+- Termin-Checkliste „Mitnehmen“ (packing in Appointment, Vorschläge + zuletzt genutzte, Badge x/y in Agenda, offene Punkte in Erinnerung); ProTeaser/ProLockedPill für Basic (Projekt-Reiter + Startseiten-Kachel, „demnächst verfügbar“); Hilfe-? im Termin fragt bei ungespeicherten Eingaben nach

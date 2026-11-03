@@ -59,6 +59,11 @@ export function ProjectAppointment({ project, onChanged }: Props) {
             <Text style={[s.chipValue, { color: '#dc2626' }]}>{pretty(a.date)}{a.time ? `, ${a.time} Uhr` : ''}</Text>
           </View>
           {(a.reminder_id || a.remind_id || a.remind_before || a.travel_minutes) ? <Ionicons name="notifications" size={16} color="#dc2626" style={{ marginRight: 8 }} /> : null}
+          {!!a.packing?.length && (
+            <Text testID={`project-appointment-${a.id}-packing`} accessibilityLabel={`${a.packing.filter(p => p.done).length} von ${a.packing.length} eingepackt`} style={s.pack}>
+              🎒 {a.packing.filter(p => p.done).length}/{a.packing.length}
+            </Text>
+          )}
           <Ionicons name="create-outline" size={18} color="#dc2626" />
         </TouchableOpacity>
       ))}
@@ -87,4 +92,5 @@ const s = StyleSheet.create({
   chipSet: { backgroundColor: '#fef2f2', borderColor: '#fca5a5' },
   chipLabel: { fontSize: 11, color: '#666', marginBottom: 2 },
   chipValue: { fontSize: 14, fontWeight: '600' },
+  pack: { fontSize: 12, fontWeight: '800', color: '#b45309', marginRight: 8 },
 });

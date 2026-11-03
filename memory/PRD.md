@@ -774,3 +774,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - touchProject(): neue Skizze/Checkliste/Foto setzt updated_at des Projekts; Kachel 'Projekte' von Startseite entfernt
 - Projekt-Termin (appointment_date/time, AppointmentPicker im Projekt), Heute-Übersicht auf Startseite (Termine heute + heute bearbeitet)
 - Projekte per Gedrückthalten+Ziehen auf Ordner (RNGH Pan activateAfterLongPress, FolderDropOverlay); ohne Bewegung = Mehrfachauswahl; GestureHandlerRootView in _layout
+- Termine von Startseite (services/AppointmentService.ts, key aufmassprofi_appointments, im Backup): Notiz, Adresse→Navi (openNavigation), Fahrzeit→lokale Abfahrts-Erinnerung (expo-notifications, Fahrzeit+10 Min). Wochenvorschau 7 Tage. Firmenlogo-Karte im Seitenverhältnis des Logos.

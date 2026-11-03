@@ -63,6 +63,12 @@
       "./plugins/withAndroidFullScreen",
       "./plugins/withAsyncStorageDbSize",
       "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "color": "#1976d2"
+        }
+      ],
       "expo-localization",
       "expo-image",
       "expo-sharing",

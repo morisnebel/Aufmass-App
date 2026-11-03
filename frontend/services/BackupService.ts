@@ -36,6 +36,7 @@ const STORAGE_KEYS = [
   'aufmassprofi_material_locations',
   'aufmassprofi_material_suppliers',
   'aufmassprofi_project_folders',
+  'aufmassprofi_appointments',
 ];
 
 const AUTO_BACKUP_KEY = 'aufmassprofi_auto_backups'; // ALT: monolithischer Blob (OOM-Quelle, wird nur noch gelöscht)

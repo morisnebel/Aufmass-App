@@ -1,0 +1,35 @@
+{
+  "summary": "Frontend-only test of the home company logo, home appointments (AppointmentFormModal, Heute card, Nächste 7 Tage card, navi button) and home regression. Viewports: 390x844 and 1180x820, Pro, localStorage seed, web clock Tue 03.11.2026. Logo PASS: a 400x150 PNG gives a 213x80 card on phone (ratio 2.667) and 320x120 on tablet, with padding 0, the img filling the box and the blue test border visible on all sides. Appointment flow PASS: picking project p2 fills title and address. Validation alerts work: 'Titel fehlt', 'Uhrzeit fehlt' (travel set, no time), 'Ungültige Uhrzeit' (25:99 and 7:5), 'Ungültiges Datum' (31.02.2026). Today 14:00 with travel 30 shows reminder 13:20 plus the web hint, and the item is saved to aufmassprofi_appointments. The Heute row shows time, note and navi button, and persists after reload. Edit to 16:30 shows reminder 15:50 and updates the same id. Delete (confirm) empties the list. Navi opens https://www.google.com/maps/dir/?api=1&destination=<encoded address> in a new tab (Heute and week rows). Week PASS: items for +1 ('MORGEN'), +3 (project p3 Termin), +5 and +7 appear grouped by day. +8, +9, past and archived-project Termine are excluded. Regression PASS: Heute bearbeitet, project-detail Termin showing as home-today-p-p2, folder tiles, drag p3 to fB. One layout bug on phone: the Heute and Nächste 7 Tage cards always get equal heights, so content is clipped and covered by the next card.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "TodayOverview / WeekPreview card on phone (<768px)", "issue": "Both cards use style card:{flex:1} (TodayOverview.tsx:90, WeekPreview.tsx:39). In the column layout on phone this becomes flex '1 1 0%', so the section height is split equally between them. Measured: both cards 262px tall, but the week card's scrollHeight is 370px. Rows overflow and are covered by the next card. With 4 week items, TEST_Termin t7 (+7 days) is hidden under Schnellaktionen: elementFromPoint on that row returns home-action-new-project, and t5 is half cut off. The same happens to the 'Heute bearbeitet' list, which gets clipped under the week card. The Heute card also shows a large empty area when it has few items. Tablet (row layout) is fine.", "testID": "home-today, home-week, home-week-a-t7", "priority": "HIGH"},
+      {"component": "AppointmentFormModal date/time row on phone", "issue": "The apt-date and apt-time TextInputs are both 226px wide, so flex 1.4/1 is not applied (web inputs have an intrinsic min width). At 390px apt-time spans x=252..478, overflowing the sheet (right edge 372), and its placeholder 'Uhrzeit 08:30' is cut off. Fix: add minWidth:0 (or width:0) to both inputs. AppointmentFormModal.tsx:140-141.", "testID": "apt-time", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home Heute/Week rows", "issues": ["If the appointment title equals the linked project name (the default after picking a project), the row shows the name twice: title 'TEST_Projekt 2' and subtitle 'TEST_Projekt 2 · note'. Hide the subtitle project name when it equals the title.", "apt-close icon is 26x28 on web. hitSlop is ignored on web, so the touch target is below 44px."]},
+      {"screen": "AppointmentFormModal", "issues": ["Choosing 'Ohne Projekt' after a project keeps the project's title and address (minor, possibly intended)."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/home2_seed.py", "/app/tests/e2e/appointments_seed.py", "/app/tests/e2e/drag_folder_helpers.py"],
+  "action_items": [
+    "HIGH: Fix the phone layout of the Heute and Nächste 7 Tage cards. Apply flex:1 only when the section is a row (isTablet), e.g. pass style={isTablet ? {flex:1} : undefined} or use flexGrow:1 with flexBasis:'auto'. Right now week rows and 'Heute bearbeitet' rows are clipped and cannot be tapped at 390x844.",
+    "MEDIUM: Add minWidth:0 to the apt-date and apt-time TextInputs (AppointmentFormModal.tsx:140-141) so the time field does not overflow the sheet on phones.",
+    "LOW: Avoid showing the project name twice in agenda rows when title === project name. Enlarge the apt-close touch area to 44x44 with padding."
+  ],
+  "critical_code_review_comments": [
+    "index.tsx agenda: the project-linked appointment subtitle duplicates the title when the default title is used.",
+    "AppointmentFormModal: when editing, initial is the stale object captured in the onPress closure. This works because onSaved reloads, but the modal does not re-read storage.",
+    "expo-notifications ~58.1.8 is used correctly: local DATE trigger, Android channel, permission flow, web guarded. Native reminders were not testable on web.",
+    "aufmassprofi_appointments is included in the BackupService keys (BackupService.ts:39)."
+  ],
+  "updated_files": ["/app/tests/e2e/appointments_seed.py (new test helper only)"],
+  "success_rate": {"backend": "N/A", "frontend": "90% (all functional flows pass; 1 HIGH phone layout bug, 1 MEDIUM input overflow)"},
+  "seed_data_creation": "Browser localStorage only (fresh Playwright contexts): TEST_ projects/customer from home2_seed.py, TEST_ appointments. No server data.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "exec home2_seed.py, then appointments_seed.py. After seed(page, pro=True), run page.evaluate(SEED_APT) and reload. The modal slides in, so wait about 1.5s after tapping home-add-appointment before clicking apt-save (otherwise Playwright reports 'outside of viewport'). Alerts and confirms arrive via page.on('dialog'). Navi opens a popup page (use context.expect_page). To check the phone clipping bug, compare the home-week scrollHeight with its height, and call elementFromPoint on home-week-a-t7. The web clock is Nov 2026.",
+  "rca_of_issue": "Phone clipping: the TodayOverview and WeekPreview StyleSheets set card.flex=1. That is meant for the tablet row layout in index.tsx:307 (flexDirection row). On phone the parent section is a column whose height is computed from content, and flex-basis 0% splits that height equally. The taller card overflows visibly (overflow visible) and is painted under the next section."
+}

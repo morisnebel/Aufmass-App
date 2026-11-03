@@ -7,7 +7,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ProjectService, CustomerService, SettingsService, PhotoService, Project, Customer, cleanupOrphanedStorage, migrateSketchPreviews } from '../services/LocalStorage';
 import { ProjectFolderService, ProjectFolder } from '../services/ProjectFolders';
 import { FolderTiles } from '../src/components/home/FolderTiles';
-import { TodayOverview, todayKey } from '../src/components/home/TodayOverview';
+import { TodayOverview, todayKey, AgendaItem } from '../src/components/home/TodayOverview';
+import { WeekPreview } from '../src/components/home/WeekPreview';
+import { AppointmentFormModal, projectAddress } from '../src/components/home/AppointmentFormModal';
+import { AppointmentService, Appointment } from '../services/AppointmentService';
+import { openNavigation } from '../src/utils/appointmentTools';
 import { Features, loadProStatus, updateFeatures, getProStatus } from '../services/FeatureFlags';
 import { BackupService } from '../services/BackupService';
 import { quickFreeableScan } from '../services/StorageCleanup';
@@ -44,6 +48,9 @@ export default function HomeScreen() {
   const [companyLogo, setCompanyLogo] = useState<string | null>(null);
   const [covers, setCovers] = useState<Record<string, string>>({});
   const [folders, setFolders] = useState<ProjectFolder[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointmentModal, setAppointmentModal] = useState(false);
+  const [editAppointment, setEditAppointment] = useState<Appointment | null>(null);
 
   // Einmalig beim App-Start: Papierkorb (>30 Tage), Vorschauen auslagern, verwaiste Daten aufräumen, Speicher messen
   useEffect(() => {
@@ -68,6 +75,7 @@ export default function HomeScreen() {
       setIsPro(proStatus);
       setProjects(projectList);
       setFolders(folderList);
+      AppointmentService.getAll().then(setAppointments).catch(() => {});
       setCompanyLogo((settings as any)?.logo_data || (settings as any)?.company_logo || null);
       // Vorschaufotos der 3 letzten Projekte
       const recentIds = projectList
@@ -142,13 +150,38 @@ export default function HomeScreen() {
     [active]
   );
 
-  // Heute-Übersicht: Termine heute (Feld „Termin“) + heute bearbeitete Projekte
+  // Heute-Übersicht + Wochenvorschau: Projekt-Termine (Feld „Termin“) + eigene Termine
   const today = todayKey();
-  const appointmentsToday = useMemo(
-    () => active.filter(p => p.appointment_date === today)
-      .sort((a, b) => (a.appointment_time || '99').localeCompare(b.appointment_time || '99')),
-    [active, today]
-  );
+  const agenda: AgendaItem[] = useMemo(() => {
+    const fromProjects: AgendaItem[] = active.filter(p => !!p.appointment_date).map(p => ({
+      key: `p-${p.id}`,
+      title: p.name,
+      subtitle: customers[p.customer_id]?.name,
+      date: p.appointment_date as string,
+      time: p.appointment_time,
+      address: projectAddress(p, customers[p.customer_id]),
+      onPress: () => router.push(`/projects/${p.id}`),
+    }));
+    const fromAppointments: AgendaItem[] = appointments.map(a => ({
+      key: `a-${a.id}`,
+      title: a.title,
+      subtitle: a.project_id ? projects.find(p => p.id === a.project_id && p.name !== a.title)?.name : undefined,
+      date: a.date,
+      time: a.time,
+      address: a.address,
+      note: a.note,
+      hasReminder: !!a.reminder_id,
+      onPress: () => { setEditAppointment(a); setAppointmentModal(true); },
+    }));
+    return [...fromProjects, ...fromAppointments]
+      .sort((a, b) => (a.date + (a.time || '99')).localeCompare(b.date + (b.time || '99')));
+  }, [active, appointments, customers, projects, router]);
+  const todayItems = useMemo(() => agenda.filter(i => i.date === today), [agenda, today]);
+  const weekItems = useMemo(() => {
+    const end = new Date(); end.setDate(end.getDate() + 7);
+    const endKey = todayKey(end);
+    return agenda.filter(i => i.date > today && i.date <= endKey);
+  }, [agenda, today]);
   const editedToday = useMemo(
     () => active.filter(p => p.appointment_date !== today && p.updated_at && todayKey(new Date(p.updated_at)) === today)
       .sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || '')).slice(0, 5),
@@ -271,14 +304,25 @@ export default function HomeScreen() {
         {(backupDueDays !== null || storageFreeable !== null) && (
           <View style={[s.section, isTablet && { flexDirection: 'row' }, { gap: 12 }]}>{banners}</View>
         )}
-        <View style={s.section}>
+        <View style={[s.section, isTablet && { flexDirection: 'row', alignItems: 'stretch' }, { gap: 16 }]}>
           <TodayOverview
-            appointments={appointmentsToday}
+            items={todayItems}
             editedToday={editedToday}
-            customerName={p => customers[p.customer_id]?.name || (p as any).bauherr_name}
-            onOpen={id => router.push(`/projects/${id}`)}
+            onOpenProject={id => router.push(`/projects/${id}`)}
+            onAdd={() => { setEditAppointment(null); setAppointmentModal(true); }}
+            onNavigate={openNavigation}
+            style={isTablet ? { flex: 1 } : undefined}
           />
+          <WeekPreview items={weekItems} onNavigate={openNavigation} style={isTablet ? { flex: 1 } : undefined} />
         </View>
+        <AppointmentFormModal
+          visible={appointmentModal}
+          initial={editAppointment}
+          projects={active}
+          customers={customers}
+          onClose={() => setAppointmentModal(false)}
+          onSaved={() => { setAppointmentModal(false); AppointmentService.getAll().then(setAppointments); }}
+        />
         <View style={[s.section, isWide && { flexDirection: 'row', alignItems: 'stretch' }, { gap: 16 }]}>
           {quickActions}
           {recentCard}

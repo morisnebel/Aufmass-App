@@ -27,6 +27,13 @@ type Props = {
 export function HomeHero({ period, firstName, isPro, compact, companyLogo, onSearch, onBackup, onSettings }: Props) {
   const insets = useSafeAreaInsets();
   const heroHeight = (compact ? 300 : 400) + insets.top;
+  // Seitenverhältnis des Firmenlogos ermitteln, damit es die Karte komplett ausfüllt
+  const [logoRatio, setLogoRatio] = React.useState(2);
+  const logoH = compact ? 80 : 120;
+  React.useEffect(() => {
+    if (!companyLogo) return;
+    Image.getSize(companyLogo, (w, h) => { if (w > 0 && h > 0) setLogoRatio(w / h); }, () => {});
+  }, [companyLogo]);
   const greeting = `${GREETINGS[period]}${firstName ? `, ${firstName}` : ''}!`;
   const iconBtn = (name: any, onPress: () => void, testID: string, label: string) => (
     <TouchableOpacity testID={testID} accessibilityLabel={label} style={s.iconBtn} onPress={onPress}>
@@ -80,8 +87,9 @@ export function HomeHero({ period, firstName, isPro, compact, companyLogo, onSea
       <View style={{ flex: 1, minHeight: 20 }} />
       {/* Firmenlogo aus den Einstellungen (nur wenn vorhanden) */}
       {!!companyLogo && (
-        <View testID="home-company-logo" style={[s.companyLogoBox, compact && { width: 150, height: 72 }]}>
-          <Image source={{ uri: companyLogo }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+        <View testID="home-company-logo" style={[s.companyLogoBox, { height: logoH, width: Math.min(logoH * logoRatio, compact ? 300 : 420) }]}>
+          {/* Logo füllt die Karte vollständig aus (Kartenform = Seitenverhältnis des Logos) */}
+          <Image source={{ uri: companyLogo }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         </View>
       )}
       <Text testID="home-greeting" style={[s.greeting, compact && { fontSize: 26 }]}>{greeting}</Text>
@@ -105,5 +113,5 @@ const s = StyleSheet.create({
   iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.14)' },
   greeting: { fontSize: 34, fontWeight: '800', color: '#fff', textShadowColor: 'rgba(0,0,0,0.45)', textShadowRadius: 8 },
   sub: { fontSize: 15, color: 'rgba(255,255,255,0.92)', marginTop: 6, textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 4 },
-  companyLogoBox: { width: 220, height: 104, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.92)', padding: 10, marginBottom: 14, overflow: 'hidden' },
+  companyLogoBox: { borderRadius: 14, backgroundColor: '#fff', marginBottom: 14, overflow: 'hidden' },
 });

@@ -8,42 +8,78 @@ import { cardShadow } from './HomeTiles';
 export const todayKey = (d: Date = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-type Props = {
-  appointments: Project[];
-  editedToday: Project[];
-  customerName: (p: Project) => string | undefined;
-  onOpen: (id: string) => void;
+// Ein Eintrag im Kalender der Startseite (Projekt-Termin oder eigener Termin)
+export type AgendaItem = {
+  key: string;
+  title: string;
+  subtitle?: string;
+  date: string;
+  time?: string | null;
+  address?: string;
+  note?: string;
+  hasReminder?: boolean;
+  onPress: () => void;
 };
 
-// Heute-Übersicht: Projekte mit Termin heute + heute bearbeitete Projekte
-export function TodayOverview({ appointments, editedToday, customerName, onOpen }: Props) {
-  const row = (p: Project, kind: 'termin' | 'edit') => (
-    <TouchableOpacity key={`${kind}-${p.id}`} testID={`home-today-${kind}-${p.id}`} style={s.row} onPress={() => onOpen(p.id)}>
-      <View style={[s.dot, { backgroundColor: kind === 'termin' ? '#dc2626' : '#1976d2' }]} />
-      <View style={{ flex: 1 }}>
-        <Text style={s.name} numberOfLines={1}>{p.name}</Text>
-        {!!customerName(p) && <Text style={s.sub} numberOfLines={1}>{customerName(p)}</Text>}
-      </View>
-      {kind === 'termin' && !!p.appointment_time && <Text style={s.time}>{p.appointment_time} Uhr</Text>}
-      <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
-    </TouchableOpacity>
+export function AgendaRow({ item, onNavigate, testID }: { item: AgendaItem; onNavigate: (a: string) => void; testID: string }) {
+  return (
+    <View style={s.row}>
+      <TouchableOpacity testID={testID} style={s.rowMain} onPress={item.onPress}>
+        <View style={s.timeBox}>
+          <Text style={s.timeText}>{item.time || 'ganztägig'}</Text>
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.name} numberOfLines={1}>{item.title}</Text>
+          {!!(item.subtitle || item.note) && <Text style={s.sub} numberOfLines={1}>{[item.subtitle, item.note].filter(Boolean).join(' · ')}</Text>}
+        </View>
+        {item.hasReminder && <Ionicons name="notifications-outline" size={16} color="#0369a1" />}
+      </TouchableOpacity>
+      {!!item.address && (
+        <TouchableOpacity testID={`${testID}-navi`} style={s.navi} onPress={() => onNavigate(item.address!)} accessibilityLabel="Navigation starten">
+          <Ionicons name="navigate" size={20} color="#fff" />
+        </TouchableOpacity>
+      )}
+    </View>
   );
+}
+
+type Props = {
+  items: AgendaItem[];
+  editedToday: Project[];
+  onOpenProject: (id: string) => void;
+  onAdd: () => void;
+  onNavigate: (address: string) => void;
+};
+
+// Heute-Übersicht: Termine heute + heute bearbeitete Projekte
+export function TodayOverview({ items, editedToday, onOpenProject, onAdd, onNavigate, style }: Props & { style?: any }) {
   const date = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
   return (
-    <View style={s.card} testID="home-today">
+    <View style={[s.card, style]} testID="home-today">
       <View style={s.header}>
         <Ionicons name="today-outline" size={22} color="#dc2626" />
-        <Text style={s.title}>Heute</Text>
-        <Text style={s.date}>{date}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.title}>Heute</Text>
+          <Text style={s.date}>{date}</Text>
+        </View>
+        <TouchableOpacity testID="home-add-appointment" style={s.addBtn} onPress={onAdd}>
+          <Ionicons name="add" size={18} color="#fff" />
+          <Text style={s.addText}>Termin</Text>
+        </TouchableOpacity>
       </View>
-      <Text style={s.group}>Termine</Text>
-      {appointments.length === 0
-        ? <Text style={s.empty}>Heute keine Termine. Termin im Projekt eintragen.</Text>
-        : appointments.map(p => row(p, 'termin'))}
+      {items.length === 0
+        ? <Text style={s.empty}>Heute keine Termine.</Text>
+        : items.map(i => <AgendaRow key={i.key} item={i} onNavigate={onNavigate} testID={`home-today-${i.key}`} />)}
       {editedToday.length > 0 && (
         <>
-          <Text style={[s.group, { marginTop: 10 }]}>Heute bearbeitet</Text>
-          {editedToday.map(p => row(p, 'edit'))}
+          <Text style={s.group}>Heute bearbeitet</Text>
+          {editedToday.map(p => (
+            <TouchableOpacity key={p.id} testID={`home-today-edit-${p.id}`} style={s.editRow} onPress={() => onOpenProject(p.id)}>
+              <Ionicons name="create-outline" size={16} color="#1976d2" />
+              <Text style={s.editName} numberOfLines={1}>{p.name}</Text>
+              <Ionicons name="chevron-forward" size={16} color="#94a3b8" />
+            </TouchableOpacity>
+          ))}
         </>
       )}
     </View>
@@ -52,14 +88,20 @@ export function TodayOverview({ appointments, editedToday, customerName, onOpen 
 
 const s = StyleSheet.create({
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 16, ...cardShadow },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
   title: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
-  date: { flex: 1, textAlign: 'right', fontSize: 13, color: '#64748b' },
-  group: { fontSize: 12, fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 },
+  date: { fontSize: 12, color: '#64748b' },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#dc2626', borderRadius: 12, paddingHorizontal: 12, minHeight: 40 },
+  addText: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  group: { fontSize: 12, fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 12, marginBottom: 2 },
   empty: { fontSize: 14, color: '#94a3b8', paddingVertical: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-  dot: { width: 10, height: 10, borderRadius: 5 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 56, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 56 },
+  timeBox: { minWidth: 62, paddingVertical: 4, paddingHorizontal: 6, borderRadius: 8, backgroundColor: '#fef2f2', alignItems: 'center' },
+  timeText: { fontSize: 12, fontWeight: '800', color: '#dc2626' },
   name: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
   sub: { fontSize: 12, color: '#64748b' },
-  time: { fontSize: 13, fontWeight: '700', color: '#dc2626' },
+  navi: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' },
+  editRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
+  editName: { flex: 1, fontSize: 14, fontWeight: '600', color: '#1e293b' },
 });

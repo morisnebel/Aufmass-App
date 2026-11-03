@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert, StyleSheet } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Project, Customer, generateFullAddress } from '../../../services/LocalStorage';
 import { Appointment, AppointmentService } from '../../../services/AppointmentService';
 import { scheduleDepartureReminder, cancelReminder, departureTime } from '../../utils/appointmentTools';
@@ -26,10 +27,13 @@ type Props = {
   customers: Record<string, Customer>;
   onClose: () => void;
   onSaved: () => void;
+  onCreateProject?: (a: Appointment) => void;
+  initialDate?: string; // Vorbelegung für neuen Termin (z. B. aus dem Kalender)
 };
 
 // Termin direkt von der Startseite anlegen/bearbeiten – mit Notiz, Navi-Adresse und Abfahrts-Erinnerung
-export function AppointmentFormModal({ visible, initial, projects, customers, onClose, onSaved }: Props) {
+export function AppointmentFormModal({ visible, initial, projects, customers, onClose, onSaved, onCreateProject, initialDate }: Props) {
+  const [picker, setPicker] = useState<'date' | 'time' | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [dateText, setDateText] = useState('');
@@ -41,14 +45,15 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
 
   useEffect(() => {
     if (!visible) return;
+    setPicker(null);
     setProjectId(initial?.project_id || null);
     setTitle(initial?.title || '');
-    setDateText(toDisplay(initial?.date || todayKey()));
+    setDateText(toDisplay(initial?.date || initialDate || todayKey()));
     setTime(initial?.time || '');
     setAddress(initial?.address || '');
     setNote(initial?.note || '');
     setTravel(initial?.travel_minutes || 0);
-  }, [visible, initial]);
+  }, [visible, initial, initialDate]);
 
   const projectChoices = useMemo(
     () => [...projects].sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || '')).slice(0, 30),
@@ -71,6 +76,12 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   const normTime = tm ? `${tm[1].padStart(2, '0')}:${tm[2]}` : null;
   const date = parseDate(dateText);
   const departure = date && normTime && travel > 0 ? departureTime(date, normTime, travel) : null;
+  // Startwert für Kalender/Uhrzeit-Rad
+  const pickerValue = (() => {
+    const [y, m, d] = (date || todayKey()).split('-').map(Number);
+    const [hh, mm] = (normTime || '08:00').split(':').map(Number);
+    return new Date(y, m - 1, d, hh, mm);
+  })();
 
   const save = async () => {
     if (!title.trim()) { Alert.alert('Titel fehlt', 'Bitte einen Titel eingeben oder ein Projekt wählen.'); return; }
@@ -112,7 +123,7 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             <Text style={s.title}>{initial ? 'Termin bearbeiten' : 'Neuer Termin'}</Text>
             <TouchableOpacity testID="apt-close" onPress={onClose} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={26} color="#334155" /></TouchableOpacity>
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
+          <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 16 }}>
             <Text style={s.label}>Projekt (optional)</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
               <TouchableOpacity testID="apt-project-none" style={[s.chip, !projectId && s.chipOn]} onPress={() => pickProject(null)}>
@@ -137,9 +148,57 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
               ))}
             </View>
             <View style={[s.row, { marginTop: 8 }]}>
-              <TextInput testID="apt-date" style={[s.input, { flex: 1.4, minWidth: 0 }]} value={dateText} onChangeText={setDateText} placeholder="TT.MM.JJJJ" keyboardType="numbers-and-punctuation" />
-              <TextInput testID="apt-time" style={[s.input, { flex: 1, minWidth: 0 }]} value={time} onChangeText={setTime} placeholder="08:30" keyboardType="numbers-and-punctuation" maxLength={5} />
+              {Platform.OS === 'web' ? (
+                <>
+                  <TextInput testID="apt-date" style={[s.input, { flex: 1.4, minWidth: 0 }]} value={dateText} onChangeText={setDateText} placeholder="TT.MM.JJJJ" keyboardType="numbers-and-punctuation" />
+                  <TextInput testID="apt-time" style={[s.input, { flex: 1, minWidth: 0 }]} value={time} onChangeText={setTime} placeholder="08:30" keyboardType="numbers-and-punctuation" maxLength={5} />
+                </>
+              ) : (
+                <>
+                  {/* Handy: Kalender und Uhrzeit-Rad öffnen sich per Tipp */}
+                  <TouchableOpacity testID="apt-date" style={[s.input, s.pickBtn, { flex: 1.4 }, picker === 'date' && s.pickOn]} onPress={() => setPicker(picker === 'date' ? null : 'date')}>
+                    <Ionicons name="calendar-outline" size={18} color="#1976d2" />
+                    <Text style={s.pickText}>{dateText || 'Datum'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="apt-time" style={[s.input, s.pickBtn, { flex: 1 }, picker === 'time' && s.pickOn]} onPress={() => setPicker(picker === 'time' ? null : 'time')}>
+                    <Ionicons name="time-outline" size={18} color="#1976d2" />
+                    <Text style={s.pickText}>{time || 'Uhrzeit'}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
+            {picker && Platform.OS !== 'web' && (
+              <View style={Platform.OS === 'ios' ? s.pickerBox : undefined}>
+                <DateTimePicker
+                  value={pickerValue}
+                  mode={picker}
+                  display={Platform.OS === 'ios' ? (picker === 'date' ? 'inline' : 'spinner') : 'default'}
+                  locale="de-DE"
+                  is24Hour
+                  minuteInterval={5}
+                  themeVariant="light"
+                  accentColor="#1976d2"
+                  onChange={(e, d) => {
+                    if (Platform.OS === 'android') setPicker(null);
+                    if (!d || e.type === 'dismissed') return;
+                    if (picker === 'date') {
+                      setDateText(toDisplay(todayKey(d)));
+                      if (Platform.OS === 'ios') setPicker(null);
+                    } else {
+                      setTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                    }
+                  }}
+                />
+                {Platform.OS === 'ios' && picker === 'time' && (
+                  <TouchableOpacity style={s.pickDone} onPress={() => setPicker(null)}>
+                    <Text style={s.pickDoneText}>Fertig</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            <Text style={s.label}>Notiz</Text>
+            <TextInput testID="apt-note" style={[s.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: 10 }]} value={note} onChangeText={setNote} placeholder="z. B. Leiter mitnehmen, Kunde vorher anrufen" multiline />
 
             <Text style={s.label}>Adresse fürs Navi</Text>
             <TextInput testID="apt-address" style={s.input} value={address} onChangeText={setAddress} placeholder="Straße, PLZ Ort" />
@@ -158,9 +217,6 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
                 {Platform.OS === 'web' ? ' – Erinnerungen funktionieren nur in der App auf dem Handy.' : ''}
               </Text>
             )}
-
-            <Text style={s.label}>Notiz</Text>
-            <TextInput testID="apt-note" style={[s.input, { minHeight: 80, textAlignVertical: 'top', paddingTop: 10 }]} value={note} onChangeText={setNote} placeholder="z. B. Leiter mitnehmen, Kunde vorher anrufen" multiline />
           </ScrollView>
           <View style={s.btnRow}>
             {initial && (
@@ -168,8 +224,13 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
                 <Ionicons name="trash-outline" size={20} color="#dc2626" />
               </TouchableOpacity>
             )}
+            {initial && !initial.project_id && onCreateProject && (
+              <TouchableOpacity testID="apt-create-project" style={[s.btn, { backgroundColor: '#e8f5e9' }]} onPress={() => onCreateProject(initial)}>
+                <Text style={[s.btnText, { color: '#2e7d32', fontSize: 14 }]}>Projekt erstellen</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity testID="apt-save" style={[s.btn, { backgroundColor: '#1976d2' }]} onPress={save} disabled={saving}>
-              <Text style={s.btnText}>{saving ? 'Speichern…' : 'Termin speichern'}</Text>
+              <Text style={s.btnText} numberOfLines={1}>{saving ? 'Speichern…' : 'Speichern'}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -193,6 +254,12 @@ const s = StyleSheet.create({
   quick: { flex: 1, minHeight: 44, borderRadius: 10, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
   quickText: { fontSize: 14, fontWeight: '700', color: '#1e293b' },
   hint: { marginTop: 8, fontSize: 13, color: '#0369a1' },
+  pickBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pickOn: { borderColor: '#1976d2', backgroundColor: '#eff6ff' },
+  pickText: { fontSize: 16, color: '#0f172a', fontWeight: '600' },
+  pickerBox: { marginTop: 8, borderRadius: 12, backgroundColor: '#f8fafc', overflow: 'hidden' },
+  pickDone: { alignSelf: 'flex-end', minHeight: 44, justifyContent: 'center', paddingHorizontal: 16 },
+  pickDoneText: { color: '#1976d2', fontWeight: '800', fontSize: 16 },
   btnRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
   btn: { flex: 1, minHeight: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   btnText: { color: '#fff', fontSize: 16, fontWeight: '800' },

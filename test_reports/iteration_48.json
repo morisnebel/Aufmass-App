@@ -1,0 +1,35 @@
+{
+  "summary": "Frontend-only test, viewports 390x844 and 1180x820, Pro, localStorage seed (home2_seed + appointments_seed). The web clock shows Tue 03.11.2026. PASS: phone home order is Hero → Schnellaktionen (4 actions in one row, 78x68 each, 'Checklisten' stays on one line) → backup banner → Heute → Nächste 7 Tage (no clipping anymore) → 5 compact stat cards in one row (67x52 each, no overflow, doc width 390, labels incl. 'Ausführung' fit) → Letzte Projekte → folders → nav. Tablet home is fine. Appointment form on web PASS: apt-date and apt-time are text inputs (197/148px, the earlier overflow is fixed), Notiz sits above Adresse, save persists. Create project from appointment PASS (from home and from /appointments): apt-create-project shows only when editing an appointment without a project and opens /projects/new?from_appointment=..&name=..&description=address+note with name and description prefilled. After choosing the customer and saving, appointment.project_id is set, the button disappears and the project chip is preselected. /appointments PASS for logic: month nav prev/next/Heute, day count dots (4.11 → 2, project Termin counted), day selection lists cal-item-*, the navi popup opens Google Maps, tapping a project row opens the project, cal-add prefills the selected date (also in December) and the saved item shows up, the upcoming list excludes past items. FAIL: the calendar grid is misaligned on both phone and tablet (weekday columns don't match the days).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "/appointments month grid", "issue": "Weekday header and day cells are misaligned. Phone 390: cellSize=(min(w,700)-32-12)/7=49.4, but the card's inner width is 390-32-28=330 < 7*49.4+6*2=358, so only 6 cells fit per row. 'So' wraps to a second line and every day lands under the wrong weekday (Tue 03.11.2026 shows under 'Do', Sun 01.11 under 'Di'). Tablet 1180: cellSize=56, but the grid is about 640px wide, so 11 cells per row (Tue 03.11 under 'Fr', 9.11 on the same row as 1.11). Reference: app/appointments.tsx:62, 76-91, s.grid line 141.", "testID": "cal-day-*", "priority": "CRITICAL"},
+      {"component": "AppointmentFormModal button row (edit + no project, phone)", "issue": "With 3 buttons (delete / Projekt erstellen / Termin speichern), the label 'Termin speichern' wraps onto 2 lines and is left-aligned (textAlign start; the text box equals the button width of 128px). It looks off-center and crowded. Reference: AppointmentFormModal.tsx:221-235.", "testID": "apt-save", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home stat row (phone)", "issues": ["Compact stat labels are 10px. Readable but small; 11px would be better for outdoor use. Fits as is."]},
+      {"screen": "Project from appointment", "issues": ["The new project does not take over the appointment's date/time as its Termin (the project detail shows 'Kein Termin'), and the address goes only into the description, not into the Objektadresse street/city. Consider prefilling them.", "projects/new (pre-existing): at 390px the City and Email inputs overflow past the right edge, and labels mix English and German ('Project Name', 'Description', 'Back without saving', success alert 'Success / Project created')."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/home2_seed.py", "/app/tests/e2e/appointments_seed.py", "/app/tests/e2e/drag_folder_helpers.py"],
+  "action_items": [
+    "CRITICAL: Fix the /appointments calendar grid. Give s.grid an explicit width = 7*cellSize + 6*gap (alignSelf center), or render 7-cell rows explicitly. Compute cellSize from the real card inner width, e.g. (Math.min(width,700) - 32 - 28 - 12)/7, or better via onLayout. Verify that 03.11.2026 sits under 'Di' at 390 and 1180.",
+    "LOW: Center the apt-save label (textAlign:'center') or shorten it to 'Speichern' when 3 buttons are shown.",
+    "OPTIONAL: Prefill the project's appointment_date/time and object address from the source appointment in projects/new."
+  ],
+  "critical_code_review_comments": [
+    "appointments.tsx cellSize ignores the card padding (14*2), and the flexWrap grid has no fixed width. That is the root cause of the misalignment.",
+    "projects/new.tsx:734 links the appointment only after ProjectService.create. handleBackWithSave also calls handleSave, so linking works there too.",
+    "DateTimePicker (@react-native-community/datetimepicker 9.2.1) is rendered only when Platform.OS !== 'web'. Native pickers are not testable on web.",
+    "No deprecated expo packages found in the changed files."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "90% (all functional flows pass; calendar grid layout broken on phone and tablet)"},
+  "seed_data_creation": "Browser localStorage only (fresh Playwright contexts): TEST_ projects, customer, appointments. No server data.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "exec home2_seed.py and appointments_seed.py, then seed(page, pro=True), run page.evaluate(SEED_APT) and goto /appointments. To check alignment, compare the x of cal-day-<Mon> and cal-day-<Mon+7> (they must be equal) and check that 7 cells fit per row. On /customers?selectMode=true use 'text=TEST_Max Muster >> visible=true' (a hidden duplicate exists in the stack). The success alert after project save comes via the dialog event.",
+  "rca_of_issue": "Calendar: cellSize=(min(width,700)-44)/7 assumes 44px of horizontal chrome, but the real chrome is the content padding 32 + card padding 28 + 6 gaps of 2px = 72px. On phone the 7th cell wraps. On wide screens cellSize is capped at 56, and the unconstrained flexWrap container (about 640px) fits 11 cells per row."
+}

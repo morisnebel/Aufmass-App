@@ -1,6 +1,6 @@
 // Startseite 2.0 – gleiches Design für BASIC und PRO, Kacheln nach vorhandenen Berechtigungen (FeatureFlags)
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, RefreshControl, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Alert, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -9,7 +9,8 @@ import { ProjectFolderService, ProjectFolder } from '../services/ProjectFolders'
 import { FolderTiles } from '../src/components/home/FolderTiles';
 import { TodayOverview, todayKey, AgendaItem } from '../src/components/home/TodayOverview';
 import { WeekPreview } from '../src/components/home/WeekPreview';
-import { AppointmentFormModal, projectAddress } from '../src/components/home/AppointmentFormModal';
+import { AppointmentFormModal } from '../src/components/home/AppointmentFormModal';
+import { buildAgenda } from '../src/utils/agenda';
 import { AppointmentService, Appointment } from '../services/AppointmentService';
 import { openNavigation } from '../src/utils/appointmentTools';
 import { Features, loadProStatus, updateFeatures, getProStatus } from '../services/FeatureFlags';
@@ -152,30 +153,13 @@ export default function HomeScreen() {
 
   // Heute-Übersicht + Wochenvorschau: Projekt-Termine (Feld „Termin“) + eigene Termine
   const today = todayKey();
-  const agenda: AgendaItem[] = useMemo(() => {
-    const fromProjects: AgendaItem[] = active.filter(p => !!p.appointment_date).map(p => ({
-      key: `p-${p.id}`,
-      title: p.name,
-      subtitle: customers[p.customer_id]?.name,
-      date: p.appointment_date as string,
-      time: p.appointment_time,
-      address: projectAddress(p, customers[p.customer_id]),
-      onPress: () => router.push(`/projects/${p.id}`),
-    }));
-    const fromAppointments: AgendaItem[] = appointments.map(a => ({
-      key: `a-${a.id}`,
-      title: a.title,
-      subtitle: a.project_id ? projects.find(p => p.id === a.project_id && p.name !== a.title)?.name : undefined,
-      date: a.date,
-      time: a.time,
-      address: a.address,
-      note: a.note,
-      hasReminder: !!a.reminder_id,
-      onPress: () => { setEditAppointment(a); setAppointmentModal(true); },
-    }));
-    return [...fromProjects, ...fromAppointments]
-      .sort((a, b) => (a.date + (a.time || '99')).localeCompare(b.date + (b.time || '99')));
-  }, [active, appointments, customers, projects, router]);
+  const agenda: AgendaItem[] = useMemo(() => buildAgenda({
+    projects: active,
+    appointments,
+    customers,
+    onOpenProject: id => router.push(`/projects/${id}`),
+    onEditAppointment: a => { setEditAppointment(a); setAppointmentModal(true); },
+  }), [active, appointments, customers, router]);
   const todayItems = useMemo(() => agenda.filter(i => i.date === today), [agenda, today]);
   const weekItems = useMemo(() => {
     const end = new Date(); end.setDate(end.getDate() + 7);
@@ -190,7 +174,6 @@ export default function HomeScreen() {
 
   // Schnellaktionen – nur vorhandene Funktionen; Import nur wenn im Tarif freigeschaltet
   const actions: HomeTile[] = [
-    { key: 'new-project', title: 'Neues Projekt', icon: 'add', color: '#fff', bg: '#1565c0', onPress: () => router.push('/projects/new') },
     { key: 'new-customer', title: 'Kunde anlegen', icon: 'person-add-outline', color: '#1976d2', bg: '#e3f2fd', onPress: () => router.push('/customers/new') },
     { key: 'checklists', title: 'Checklisten', icon: 'checkbox-outline', color: '#7b1fa2', bg: '#f3e5f5', onPress: () => router.push('/checklists/templates') },
     ...(Features.showImportButton ? [{ key: 'import', title: 'Projekt importieren', icon: 'download-outline', color: '#2e7d32', bg: '#e8f5e9', onPress: () => router.push('/projects?action=import') }] : []),
@@ -210,9 +193,8 @@ export default function HomeScreen() {
     { key: 'settings', title: 'Einstellungen', subtitle: 'App, PDF, Logo und Vorlagen', icon: 'settings-outline', color: '#546e7a', bg: '#eceff1', onPress: () => router.push('/settings') },
   ];
 
-  const statColumns = isWide ? 5 : 4;
   const navColumns = isWide ? 4 : isTablet ? 2 : 1;
-  const actionColumns = isTablet || actions.length <= 3 ? actions.length : 2;
+  const actionColumns = actions.length; // eine Zeile, auf dem Handy kompakt
 
   const banners = (
     <>
@@ -221,8 +203,8 @@ export default function HomeScreen() {
           testID="home-backup-banner"
           icon="server-outline"
           title={backupRunning ? 'Backup wird erstellt…' : 'Backup empfohlen'}
-          text={backupDueDays === 0 ? 'Du hast noch nie ein Datei-Backup erstellt.' : `Letzte Sicherung vor ${backupDueDays} ${backupDueDays === 1 ? 'Tag' : 'Tagen'}.`}
-          button="Jetzt sichern"
+          text={backupDueDays === 0 ? 'Noch kein Backup erstellt.' : `Letzte Sicherung vor ${backupDueDays} ${backupDueDays === 1 ? 'Tag' : 'Tagen'}.`}
+          button="Sichern"
           color="#d97706"
           bg="#fff7e6"
           busy={backupRunning}
@@ -251,13 +233,22 @@ export default function HomeScreen() {
   );
 
   const quickActions = (
-    <View style={[s.panel, isWide && { flex: 1.4 }]}>
-      <View style={s.panelHeader}>
-        <Ionicons name="flash" size={22} color="#f59e0b" />
-        <Text style={s.panelTitle}>Schnellaktionen</Text>
-      </View>
-      <View style={{ flexGrow: 1, justifyContent: 'center' }}>
-        <TileGrid tiles={actions} columns={actionColumns} variant="action" />
+    <View style={[s.panel, !isTablet && { padding: 12 }]}>
+      <TouchableOpacity
+        testID="home-new-project-cta"
+        activeOpacity={0.85}
+        style={s.cta}
+        onPress={() => router.push('/projects/new')}
+      >
+        <View style={s.ctaIcon}><Ionicons name="add" size={30} color="#1565c0" /></View>
+        <View style={{ flex: 1 }}>
+          <Text style={s.ctaTitle}>Neues Projekt starten</Text>
+          <Text style={s.ctaText}>Hier beginnst du dein Aufmaß</Text>
+        </View>
+        <Ionicons name="arrow-forward" size={24} color="#fff" />
+      </TouchableOpacity>
+      <View style={{ flexGrow: 1, justifyContent: 'center', marginTop: 12 }}>
+        <TileGrid tiles={actions} columns={actionColumns} variant="action" compact={!isTablet} />
       </View>
     </View>
   );
@@ -290,20 +281,12 @@ export default function HomeScreen() {
         onSettings={() => router.push('/settings')}
       />
       <View style={[s.body, isWide && { maxWidth: 1400, alignSelf: 'center', width: '100%' }]}>
-        <View style={{ marginTop: -40, gap: 12 }}>
-          {isWide ? (
-            <StatCards items={stats} columns={statColumns} />
-          ) : (
-            <>
-              {/* Smartphone/kleines Tablet: Gesamtzahl über volle Breite, Status darunter */}
-              <StatCards items={stats.slice(0, 1)} columns={1} />
-              <StatCards items={stats.slice(1)} columns={isTablet ? 4 : 2} />
-            </>
-          )}
-        </View>
+        {/* 1. Schnellaktionen ganz oben */}
+        <View style={{ marginTop: -40 }}>{quickActions}</View>
         {(backupDueDays !== null || storageFreeable !== null) && (
           <View style={[s.section, isTablet && { flexDirection: 'row' }, { gap: 12 }]}>{banners}</View>
         )}
+        {/* 2. Termine */}
         <View style={[s.section, isTablet && { flexDirection: 'row', alignItems: 'stretch' }, { gap: 16 }]}>
           <TodayOverview
             items={todayItems}
@@ -313,7 +296,7 @@ export default function HomeScreen() {
             onNavigate={openNavigation}
             style={isTablet ? { flex: 1 } : undefined}
           />
-          <WeekPreview items={weekItems} onNavigate={openNavigation} style={isTablet ? { flex: 1 } : undefined} />
+          <WeekPreview items={weekItems} onNavigate={openNavigation} onShowAll={() => router.push('/appointments')} style={isTablet ? { flex: 1 } : undefined} />
         </View>
         <AppointmentFormModal
           visible={appointmentModal}
@@ -322,11 +305,13 @@ export default function HomeScreen() {
           customers={customers}
           onClose={() => setAppointmentModal(false)}
           onSaved={() => { setAppointmentModal(false); AppointmentService.getAll().then(setAppointments); }}
+          onCreateProject={a => { setAppointmentModal(false); router.push({ pathname: '/projects/new', params: { from_appointment: a.id, name: a.title, description: [a.address, a.note].filter(Boolean).join('\n') } }); }}
         />
-        <View style={[s.section, isWide && { flexDirection: 'row', alignItems: 'stretch' }, { gap: 16 }]}>
-          {quickActions}
-          {recentCard}
+        {/* 3. Projekt-Zahlen (Smartphone: kompakt in einer Zeile) */}
+        <View style={s.section}>
+          <StatCards items={stats} columns={5} compact={!isWide} />
         </View>
+        <View style={s.section}>{recentCard}</View>
         <View style={s.section}>
           <FolderTiles
             folders={folders}
@@ -350,4 +335,8 @@ const s = StyleSheet.create({
   panel: { backgroundColor: '#fff', borderRadius: 20, padding: 16, ...cardShadow },
   panelHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
   panelTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
+  cta: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#1565c0', borderRadius: 16, paddingVertical: 16, paddingHorizontal: 16, minHeight: 76, shadowColor: '#1565c0', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  ctaIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  ctaTitle: { color: '#fff', fontSize: 19, fontWeight: '900' },
+  ctaText: { color: '#dbeafe', fontSize: 13, marginTop: 2 },
 });

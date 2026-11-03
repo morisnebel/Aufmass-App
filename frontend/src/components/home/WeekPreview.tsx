@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import { AgendaItem, AgendaRow } from './TodayOverview';
 import { cardShadow } from './HomeTiles';
 
 // Kleine Vorschau: Termine der nächsten 7 Tage (ab morgen), nach Tag gruppiert
-export function WeekPreview({ items, onNavigate, style }: { items: AgendaItem[]; onNavigate: (a: string) => void; style?: any }) {
+export function WeekPreview({ items, onNavigate, onShowAll, style }: { items: AgendaItem[]; onNavigate: (a: string) => void; onShowAll?: () => void; style?: any }) {
   const byDay: Record<string, AgendaItem[]> = {};
   items.forEach(i => { (byDay[i.date] = byDay[i.date] || []).push(i); });
   const days = Object.keys(byDay).sort();
@@ -22,6 +22,12 @@ export function WeekPreview({ items, onNavigate, style }: { items: AgendaItem[];
         <Ionicons name="calendar-outline" size={22} color="#7c3aed" />
         <Text style={s.title}>Nächste 7 Tage</Text>
         <Text style={s.count}>{items.length} {items.length === 1 ? 'Termin' : 'Termine'}</Text>
+        {onShowAll && (
+          <TouchableOpacity testID="home-week-all" onPress={onShowAll} style={s.all} hitSlop={6}>
+            <Text style={s.allText}>Kalender</Text>
+            <Ionicons name="chevron-forward" size={16} color="#7c3aed" />
+          </TouchableOpacity>
+        )}
       </View>
       {days.length === 0 ? (
         <Text style={s.empty}>Keine Termine in den nächsten 7 Tagen.</Text>
@@ -40,6 +46,8 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   title: { flex: 1, fontSize: 18, fontWeight: '800', color: '#0f172a' },
   count: { fontSize: 13, color: '#64748b', fontWeight: '600' },
+  all: { flexDirection: 'row', alignItems: 'center', minHeight: 44, marginLeft: 6 },
+  allText: { color: '#7c3aed', fontWeight: '800', fontSize: 14 },
   empty: { fontSize: 14, color: '#94a3b8', paddingVertical: 8 },
   day: { fontSize: 12, fontWeight: '800', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 10 },
 });

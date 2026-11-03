@@ -775,3 +775,8 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Projekt-Termin (appointment_date/time, AppointmentPicker im Projekt), Heute-Übersicht auf Startseite (Termine heute + heute bearbeitet)
 - Projekte per Gedrückthalten+Ziehen auf Ordner (RNGH Pan activateAfterLongPress, FolderDropOverlay); ohne Bewegung = Mehrfachauswahl; GestureHandlerRootView in _layout
 - Termine von Startseite (services/AppointmentService.ts, key aufmassprofi_appointments, im Backup): Notiz, Adresse→Navi (openNavigation), Fahrzeit→lokale Abfahrts-Erinnerung (expo-notifications, Fahrzeit+10 Min). Wochenvorschau 7 Tage. Firmenlogo-Karte im Seitenverhältnis des Logos.
+- Startseite Handy: Schnellaktionen oben (kompakt, eine Zeile), dann Termine, dann kompakte Status-Zeile. Termin-Formular: Kalender/Uhrzeit-Rad (native), Notiz oben, 'Projekt erstellen' aus Termin (projects/new?from_appointment). Neue Seite app/appointments.tsx (Monatskalender, Tag, kommende Termine), Link 'Kalender' in Wochenkarte.
+
+## Nov 2026 – Startseite
+- Großer Button „Neues Projekt starten“ oben in den Schnellaktionen; Backup-Hinweis schmal & einzeilig
+- Offen: Navi + Losfahr-Erinnerung für Termine, iPhone-Test des Termin-Formulars

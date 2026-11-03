@@ -16,6 +16,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { AppointmentService } from '../../services/AppointmentService';
 import { useFocusEffect } from 'expo-router';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import * as Contacts from 'expo-contacts/legacy';
@@ -85,10 +86,11 @@ function extractContactData(contact: Contacts.Contact) {
 export default function NewProjectScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const params = useLocalSearchParams<{ customer_id?: string }>();
+  const params = useLocalSearchParams<{ customer_id?: string; from_appointment?: string; name?: string; description?: string }>();
   const [projectNumber, setProjectNumber] = useState(''); // PR-26001 etc.
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  // Aus einem Termin erstellt → Name/Beschreibung vorausfüllen
+  const [name, setName] = useState(params.name || '');
+  const [description, setDescription] = useState(params.description || '');
   const [customerId, setCustomerId] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -727,8 +729,17 @@ export default function NewProjectScreen() {
       });
       
       setLoading(false);
-      
-      const successMessage = saveAddressWithName 
+
+      // Termin mit dem neuen Projekt verknüpfen (Datum/Uhrzeit als Projekt-Termin übernehmen)
+      if (params.from_appointment) {
+        const apt = (await AppointmentService.getAll()).find(a => a.id === params.from_appointment);
+        if (apt) {
+          await AppointmentService.save({ ...apt, project_id: newProject.id });
+          await ProjectService.update(newProject.id, { appointment_date: apt.date, appointment_time: apt.time || null, address: apt.address || undefined } as any);
+        }
+      }
+
+      const successMessage = saveAddressWithName
         ? t('projects.projectCreatedAndAddressSaved')
         : t('projects.projectCreated');
         

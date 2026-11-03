@@ -5,8 +5,23 @@ import { cardShadow } from './HomeTiles';
 
 export type StatItem = { key: string; label: string; count: number; icon: any; color: string; onPress: () => void };
 
-// Zahlen-Karten (Projekte gesamt + je Status), gleichmäßig in Spalten verteilt
-export function StatCards({ items, columns }: { items: StatItem[]; columns: number }) {
+// Zahlen-Karten (Projekte gesamt + je Status). compact = Smartphone: alle in einer schmalen Zeile
+export function StatCards({ items, columns, compact }: { items: StatItem[]; columns: number; compact?: boolean }) {
+  if (compact) {
+    return (
+      <View style={s.compactRow}>
+        {items.map(item => (
+          <TouchableOpacity key={item.key} testID={`home-stat-${item.key}`} style={s.compactCard} onPress={item.onPress} activeOpacity={0.85}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name={item.icon} size={14} color={item.color} />
+              <Text style={s.compactCount}>{item.count}</Text>
+            </View>
+            <Text style={s.compactLabel} numberOfLines={1} adjustsFontSizeToFit>{item.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  }
   const rows: StatItem[][] = [];
   for (let i = 0; i < items.length; i += columns) rows.push(items.slice(i, i + columns));
   return (
@@ -25,7 +40,6 @@ export function StatCards({ items, columns }: { items: StatItem[]; columns: numb
               <Ionicons name="chevron-forward" size={18} color="#64748b" />
             </TouchableOpacity>
           ))}
-          {/* Leere Plätze auffüllen, damit Karten gleich breit bleiben */}
           {Array.from({ length: columns - row.length }).map((_, i) => <View key={`f${i}`} style={{ flex: 1 }} />)}
         </View>
       ))}
@@ -38,4 +52,8 @@ const s = StyleSheet.create({
   icon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   count: { fontSize: 22, fontWeight: '900', color: '#0f172a' },
   label: { fontSize: 12, color: '#334155', fontWeight: '600' },
+  compactRow: { flexDirection: 'row', gap: 6 },
+  compactCard: { flex: 1, minHeight: 52, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 6, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', ...cardShadow },
+  compactCount: { fontSize: 17, fontWeight: '900', color: '#0f172a' },
+  compactLabel: { fontSize: 10, color: '#475569', fontWeight: '700', marginTop: 2 },
 });

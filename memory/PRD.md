@@ -785,3 +785,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Projektdetails: voller Terminplaner (ProjectAppointment) statt einfachem Datum; eigene Zeit für Erinnerung und Abfahrt über Kalender+Uhrzeit-Fenster (DateTimeSheet); Kundenauswahl nur eine Kopfzeile
 - Bedienungsanleitung: /help (Kurzanleitung + aufklappbare Kapitel mit ℹ️-Erklärungen, PDF teilen), Inhalt in src/content/manual.ts; Links in Einstellungen + Startseiten-Kachel „Anleitung“
 - Erste-Schritte-Tour (HomeTour, 6 Schritte, Key aufmassprofi_tour_done, startet nach Disclaimer, neu startbar in /help); Suche in der Anleitung mit Hervorhebung
+- Hilfe-?: Termin (apt-help), Backup (backup-help), Skizze (sketch-help) öffnen /help?section=…; Skizzen-Tour (aufmassprofi_sketch_tour_done); Anleitung mit Basic/Pro-Kennzeichnung (PRO-Badges, Kapitel „Basic und Pro“, Versionskarte, PDF mit PRO)

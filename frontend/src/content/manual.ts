@@ -1,18 +1,28 @@
 // Bedienungsanleitung Aufmaßprofi – gemeinsame Inhalte für Hilfe-Seite und PDF
-export type ManualStep = { text: string; info?: string };
-export type ManualSection = { id: string; icon: string; color: string; title: string; intro: string; steps: ManualStep[]; tips?: string[] };
+export type ManualStep = { text: string; info?: string; pro?: boolean };
+export type ManualSection = { id: string; icon: string; color: string; title: string; intro: string; steps: ManualStep[]; tips?: string[]; pro?: boolean };
 
 export const QUICK_START: { title: string; text: string }[] = [
   { title: 'Hinweise bestätigen', text: 'Beim ersten Start die Hinweise lesen, Häkchen setzen und „App starten“ tippen.' },
   { title: 'Firmendaten & Logo', text: 'Einstellungen → Logo, Name und PDF-Einstellungen eintragen. Erscheinen später auf allen PDFs.' },
   { title: 'Neues Projekt starten', text: 'Auf der Startseite den großen blauen Button „Neues Projekt starten“ tippen, Namen eingeben, Kunde wählen oder neu anlegen, speichern.' },
-  { title: 'Aufmaß erfassen', text: 'Im Projekt Skizzen zeichnen, Fotos aufnehmen, Dachflächen berechnen und Checklisten ausfüllen.' },
+  { title: 'Aufmaß erfassen', text: 'Im Projekt Skizzen zeichnen, Fotos aufnehmen und Checklisten ausfüllen – in Pro zusätzlich Dachflächen berechnen und Fotos vermessen.' },
   { title: 'Termin planen', text: 'Startseite „+ Termin“ oder im Projekt „Termin planen“ – mit Erinnerung und Navi-Adresse.' },
   { title: 'PDF erstellen & teilen', text: 'Im Projekt „Projekt-PDF“ wählen und per Mail, WhatsApp oder in Dateien weitergeben.' },
   { title: 'Daten sichern', text: 'Regelmäßig unter Backup „Backup erstellen & teilen“ – alle Daten liegen nur auf deinem Gerät.' },
 ];
 
 export const MANUAL: ManualSection[] = [
+  {
+    id: 'versionen', icon: 'ribbon-outline', color: '#d97706', title: 'Basic und Pro – was ist enthalten?',
+    intro: 'Aufmaßprofi gibt es als Basic und als Pro. Mit „PRO“ markierte Kapitel und Schritte gibt es nur in der Pro-Version.',
+    steps: [
+      { text: 'Basic: Projekte, Kunden, Termine mit Erinnerungen, Skizzen mit Flächenberechnung, Fotos mit Beschriftung, Checklisten, Projekt-PDF und Backup.' },
+      { text: 'Checklisten in Basic: bis zu 3 Vorlagen, 10 Hauptpunkte und 5 Unterpunkte je Checkliste.', info: 'In Pro sind Vorlagen und Punkte unbegrenzt. Dazu kommen verschachtelte Unterpunkte, Logos, Druckbild, Vorschau, Verknüpfungen, Berechnungen und Import/Export von Vorlagen.' },
+      { text: 'Pro zusätzlich: Dach-Aufmaß, Flächen-Kalkulator, Fotomessung, Dokumente, Rapporte mit Mitarbeitern, Material und Maschinen, Referenzen sowie Projekte exportieren, importieren und verschieben.', pro: true },
+      { text: 'Pro freischalten: Einstellungen öffnen, ganz nach unten scrollen, „Erweitert…“ tippen und den Freischaltcode eingeben. Danach stehen alle Pro-Funktionen sofort zur Verfügung.', info: 'Deine bisherigen Daten bleiben beim Wechsel von Basic auf Pro vollständig erhalten.' },
+    ],
+  },
   {
     id: 'start', icon: 'home-outline', color: '#1565c0', title: 'Die Startseite',
     intro: 'Dein Überblick über Projekte, Termine und schnelle Aktionen.',
@@ -47,6 +57,7 @@ export const MANUAL: ManualSection[] = [
       { text: 'Speichern – das Projekt öffnet sich in den Projektdetails.' },
       { text: 'Status setzen (Anfrage, Angebot, Ausführung, Fertig), damit die Startseite den Überblick behält.' },
       { text: 'Projekte in Ordner sortieren: in der Projektliste ein Projekt gedrückt halten und auf einen Ordner ziehen.', info: 'Ordner legst du in der Projektliste an. „Ohne Ordner“ zeigt alle noch nicht sortierten Projekte.' },
+      { text: 'Dokumente (z. B. Pläne, Angebote als PDF) im Projekt unter „Dokumente“ ablegen.', pro: true },
     ],
     tips: ['Fertige Projekte archivieren hält die Liste übersichtlich – Archiv findest du in den Einstellungen.', 'Gelöschtes landet zuerst im Papierkorb und kann wiederhergestellt werden.'],
   },
@@ -70,12 +81,12 @@ export const MANUAL: ManualSection[] = [
     steps: [
       { text: 'Im Projekt „Fotos“ → Kamera oder Galerie wählen.', info: 'Kamera- und Fotozugriff wird erst beim ersten Tippen erfragt. Bei Ablehnung kannst du die Erlaubnis über „Einstellungen öffnen“ nachträglich erteilen.' },
       { text: 'Foto antippen → bearbeiten: Pfeile, Texte, Linien und Flächen einzeichnen.' },
-      { text: 'Fotomessung: Referenz setzen (bekannte Länge, z. B. Ziegel oder Zollstock), dann weitere Strecken messen.', info: 'Je genauer die Referenz, desto genauer die Messung. Fotomessung ersetzt kein exaktes Aufmaß.' },
+      { text: 'Fotomessung: Referenz setzen (bekannte Länge, z. B. Ziegel oder Zollstock), dann weitere Strecken messen.', pro: true, info: 'Je genauer die Referenz, desto genauer die Messung. Fotomessung ersetzt kein exaktes Aufmaß.' },
       { text: 'Das erste Projektfoto dient als Vorschaubild in der Projektliste.' },
     ],
   },
   {
-    id: 'dach', icon: 'triangle-outline', color: '#dc2626', title: 'Dachflächen & Flächen-Kalkulator',
+    id: 'dach', icon: 'triangle-outline', color: '#dc2626', title: 'Dachflächen & Flächen-Kalkulator', pro: true,
     intro: 'Dachflächen aus Gebäudemaßen und Neigung berechnen.',
     steps: [
       { text: 'Im Projekt „Dach-Aufmaß“ → Dachtyp wählen (z. B. Satteldach, Walmdach, Pultdach).' },
@@ -90,7 +101,8 @@ export const MANUAL: ManualSection[] = [
     intro: 'Wiederkehrende Prüfungen und Abnahmen mit Vorlagen erledigen.',
     steps: [
       { text: 'Startseite → „Checklisten“ zeigt deine Vorlagen.' },
-      { text: 'Vorlage bearbeiten oder neu anlegen: Punkte, Kategorien und Logo festlegen.' },
+      { text: 'Vorlage bearbeiten oder neu anlegen: Punkte und Kategorien festlegen.', info: 'Basic: bis zu 3 Vorlagen, 10 Hauptpunkte und 5 Unterpunkte. Pro: unbegrenzt.' },
+      { text: 'Logo, Druckbild, Vorschau, Berechnungen und Verknüpfungen in Vorlagen nutzen sowie Vorlagen importieren/exportieren.', pro: true },
       { text: 'Im Projekt „Checkliste“ → Vorlage wählen und Punkt für Punkt abhaken, Fotos und Notizen ergänzen.' },
       { text: 'Fertige Checklisten erscheinen im Projekt-PDF oder lassen sich einzeln exportieren.' },
     ],
@@ -111,8 +123,8 @@ export const MANUAL: ManualSection[] = [
     tips: ['Die Monatsansicht findest du über „Kalender“ auf der Startseite.'],
   },
   {
-    id: 'rapporte', icon: 'document-text-outline', color: '#0891b2', title: 'Rapporte, Material & Mitarbeiter',
-    intro: 'Arbeitszeiten, Fahrten und Material zu einem Projekt erfassen (Pro-Funktion).',
+    id: 'rapporte', icon: 'document-text-outline', color: '#0891b2', title: 'Rapporte, Material & Mitarbeiter', pro: true,
+    intro: 'Arbeitszeiten, Fahrten und Material zu einem Projekt erfassen.',
     steps: [
       { text: 'Im Projekt „Rapport“ anlegen: Datum, Mitarbeiter, Stunden und Fahrzeiten eintragen.' },
       { text: 'Material aus der Materialliste oder aus Checklisten übernehmen.' },
@@ -127,7 +139,8 @@ export const MANUAL: ManualSection[] = [
       { text: 'Im Projekt „Projekt-PDF“ tippen und Inhalte auswählen (Skizzen, Fotos, Flächen, Checklisten …).' },
       { text: 'Teilen per Mail, WhatsApp, AirDrop oder in „Dateien“ speichern.' },
       { text: 'Logo, Firmendaten und Layout stellst du unter Einstellungen → PDF-Einstellungen ein.' },
-      { text: '„Projekt exportieren“ erstellt eine Datei, die ein Kollege mit Aufmaßprofi importieren kann.' },
+      { text: '„Projekt exportieren“ erstellt eine Datei, die ein Kollege mit Aufmaßprofi Pro importieren kann.', pro: true },
+      { text: 'Referenzen: abgeschlossene Projekte mit Beispielfotos sammeln und Kunden zeigen.', pro: true },
     ],
   },
   {
@@ -147,16 +160,18 @@ export const MANUAL: ManualSection[] = [
     steps: [
       { text: 'Sprache, Logo, PDF-Layout, Projekttypen und Werkzeugnamen anpassen.' },
       { text: 'Archiv und Papierkorb verwalten.' },
-      { text: 'Pro-Version: Freischaltcode eingeben, um Rapporte, Mitarbeiter, Material und weitere Funktionen zu nutzen.' },
+      { text: 'Pro-Version: unter „Erweitert…“ den Freischaltcode eingeben, um Dach-Aufmaß, Fotomessung, Rapporte, Mitarbeiter, Material und weitere Funktionen zu nutzen.' },
       { text: 'Rechtliches: Datenschutz, Haftungsausschluss und Impressum.' },
     ],
   },
 ];
 
 const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const PRO = '<span class="pro">PRO</span>';
 
 // HTML für das PDF (Kurzanleitung + ausführliche Anleitung inkl. aller Erklärungen)
-export const manualHtml = () => `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
+export const manualHtml = (isPro = false) => `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
+  .pro { display: inline-block; background: #d97706; color: #fff; font-size: 9px; font-weight: 800; border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
   body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #0f172a; font-size: 12px; line-height: 1.45; }
   h1 { color: #1565c0; font-size: 26px; margin: 0 0 4px; } .sub { color: #475569; margin-bottom: 18px; }
   h2 { font-size: 17px; margin: 22px 0 6px; padding-bottom: 4px; border-bottom: 2px solid #e2e8f0; page-break-after: avoid; }
@@ -168,12 +183,12 @@ export const manualHtml = () => `<!DOCTYPE html><html><head><meta charset="utf-8
   section { page-break-inside: avoid; } .foot { margin-top: 24px; color: #64748b; font-size: 10px; }
 </style></head><body>
 <h1>Aufmaßprofi – Bedienungsanleitung</h1>
-<div class="sub">Die App für digitales Aufmaß · Schritt für Schritt erklärt</div>
+<div class="sub">Die App für digitales Aufmaß · Schritt für Schritt erklärt · Deine Version: ${isPro ? 'Pro' : 'Basic'}. Mit ${PRO} markierte Funktionen gibt es nur in der Pro-Version.</div>
 <div class="quick"><b>Kurzanleitung – in 7 Schritten startklar</b><ol>
 ${QUICK_START.map(q => `<li><b>${esc(q.title)}:</b> ${esc(q.text)}</li>`).join('')}
 </ol></div>
-${MANUAL.map(sec => `<section><h2>${esc(sec.title)}</h2><div class="intro">${esc(sec.intro)}</div><ol class="steps">
-${sec.steps.map(st => `<li>${esc(st.text)}${st.info ? `<div class="info">ℹ️ ${esc(st.info)}</div>` : ''}</li>`).join('')}
+${MANUAL.map(sec => `<section><h2>${esc(sec.title)}${sec.pro ? PRO : ''}</h2><div class="intro">${esc(sec.intro)}</div><ol class="steps">
+${sec.steps.map(st => `<li>${esc(st.text)}${st.pro ? PRO : ''}${st.info ? `<div class="info">ℹ️ ${esc(st.info)}</div>` : ''}</li>`).join('')}
 </ol>${(sec.tips || []).map(t => `<div class="tip">💡 ${esc(t)}</div>`).join('')}</section>`).join('')}
 <div class="foot">Maße und Berechnungen dienen als Unterstützung und ersetzen keine Statik, Bauplanung oder amtliche Vermessung. Alle Daten bleiben ausschließlich auf deinem Gerät.</div>
 </body></html>`;

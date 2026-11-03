@@ -40,6 +40,9 @@ import { deepCloneElement, simplifyPath, DrawElement, FontFamily, FONT_FAMILIES,
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
 import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared } from '../../src/sketch/polygonArea';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
+import { HelpButton } from '../../src/components/HelpButton';
+import { SketchTour } from '../../src/components/SketchTour';
+import { tourRef } from '../../src/components/home/HomeTour';
 import Svg, { 
   Path, 
   Line, 
@@ -6126,10 +6129,16 @@ export default function DrawSketchScreen() {
           />
           <Text style={styles.pdfSizeHeaderLabel}>PDF</Text>
         </TouchableOpacity>
+        <View ref={tourRef('sk-help')} collapsable={false} style={{ marginHorizontal: 4 }}>
+          <HelpButton section="skizzen" light testID="sketch-help" />
+        </View>
+        <View ref={tourRef('sk-save')} collapsable={false}>
         <TouchableOpacity testID="sketch-save-button" onPress={saveSketch} style={styles.headerButton} disabled={loading}>
           <Ionicons name="checkmark" size={24} color={loading ? '#888' : '#fff'} />
         </TouchableOpacity>
+        </View>
       </View>
+      <SketchTour />
 
       {/* Auto-Save Hinweis */}
       {autoSaveNotice && (
@@ -6140,7 +6149,7 @@ export default function DrawSketchScreen() {
       )}
 
       {/* Toolbar mit Labels - scrollbar für iPhone und im Querformat */}
-      <View style={[styles.toolbarContainer, isPhoneLandscape && { borderBottomWidth: 0.5 }]}>
+      <View ref={tourRef('sk-toolbar')} collapsable={false} style={[styles.toolbarContainer, isPhoneLandscape && { borderBottomWidth: 0.5 }]}>
         <ScrollView 
           horizontal={isPhoneDevice || isPhoneLandscape} 
           showsHorizontalScrollIndicator={isPhoneDevice}
@@ -6220,7 +6229,7 @@ export default function DrawSketchScreen() {
         {/* ========== ZEICHEN-TOOLS ========== */}
         
         {/* Zoom an/aus Toggle - vor Bearbeiten */}
-        <View style={styles.toolButtonWithLabel}>
+        <View ref={tourRef('sk-zoom')} collapsable={false} style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[
               styles.toolButtonInner, 
@@ -6698,7 +6707,7 @@ export default function DrawSketchScreen() {
         <View style={styles.separator} />
 
         {/* ========== UNDO/REDO ========== */}
-        <View style={styles.toolGroupWithLabel}>
+        <View ref={tourRef('sk-undo')} collapsable={false} style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             <TouchableOpacity
               style={[styles.toolButtonInner, !canUndo && styles.toolButtonDisabled]}

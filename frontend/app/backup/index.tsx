@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BackupService, AutoBackupSnapshot } from '../../services/BackupService';
 import { Features } from '../../services/FeatureFlags';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { HelpButton } from '../../src/components/HelpButton';
 
 const REMINDER_KEY = 'aufmassprofi_backup_reminder_days';
 const REMINDER_OPTIONS: { days: number; label: string }[] = [
@@ -240,6 +241,7 @@ export default function BackupScreen() {
               damit du sie bei Bedarf wiederherstellen kannst.
             </Text>
           </View>
+          <HelpButton section="backup" testID="backup-help" />
         </View>
 
         {/* ===== Option A: Datei-Backup ===== */}

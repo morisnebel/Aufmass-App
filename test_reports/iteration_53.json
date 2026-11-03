@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend-only test of the new help '?' buttons and the Home/Sketch tours on the web preview (390x844, app_language='de', welcome dialog accepted). PASS: (1) The Home tour (6 steps) starts once after the disclaimer is accepted. Skip sets aufmassprofi_tour_done=1 and the tour does not come back after a reload. (2) apt-help closes the appointment modal and opens /help?section=termine. 'Termine & Erinnerungen' is expanded and scrolled to the top (y=72), and other chapters stay collapsed. (3) backup-help opens /help?section=backup with 'Datensicherung' expanded and in view. (4) sketch-help opens /help?section=skizzen with 'Skizzen zeichnen' expanded and in view. Going back returns to the editor. (5) The Sketch tour shows the 7 expected steps the first time the editor opens. Steps 1 and 4 are centred cards; steps 2, 3 and 7 highlight their target visibly. After 'Los geht's' or Skip, aufmassprofi_sketch_tour_done=1 is set and the tour does not appear when the editor is reopened or a new sketch is opened. (6) In /help, the search works (hit help-hit-backup, the 'no results' text, and 'Ganzes Kapitel öffnen' expands the chapter). help-restart-tour clears both keys and navigates to /, where the Home tour starts again; the Sketch tour also starts again on the next sketch. (7) Regression: pen drawing works (Elemente: 2, and undo gives 1) and sketch-save-button shows 'Skizze wurde gespeichert'; the sketch appears in the project's Skizzen tab. ISSUES: (a) MEDIUM, on the web preview at phone widths: the extra '?' button pushes sketch-save-button off-screen to the right. (b) LOW: in the Sketch tour, the highlights for 'Rückgängig' (step 5) and 'Speichern' (step 6) land off-screen or are cut off, so the user sees a dark screen with no visible highlight. No deprecated Expo packages detected.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Sketch editor header (app/sketches/draw.tsx:6091-6140, src/styles/sketchDrawStyles.ts:50 titleInput)", "issue": "On the web preview, at viewport widths of 375 and 390, sketch-save-button is placed at x=384-424 and is cut off or hidden past the right edge; the screenshot shows no checkmark. Cause: the title TextInput renders as an <input size=20> with flex '1 1 0%' but min-width 'auto', so it never shrinks below about 216px. The '?' button added in this change (36px + 8px margin) pushes the save button off-screen. Verified fix: adding minWidth: 0 to styles.titleInput moves the save button to x=334 and makes it fully visible. On native, flex shrink probably makes it fit, but this is not verified.", "testID": "sketch-save-button", "priority": "MEDIUM"},
+      {"component": "SketchTour / SpotlightTour visibility check (src/components/home/HomeTour.tsx:42)", "issue": "The visibility check only tests y (y >= 0 && y+h <= H), not x. In step 5 ('Rückgängig & Wiederholen'), sk-undo sits at x=1227 inside the horizontal toolbar ScrollView, so the rect is set off-screen. The user sees the dimmed screen with no ring, and the card is placed relative to an invisible target. Step 6 ('Speichern') rings a target that is cut off by issue (a). The toolbar also scrolls horizontally on native phones, so the same problem should occur there.", "testID": "home-tour", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "HelpButton (src/components/HelpButton.tsx:22)", "issues": ["The visible size is 36x36; hitSlop 8 brings the touch area to 52, which is acceptable. No change required."]},
+      {"screen": "AppointmentFormModal", "issues": ["Tapping apt-help calls onClose and drops any unsaved data in the appointment form without asking. Consider a confirmation, or keeping the draft, when fields are filled."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/help_tour_notes.md"],
+  "action_items": [
+    "MEDIUM: Add minWidth: 0 to styles.titleInput in src/styles/sketchDrawStyles.ts (or flexShrink/minWidth on the header TextInput) so the header fits at 375/390 px on web. Verified in the DOM: the save button moves from x=384 to x=334 and is fully visible.",
+    "LOW: In SpotlightTour, also require x >= 0 && x+w <= W before setting the rect, so the card is shown centred when the target is off-screen. Better: scroll the sketch toolbar ScrollView to the sk-undo group (scrollTo/scrollToEnd) before measuring step 5, so that the 'Rückgängig' highlight is actually visible."
+  ],
+  "critical_code_review_comments": [
+    "HomeTour.tsx: the module-level targets map keeps refs to unmounted views (for example sk-* keys after the sketch editor closes). This works today because the keys are distinct, but nothing is cleaned up on unmount.",
+    "HomeTour.tsx:78: on the last step, tour-skip still renders an empty 90px tappable area that calls finish. This is harmless but invisible to the user.",
+    "help.tsx: scrolling to a chapter relies on the chapter wrappers being direct children of the ScrollView content. This works now, but it will break if the chapters are wrapped in another View."
+  ],
+  "updated_files": ["/app/tests/e2e/help_tour_notes.md"],
+  "success_rate": {"backend": "N/A", "frontend": "90% (7/7 requested flows pass functionally; 1 medium layout regression and 1 low tour-highlight issue)"},
+  "seed_data_creation": "TEST_Max TEST_Tour customer, TEST_Tour Projekt project, and 'Neue Skizze' sketches created only in isolated, ephemeral browser localStorage contexts; no persistent data touched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "See /app/tests/e2e/help_tour_notes.md. Every browser_automation call gets a fresh localStorage. Open the sketch editor quickly with SEED_JS from setup_snippet.py and then /sketches/draw?projectId=p1. Saving after opening the draw URL directly keeps you on the same URL (no history); this is a test artifact. The pen tool sits at absolute x=655 (use SCROLL_JS). Mouse drags draw strokes. To check the save button, compare the bounding box of sketch-save-button with the viewport width.",
+  "rca_of_issue": "Header overflow: RN-web renders TextInput as <input> (size=20) with min-width:auto. A flex item with min-width:auto cannot shrink below its intrinsic width (about 216px), so the row content is about 434px wide: back button 40 + margins 32 + input 216 + PDF button 40 + help button 44 + save button 40 + padding 32. That overflows a 390px viewport. Before the HelpButton was added the save button fit at x≈340."
+}

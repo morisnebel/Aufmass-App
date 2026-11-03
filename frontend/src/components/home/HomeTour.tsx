@@ -8,8 +8,8 @@ export const TOUR_DONE_KEY = 'aufmassprofi_tour_done';
 const targets: Record<string, any> = {};
 export const tourRef = (key: string) => (el: any) => { if (el) targets[key] = el; };
 
-type Step = { key: string | null; title: string; text: string };
-const STEPS: Step[] = [
+export type TourStep = { key: string | null; title: string; text: string };
+const STEPS: TourStep[] = [
   { key: null, title: 'Willkommen bei Aufmaßprofi 👋', text: 'In 6 kurzen Schritten zeigen wir dir die wichtigsten Buttons. Du kannst die Tour jederzeit überspringen.' },
   { key: 'cta', title: 'Neues Projekt starten', text: 'Hier beginnt jedes Aufmaß: Projekt anlegen, Kunde wählen – danach Skizzen, Fotos und Flächen erfassen.' },
   { key: 'termin', title: 'Termine planen', text: 'Lege Baustellentermine mit Erinnerung, Abfahrtszeit und Navi-Adresse an.' },
@@ -21,6 +21,11 @@ const STEPS: Step[] = [
 type Rect = { x: number; y: number; w: number; h: number };
 
 export function HomeTour({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  return <SpotlightTour visible={visible} onClose={onClose} steps={STEPS} storageKey={TOUR_DONE_KEY} />;
+}
+
+// Allgemeine Spotlight-Tour (Startseite, Skizze …)
+export function SpotlightTour({ visible, onClose, steps: STEPS, storageKey }: { visible: boolean; onClose: () => void; steps: TourStep[]; storageKey: string }) {
   const [i, setI] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
   const { width: W, height: H } = useWindowDimensions();
@@ -34,12 +39,12 @@ export function HomeTour({ visible, onClose }: { visible: boolean; onClose: () =
     if (!el?.measureInWindow) return;
     const t = setTimeout(() => el.measureInWindow((x: number, y: number, w: number, h: number) => {
       // Nur hervorheben, wenn das Ziel sichtbar ist
-      if (w > 0 && h > 0 && y >= 0 && y + h <= H) setRect({ x, y, w, h });
+      if (w > 0 && h > 0 && y >= 0 && y + h <= H && x >= 0 && x + w <= W) setRect({ x, y, w, h });
     }), 50);
     return () => clearTimeout(t);
-  }, [visible, i, step.key, H]);
+  }, [visible, i, step.key, H, W]);
 
-  const finish = () => { AsyncStorage.setItem(TOUR_DONE_KEY, '1').catch(() => {}); onClose(); };
+  const finish = () => { AsyncStorage.setItem(storageKey, '1').catch(() => {}); onClose(); };
   const next = () => (i < STEPS.length - 1 ? setI(i + 1) : finish());
 
   const pad = 6;
@@ -69,7 +74,7 @@ export function HomeTour({ visible, onClose }: { visible: boolean; onClose: () =
           <Text style={s.title}>{step.title}</Text>
           <Text style={s.text}>{step.text}</Text>
           <View style={s.row}>
-            <TouchableOpacity testID="tour-skip" style={s.skip} onPress={finish}>
+            <TouchableOpacity testID="tour-skip" style={s.skip} onPress={finish} disabled={i === STEPS.length - 1}>
               <Text style={s.skipText}>{i < STEPS.length - 1 ? 'Überspringen' : ''}</Text>
             </TouchableOpacity>
             <View style={s.dots}>

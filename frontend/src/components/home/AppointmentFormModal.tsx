@@ -8,6 +8,7 @@ import { Appointment, AppointmentService } from '../../../services/AppointmentSe
 import { scheduleDepartureReminder, scheduleAppointmentReminder, cancelReminder, departureTime } from '../../utils/appointmentTools';
 import { todayKey } from './TodayOverview';
 import { DateTimeSheet, pickDateTimeAndroid, fmtDateTime } from './DateTimeSheet';
+import { HelpButton } from '../HelpButton';
 
 const TRAVEL_OPTIONS = [0, 15, 30, 45, 60, 90];
 const REMIND_OPTIONS: [number, string][] = [[0, 'Keine'], [15, '15 Min'], [30, '30 Min'], [60, '1 Std'], [120, '2 Std'], [1440, '1 Tag'], [-1, 'Eigene Zeit']];
@@ -224,7 +225,8 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
       <View style={s.backdrop}>
         <View style={[s.sheet, kb > 0 && { marginBottom: kb, paddingBottom: 10, maxHeight: winH - kb - insets.top - 8 }]}>
           <View style={s.head}>
-            <Text style={s.title}>{initial ? 'Termin bearbeiten' : 'Neuer Termin'}</Text>
+            <Text style={[s.title, { flex: 1 }]}>{initial ? 'Termin bearbeiten' : 'Neuer Termin'}</Text>
+            <HelpButton section="termine" onBeforeOpen={onClose} testID="apt-help" />
             <TouchableOpacity testID="apt-close" onPress={onClose} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={26} color="#334155" /></TouchableOpacity>
           </View>
           <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>

@@ -49,6 +49,7 @@ export const styles = StyleSheet.create({
   },
   titleInput: {
     flex: 1,
+    minWidth: 0,
     marginHorizontal: 16,
     padding: 8,
     backgroundColor: 'rgba(255,255,255,0.2)',

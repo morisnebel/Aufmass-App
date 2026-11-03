@@ -1,0 +1,32 @@
+{
+  "summary": "Web Alert polyfill verification at 390x844 in Chromium, using page.on('dialog') to accept or dismiss. ALL PASS. (1) Simple info alerts now show as window.alert: 'Snapshot erstellt', 'Customer created', 'Project created' and 'Fertig'. The OK onPress runs, e.g. navigation to the project detail after 'Project created'. The UI is not frozen afterwards and reminder chip taps work. (2) Confirmations with one action plus cancel use window.confirm. Backup snapshot delete: dismissing keeps all 3 snapshots, accepting leaves 2. Snapshot restore: dismissing does nothing; accepting restores and shows the 'Fertig' alert. 'Aus Datei wiederherstellen': dismissing shows no file chooser and no busy overlay; accepting opens the file chooser and shows the 'Backup wird geladen…' overlay. Home project-card delete: dismissing keeps 1 card, accepting leaves 0. 'Save Address?' dismiss maps to the 'Nein' cancel onPress, and the project is saved. (3) Multiple actions use sequential confirms. On a duplicate project number, dismissing 'Trotzdem verwenden' and accepting 'Automatisch vergeben' saved the project as PR-26002. (4) No regression: the app loads, the disclaimer gate works, home works, and creating a customer, then a project, and saving both works. No pageerrors. Deprecated packages detected: none (no expo-av, expo-barcode-scanner or expo-background-fetch in package.json). SafeAreaView issues detected: none in scope.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Home deleteProject confirm", "issue": "The confirm text shows an empty project name: 'Do you really want to delete the project \"\"?'. app/index.tsx:635 passes { name: '' } instead of the project name. Pre-existing bug, not caused by the polyfill.", "testID": "project-card-*", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Web confirm dialogs", "issues": ["Browser confirm only shows OK/Abbrechen, so the custom button labels are lost (e.g. 'Ja'/'Nein' on Save Address, 'Ja, wiederherstellen'). Consider appending a line like 'OK = „<action>\" · Abbrechen = „<cancel>\"' in webAlertPolyfill.ts for the 1-action+cancel case."]}
+    ],
+    "react_native_issues": [
+      {"component": "Alert.prompt (calculator rename)", "issue": "Alert.prompt only works on iOS. It is a no-op on web and Android and is not covered by the polyfill, so renaming a Grundfläche does nothing there. Reference: /app/frontend/app/calculator/new.tsx:7281, 7309, 7388, 7416"}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_38.json"],
+  "action_items": [
+    "LOW: app/index.tsx:635 – pass the actual project name to t('home.deleteProjectConfirm', { name }).",
+    "LOW: Optionally polyfill Alert.prompt on web via window.prompt (calculator/new.tsx rename). Android needs a custom modal.",
+    "LOW (UX): Include the button labels in the window.confirm text in src/utils/webAlertPolyfill.ts so users know what OK and Abbrechen mean."
+  ],
+  "critical_code_review_comments": [
+    "webAlertPolyfill.ts is correct. It is guarded by Platform.OS==='web', is imported early in _layout.tsx, handles single/no buttons with alert plus onPress, uses confirm for 1 action plus cancel (the cancel onPress runs on dismiss), and runs sequential confirms for multiple actions. It runs the last action automatically only when no cancel button exists. A scan found no Alert.alert call with 2 or more buttons and no cancel style, so the auto-run path is never hit in practice.",
+    "Only the first cancel-style button is treated as cancel. That is acceptable."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "Only per-session browser-local data (TEST_Mustermann customer, TEST_P1/TEST_P2/TEST_Del projects) in the web preview storage.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Each browser_automation session starts with fresh storage. Accept the disclaimer by mouse-wheel scrolling the modal 15 times at (195,400), then click disclaimer-checkbox and disclaimer-accept. The UI locale is English (placeholders like 'Last Name', 'Street and number'). New project flow: home-new-project, fill the name placeholder 'z.B. Dachsanierung Hauptstraße', tap 'Kunde auswählen...', tap + at (350,194), fill 'Last Name', customer-save, project-save. To pick an existing customer in the select list, click at (200,322) because get_by_text hits a hidden duplicate. home-select-toggle is Pro-only. The project-card trash icon is at card.x+width-34, card.y+35. The snapshot restore and delete buttons are the 1st and 2nd following siblings of [data-testid^=snap-share-]."
+}

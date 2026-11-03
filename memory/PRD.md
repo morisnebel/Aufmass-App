@@ -751,3 +751,7 @@ Fix: Alle Zeichen-SVG-Ebenen in einen View mit style.pointerEvents:'none' gewick
 Zusaetzlich (Web): ImageMeter/Dokument-SVG width/height 100% (Linien waren im Web unsichtbar); Haupt-SVG der Skizze position:relative/zIndex 1 (Fotos deckten im Web Zeichnungen ab); imagemeter-Routen in _layout.tsx mit headerShown:false (doppelter Header).
 Testagent iteration_37 (Web, Maus + simulierter Touch): Stift/Formen/Masslinie/Verschieben/Bild einfuegen+verschieben/Speichern OK; Foto-Anmerkung, Unterschrift, Flaechenrechner, ImageMeter OK.
 Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: Remount-Workaround (fabricInvalidateTick) testweise deaktivieren, da RN 0.88 den Props-Propagation-Bug evtl. behoben hat.
+
+## Juni 2026
+- Web-Vorschau: Alert.alert/Alert.prompt-Polyfill (src/utils/webAlertPolyfill.ts) – Dialoge funktionieren im Browser (getestet, iteration_38)
+- Löschbestätigung zeigt Projektnamen

@@ -1,4 +1,5 @@
 import '../utils/storageBackend'; // MUSS früh laufen: SQLite-Backend + Schutz vor nativen NSNull-Crashes
+import '../src/utils/webAlertPolyfill'; // Web-Vorschau: Alert.alert-Buttons funktionsfähig machen
 import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

@@ -632,7 +632,7 @@ export default function HomeScreen() {
   const deleteProject = async (projectId: string) => {
     Alert.alert(
       t('home.deleteProject'),
-      t('home.deleteProjectConfirm', { name: '' }),
+      t('home.deleteProjectConfirm', { name: projects.find(p => p.id === projectId)?.name || '' }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         {

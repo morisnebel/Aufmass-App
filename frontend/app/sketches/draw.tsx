@@ -38,6 +38,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Speichereffiziente Deep-Clone-Funktion (verhindert OOM bei großen base64-Strings)
 import { deepCloneElement, simplifyPath, DrawElement, FontFamily, FONT_FAMILIES, DrawMode, TOOL_SIZES_KEY } from '../../src/sketch/sketchShared';
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
+import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared } from '../../src/sketch/polygonArea';
 import Svg, { 
   Path, 
   Line, 
@@ -108,6 +109,12 @@ export default function DrawSketchScreen() {
   const currentPenPointsRef = useRef<{ x: number; y: number }[]>([]);
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
   const [tempElement, setTempElement] = useState<DrawElement | null>(null);
+  // Flüssiges Zeichnen: Während ein Strich/eine Form entsteht, bleibt die Haupt-Zeichenfläche
+  // stehen (kein Neuaufbau pro Bewegung). Nur die kleine Live-Ebene wird aktualisiert.
+  const isLiveDrawing = !!tempElement || (currentPath.length > 0 && (drawMode === 'pen' || drawMode === 'polygon'));
+  const mainCanvasKeyRef = useRef(0);
+  if (!isLiveDrawing) mainCanvasKeyRef.current++;
+  const mainCanvasKey = mainCanvasKeyRef.current;
   
   // Polyline state - für zusammenhängende Linien (Grundrisse)
   const [polylinePoints, setPolylinePoints] = useState<{ x: number; y: number }[]>([]);
@@ -301,6 +308,20 @@ export default function DrawSketchScreen() {
       );
     });
 
+  // Eingefügte Bilder an die sichtbare Skizzenfläche anpassen, damit nichts über den Rand ragt
+  const fitImageToCanvas = (imgW: number, imgH: number, maxW = 400, maxH = 300) => {
+    const margin = 20;
+    const boundW = Math.max(50, Math.min(maxW, screenWidth - margin * 2));
+    const boundH = Math.max(50, Math.min(maxH, canvasHeight - margin * 2));
+    const ratio = imgW > 0 && imgH > 0 ? imgW / imgH : 4 / 3;
+    let w = boundW;
+    let h = boundW / ratio;
+    if (h > boundH) { h = boundH; w = boundH * ratio; }
+    const x = Math.max(margin, Math.min(50, screenWidth - w - margin));
+    const y = Math.max(margin, Math.min(50, canvasHeight - h - margin));
+    return { width: w, height: h, x, y };
+  };
+
   // Funktion um ein Projektfoto als Bild-Element einzufügen
   const insertProjectPhoto = (photo: any) => {
     const imageUri = photo.image_data || photo.uri;
@@ -312,32 +333,17 @@ export default function DrawSketchScreen() {
     // Berechne korrektes Seitenverhältnis des Bildes
     getImageSize(imageUri).then(
       ({ width: imgWidth, height: imgHeight }) => {
-        // Maximale Größe im Canvas
-        const maxWidth = 400;
-        const maxHeight = 300;
-        const aspectRatio = imgWidth / imgHeight;
-        
-        let finalWidth, finalHeight;
-        if (aspectRatio > maxWidth / maxHeight) {
-          // Bild ist breiter - begrenzen durch Breite
-          finalWidth = maxWidth;
-          finalHeight = maxWidth / aspectRatio;
-        } else {
-          // Bild ist höher - begrenzen durch Höhe
-          finalHeight = maxHeight;
-          finalWidth = maxHeight * aspectRatio;
-        }
-        
+        const fit = fitImageToCanvas(imgWidth, imgHeight);
         const imageElement: DrawElement = {
           id: generateId(),
           type: 'image',
           data: { uri: imageUri },
           color: '#000000',
           strokeWidth: 0,
-          x: 50,
-          y: 50,
-          width: finalWidth,
-          height: finalHeight,
+          x: fit.x,
+          y: fit.y,
+          width: fit.width,
+          height: fit.height,
           rotation: 0,
         };
         
@@ -359,10 +365,7 @@ export default function DrawSketchScreen() {
           data: { uri: imageUri },
           color: '#000000',
           strokeWidth: 0,
-          x: 50,
-          y: 50,
-          width: 300,
-          height: 200,
+          ...fitImageToCanvas(3, 2),
           rotation: 0,
         };
         
@@ -869,19 +872,7 @@ export default function DrawSketchScreen() {
   
   
   // Hilfsfunktion: Extrahiert den numerischen Wert aus einem Maß-String und konvertiert alles auf Meter
-  const parseMeasurementToMeters = (measurement: string): number => {
-    // Extrahiere Zahl und Einheit aus dem Maß-String (z.B. "2,50m" -> 2.50m, "25cm" -> 0.25m, "1500mm" -> 1.5m)
-    const match = measurement.match(/^([\d.,]+)\s*(cm|mm|m)?/i);
-    if (match) {
-      const value = parseFloat(match[1].replace(',', '.'));
-      if (isNaN(value)) return 0;
-      const unit = (match[2] || 'm').toLowerCase();
-      if (unit === 'cm') return value / 100;
-      if (unit === 'mm') return value / 1000;
-      return value; // Default: Meter
-    }
-    return 0;
-  };
+  const parseMeasurementToMeters = parseMeasurementToMetersShared;
 
   // Berechne Gesamtlänge für ein einzelnes Element (Grundriss)
   const calculateTotalLfmForElement = (elementId: string): number => {
@@ -900,119 +891,8 @@ export default function DrawSketchScreen() {
   // Das Polygon wird aus den eingegebenen Seitenlängen + den gezeichneten Winkeln
   // rekonstruiert (Bowditch-Ausgleich für den Schließfehler), dann Shoelace-Formel.
   // So ergibt z.B. ein Rechteck mit 5m × 4m exakt 20,00 m².
-  const calculatePolygonAreaM2 = (element: DrawElement): number | null => {
-    if (element.type !== 'polyline' || !element.data?.closed) return null;
-    const points: { x: number; y: number }[] = element.data.points;
-    if (!points || points.length < 3) return null;
-    const measures = lineSegmentMeasurements[element.id];
-    if (!measures) return null;
-
-    const n = points.length; // n Punkte = n Segmente (inkl. Schluss-Segment n-1)
-
-    // 1) Alle Segmente müssen ein numerisches Maß haben
-    const lengths: number[] = [];
-    const rawAngles: number[] = [];
-    for (let i = 0; i < n; i++) {
-      const meters = parseMeasurementToMeters(measures[i] || '');
-      if (!meters || meters <= 0) return null; // Maß fehlt oder nicht numerisch
-      const p1 = points[i];
-      const p2 = i === n - 1 ? points[0] : points[i + 1];
-      if (!p1 || !p2) return null;
-      const pxLen = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-      if (pxLen <= 0) return null;
-      lengths.push(meters);
-      rawAngles.push(Math.atan2(p2.y - p1.y, p2.x - p1.x)); // Richtung aus der Zeichnung
-    }
-
-    // Sonderfall Dreieck: Fläche ist durch die 3 Seiten EXAKT bestimmt (Heron-Formel),
-    // die gezeichneten Winkel werden nicht benötigt
-    if (n === 3) {
-      const [a, b, c] = lengths;
-      const s = (a + b + c) / 2;
-      const under = s * (s - a) * (s - b) * (s - c);
-      if (under <= 0) return null; // Seiten ergeben kein gültiges Dreieck
-      const heronArea = Math.sqrt(under);
-      if (!isFinite(heronArea) || heronArea <= 0) return null;
-      return Math.round(heronArea * 100) / 100;
-    }
-
-    // 1b) Winkel-Einrastung: Drehwinkel zwischen ALLEN aufeinanderfolgenden Kanten
-    // (inkl. Schluss-Drehung) aufs 45°-Raster einrasten (Toleranz ±12°)
-    const SNAP_STEP = Math.PI / 4; // 45°
-    const SNAP_TOL = (12 * Math.PI) / 180; // ±12°
-    const turns: number[] = [];
-    const wasSnapped: boolean[] = [];
-    for (let i = 0; i < n; i++) {
-      const prevAngle = rawAngles[(i - 1 + n) % n];
-      let turn = rawAngles[i] - prevAngle;
-      // Normalisieren auf (-180°, 180°]
-      while (turn > Math.PI) turn -= 2 * Math.PI;
-      while (turn <= -Math.PI) turn += 2 * Math.PI;
-      const snapped = Math.round(turn / SNAP_STEP) * SNAP_STEP;
-      if (Math.abs(turn - snapped) <= SNAP_TOL) {
-        turns.push(snapped);
-        wasSnapped.push(true);
-      } else {
-        turns.push(turn);
-        wasSnapped.push(false);
-      }
-    }
-
-    // 1c) Winkelschluss-Ausgleich: Die Summe aller Drehwinkel eines geschlossenen
-    // Polygons muss exakt ±360° sein. Der Restfehler wird auf die NICHT eingerasteten
-    // (= unsicher gezeichneten) Ecken verteilt – so korrigieren sich schiefe Ecken selbst
-    const turnSum = turns.reduce((a, b) => a + b, 0);
-    const target = turnSum >= 0 ? 2 * Math.PI : -2 * Math.PI;
-    const residual = target - turnSum;
-    if (Math.abs(residual) > 1e-9) {
-      const freeIdx: number[] = [];
-      for (let i = 0; i < n; i++) {
-        if (!wasSnapped[i]) freeIdx.push(i);
-      }
-      const distributeOver = freeIdx.length > 0 ? freeIdx : turns.map((_, i) => i);
-      for (const i of distributeOver) {
-        turns[i] += residual / distributeOver.length;
-      }
-    }
-
-    // 1d) Kanten-Richtungen aus den korrigierten Drehwinkeln rekonstruieren
-    const angles: number[] = [rawAngles[0]];
-    for (let i = 1; i < n; i++) {
-      angles.push(angles[i - 1] + turns[i]);
-    }
-
-    // 2) Kanten-Vektoren aus eingegebener Länge + gezeichnetem Winkel
-    const edges = lengths.map((len, i) => ({
-      x: len * Math.cos(angles[i]),
-      y: len * Math.sin(angles[i]),
-    }));
-
-    // 3) Schließfehler berechnen und per Bowditch-Ausgleich auf die Ecken verteilen
-    const totalLength = lengths.reduce((a, b) => a + b, 0);
-    const closeErrX = edges.reduce((a, e) => a + e.x, 0);
-    const closeErrY = edges.reduce((a, e) => a + e.y, 0);
-
-    const vertices: { x: number; y: number }[] = [{ x: 0, y: 0 }];
-    for (let i = 0; i < n - 1; i++) {
-      // Korrigierte Kante: Anteil des Schließfehlers proportional zur Seitenlänge abziehen
-      const corr = lengths[i] / totalLength;
-      vertices.push({
-        x: vertices[i].x + edges[i].x - closeErrX * corr,
-        y: vertices[i].y + edges[i].y - closeErrY * corr,
-      });
-    }
-
-    // 4) Shoelace-Formel auf den rekonstruierten Ecken (in Metern)
-    let areaM2 = 0;
-    for (let i = 0; i < vertices.length; i++) {
-      const j = (i + 1) % vertices.length;
-      areaM2 += vertices[i].x * vertices[j].y - vertices[j].x * vertices[i].y;
-    }
-    areaM2 = Math.abs(areaM2) / 2;
-
-    if (!isFinite(areaM2) || areaM2 <= 0) return null;
-    return Math.round(areaM2 * 100) / 100;
-  };
+  const calculatePolygonAreaM2 = (element: DrawElement): number | null =>
+    calculatePolygonAreaM2Shared(element, lineSegmentMeasurements);
 
   // Formatiert eine Fläche für die Anzeige (deutsches Format)
   const formatAreaM2 = (area: number): string => `${area.toFixed(2).replace('.', ',')} m²`;
@@ -1601,8 +1481,8 @@ export default function DrawSketchScreen() {
       getImageSize(imageUri).then(
         ({ width: imgWidth, height: imgHeight }) => {
           // Maximale Größe im Canvas (mit etwas Padding)
-          const maxWidth = width - 40;
-          const maxHeight = (height - 160) * 0.8;
+          const maxWidth = screenWidth - 40;
+          const maxHeight = Math.min((height - 160) * 0.8, canvasHeight - 40);
           const aspectRatio = imgWidth / imgHeight;
           
           let finalWidth, finalHeight;
@@ -1648,8 +1528,8 @@ export default function DrawSketchScreen() {
             strokeWidth: 0,
             x: 20,
             y: 20,
-            width: width - 40,
-            height: (height - 160) * 0.8,
+            width: screenWidth - 40,
+            height: Math.min((height - 160) * 0.8, canvasHeight - 40),
             rotation: 0,
           };
           
@@ -2705,31 +2585,17 @@ export default function DrawSketchScreen() {
         // Berechne korrektes Seitenverhältnis des Bildes
         const imgWidth = manipResult.width || 200;
         const imgHeight = manipResult.height || 200;
-        const maxWidth = 400;
-        const maxHeight = 300;
-        const aspectRatio = imgWidth / imgHeight;
-        
-        let finalWidth, finalHeight;
-        if (aspectRatio > maxWidth / maxHeight) {
-          // Bild ist breiter - begrenzen durch Breite
-          finalWidth = maxWidth;
-          finalHeight = maxWidth / aspectRatio;
-        } else {
-          // Bild ist höher - begrenzen durch Höhe
-          finalHeight = maxHeight;
-          finalWidth = maxHeight * aspectRatio;
-        }
-        
+        const fit = fitImageToCanvas(imgWidth, imgHeight);
         const newElement: DrawElement = {
           id: generateId(),
           type: 'image',
           data: { uri: base64Image },
           color: '#000000',
           strokeWidth: 0,
-          x: 100,
-          y: 100,
-          width: finalWidth,
-          height: finalHeight,
+          x: fit.x,
+          y: fit.y,
+          width: fit.width,
+          height: fit.height,
           rotation: 0,
         };
         const newElements = [...elements, newElement];
@@ -2821,29 +2687,17 @@ export default function DrawSketchScreen() {
       // Berechne Seitenverhältnis
       const imgWidth = manipResult.width || 200;
       const imgHeight = manipResult.height || 200;
-      const maxWidth = 400;
-      const maxHeight = 300;
-      const aspectRatio = imgWidth / imgHeight;
-      
-      let finalWidth, finalHeight;
-      if (aspectRatio > maxWidth / maxHeight) {
-        finalWidth = maxWidth;
-        finalHeight = maxWidth / aspectRatio;
-      } else {
-        finalHeight = maxHeight;
-        finalWidth = maxHeight * aspectRatio;
-      }
-      
+      const fit = fitImageToCanvas(imgWidth, imgHeight);
       const newElement: DrawElement = {
         id: generateId(),
         type: 'image',
         data: { uri: base64Image },
         color: '#000000',
         strokeWidth: 0,
-        x: 100,
-        y: 100,
-        width: finalWidth,
-        height: finalHeight,
+        x: fit.x,
+        y: fit.y,
+        width: fit.width,
+        height: fit.height,
         rotation: 0,
       };
       const newElements = [...elements, newElement];
@@ -2894,31 +2748,17 @@ export default function DrawSketchScreen() {
         // Berechne korrektes Seitenverhältnis des Bildes
         const imgWidth = manipResult.width || 250;
         const imgHeight = manipResult.height || 250;
-        const maxWidth = 400;
-        const maxHeight = 300;
-        const aspectRatio = imgWidth / imgHeight;
-        
-        let finalWidth, finalHeight;
-        if (aspectRatio > maxWidth / maxHeight) {
-          // Bild ist breiter - begrenzen durch Breite
-          finalWidth = maxWidth;
-          finalHeight = maxWidth / aspectRatio;
-        } else {
-          // Bild ist höher - begrenzen durch Höhe
-          finalHeight = maxHeight;
-          finalWidth = maxHeight * aspectRatio;
-        }
-        
+        const fit = fitImageToCanvas(imgWidth, imgHeight);
         const newElement: DrawElement = {
           id: generateId(),
           type: 'image',
           data: { uri: base64Image },
           color: '#000000',
           strokeWidth: 0,
-          x: 100,
-          y: 100,
-          width: finalWidth,
-          height: finalHeight,
+          x: fit.x,
+          y: fit.y,
+          width: fit.width,
+          height: fit.height,
           rotation: 0,
         };
         const newElements = [...elements, newElement];
@@ -7109,7 +6949,7 @@ export default function DrawSketchScreen() {
         })()}
         <Svg
           ref={svgRef}
-          key={Platform.OS === 'web' ? 'canvas' : `canvas-${fabricInvalidateTick.current++}`}
+          key={Platform.OS === 'web' ? 'canvas' : `canvas-${mainCanvasKey}`}
           width={screenWidth}
           height={canvasHeight}
           style={[styles.svg, { backgroundColor: 'transparent', position: 'relative', zIndex: 1 }]}
@@ -7151,20 +6991,7 @@ export default function DrawSketchScreen() {
           {/* Render all elements (Bilder sind auf der statischen Ebene) */}
           {elements.filter(el => el.type !== 'image').map(el => renderElement(el))}
 
-          {/* Render temporary element */}
-          {tempElement && renderElement(tempElement)}
-
-          {/* Render current path */}
-          {currentPath && currentPath.length > 0 && (
-            <Path
-              d={currentPath}
-              stroke={drawColor}
-              strokeWidth={strokeWidth}
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
+          {/* Live-Vorschau (Stift-Strich / Form) liegt in eigener Ebene darüber – siehe unten */}
 
           {/* Render current polyline während des Zeichnens */}
           {drawMode === 'polyline' && polylinePoints.length > 0 && (
@@ -7263,10 +7090,38 @@ export default function DrawSketchScreen() {
             );
           })()}
           {/* Fabric-Invalidierungs-Workaround: unsichtbares Element mit neuem Key pro Render */}
-          {Platform.OS !== 'web' && (
+          {Platform.OS !== 'web' && !isLiveDrawing && (
             <Circle key={`inv-${fabricInvalidateTick.current++}`} cx={-99999} cy={-99999} r={0.1} fill="none" stroke="none" opacity={0} />
           )}
         </Svg>
+        {/* Live-Ebene: nur der aktuell entstehende Strich / die Form-Vorschau.
+            Diese kleine Ebene wird pro Bewegung neu aufgebaut, die Haupt-Zeichenfläche
+            mit allen Elementen bleibt währenddessen unverändert -> flüssiges Zeichnen */}
+        {isLiveDrawing && (
+          <Svg
+            key={Platform.OS === 'web' ? 'live' : `live-${fabricInvalidateTick.current++}`}
+            width={screenWidth}
+            height={canvasHeight}
+            style={[styles.svg, { position: 'absolute', top: 0, left: 0, backgroundColor: 'transparent', zIndex: 2 }]}
+            pointerEvents="none"
+            viewBox={Platform.OS === 'android' && androidViewBox.w > 0
+              ? `${androidViewBox.x} ${androidViewBox.y} ${androidViewBox.w} ${androidViewBox.h}`
+              : `0 0 ${screenWidth} ${canvasHeight}`
+            }
+          >
+            {tempElement && renderElement(tempElement)}
+            {currentPath && currentPath.length > 0 && (
+              <Path
+                d={currentPath}
+                stroke={drawColor}
+                strokeWidth={strokeWidth}
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            )}
+          </Svg>
+        )}
         </View>
 
         {/* Info overlay - mit eigenem Responder damit Buttons funktionieren */}

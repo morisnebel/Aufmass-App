@@ -20,6 +20,7 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { useUnsavedChangesGuard } from '../../src/hooks/useUnsavedChangesGuard';
+import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import Svg, { 
   Path, 
   Circle, 
@@ -125,6 +126,8 @@ export default function AreaCalculatorEditor() {
   const [name, setName] = useState('Neue Berechnung');
   const [scale, setScale] = useState(100); // 100 Pixel = 1 Meter
   const [polygons, setPolygons] = useState<AreaPolygon[]>([]);
+  // Umbenennen-Dialog für Grund-/Abzugsflächen (funktioniert auf iOS, Android und Web)
+  const [renameTarget, setRenameTarget] = useState<{ id: string; message: string; name: string } | null>(null);
   const [lines, setLines] = useState<AreaLine[]>([]);
   const [lineCategories, setLineCategories] = useState<LineCategory[]>([]);
   const [textShortcuts, setTextShortcuts] = useState<TextShortcut[]>([]);
@@ -7278,19 +7281,7 @@ export default function AreaCalculatorEditor() {
                         <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#4CAF50' }]}>
                           <TouchableOpacity 
                             onPress={() => {
-                              Alert.prompt(
-                                'Name ändern',
-                                'Neuer Name für diese Grundfläche:',
-                                (newName) => {
-                                  if (newName && newName.trim()) {
-                                    setPolygons(polygons.map(p => 
-                                      p.id === polygon.id ? { ...p, name: newName.trim() } : p
-                                    ));
-                                  }
-                                },
-                                'plain-text',
-                                polygon.name
-                              );
+                              setRenameTarget({ id: polygon.id, message: 'Neuer Name für diese Grundfläche:', name: polygon.name });
                             }}
                           >
                             <Text style={[styles.resultCardTitle, { marginBottom: 4, textDecorationLine: 'underline' }]}>{polygon.name}</Text>
@@ -7306,19 +7297,7 @@ export default function AreaCalculatorEditor() {
                       <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#4CAF50' }]}>
                         <TouchableOpacity 
                           onPress={() => {
-                            Alert.prompt(
-                              'Name ändern',
-                              'Neuer Name für diese Grundfläche:',
-                              (newName) => {
-                                if (newName && newName.trim()) {
-                                  setPolygons(polygons.map(p => 
-                                    p.id === polygon.id ? { ...p, name: newName.trim() } : p
-                                  ));
-                                }
-                              },
-                              'plain-text',
-                              polygon.name
-                            );
+                            setRenameTarget({ id: polygon.id, message: 'Neuer Name für diese Grundfläche:', name: polygon.name });
                           }}
                         >
                           <Text style={[styles.resultCardTitle, { marginBottom: 8, textDecorationLine: 'underline' }]}>{polygon.name}</Text>
@@ -7385,19 +7364,7 @@ export default function AreaCalculatorEditor() {
                         <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#f44336' }]}>
                           <TouchableOpacity 
                             onPress={() => {
-                              Alert.prompt(
-                                'Name ändern',
-                                'Neuer Name für diese Abzugsfläche:',
-                                (newName) => {
-                                  if (newName && newName.trim()) {
-                                    setPolygons(polygons.map(p => 
-                                      p.id === polygon.id ? { ...p, name: newName.trim() } : p
-                                    ));
-                                  }
-                                },
-                                'plain-text',
-                                polygon.name
-                              );
+                              setRenameTarget({ id: polygon.id, message: 'Neuer Name für diese Abzugsfläche:', name: polygon.name });
                             }}
                           >
                             <Text style={[styles.resultCardTitle, { marginBottom: 4, textDecorationLine: 'underline' }]}>{polygon.name}</Text>
@@ -7413,19 +7380,7 @@ export default function AreaCalculatorEditor() {
                       <View key={polygon.id} style={[styles.resultCard, { borderLeftColor: '#f44336' }]}>
                         <TouchableOpacity 
                           onPress={() => {
-                            Alert.prompt(
-                              'Name ändern',
-                              'Neuer Name für diese Abzugsfläche:',
-                              (newName) => {
-                                if (newName && newName.trim()) {
-                                  setPolygons(polygons.map(p => 
-                                    p.id === polygon.id ? { ...p, name: newName.trim() } : p
-                                  ));
-                                }
-                              },
-                              'plain-text',
-                              polygon.name
-                            );
+                            setRenameTarget({ id: polygon.id, message: 'Neuer Name für diese Abzugsfläche:', name: polygon.name });
                           }}
                         >
                           <Text style={[styles.resultCardTitle, { marginBottom: 8, textDecorationLine: 'underline' }]}>{polygon.name}</Text>
@@ -7522,6 +7477,21 @@ export default function AreaCalculatorEditor() {
             </View>
           </View>
         </View>
+        {/* Innerhalb des Ergebnis-Modals, da iOS kein Modal über einem offenen Modal zeigt */}
+        <RenamePromptModal
+          visible={!!renameTarget}
+          title="Name ändern"
+          message={renameTarget?.message}
+          defaultValue={renameTarget?.name}
+          onCancel={() => setRenameTarget(null)}
+          onSubmit={(newName) => {
+            const target = renameTarget;
+            setRenameTarget(null);
+            if (target && newName.trim()) {
+              setPolygons(prev => prev.map(p => p.id === target.id ? { ...p, name: newName.trim() } : p));
+            }
+          }}
+        />
       </Modal>
 
       {/* Grid Size Modal */}

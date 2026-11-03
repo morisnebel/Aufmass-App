@@ -755,3 +755,7 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 ## Juni 2026
 - Web-Vorschau: Alert.alert/Alert.prompt-Polyfill (src/utils/webAlertPolyfill.ts) – Dialoge funktionieren im Browser (getestet, iteration_38)
 - Löschbestätigung zeigt Projektnamen
+- Skizze: eingefügte Fotos passen sich an Skizzenbreite an (fitImageToCanvas)
+- Skizze: Live-Ebene für Strich/Form – Hauptfläche wird beim Zeichnen nicht mehr pro Bewegung neu aufgebaut
+- Projekt-PDF: Flächenübersicht (m²) aller Skizzen-Grundrisse (src/sketch/polygonArea.ts)
+- Rechner: Umbenennen von Grund-/Abzugsflächen über eigenes Eingabefenster (RenamePromptModal) auf allen Plattformen

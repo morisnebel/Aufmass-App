@@ -7,6 +7,7 @@ import { SettingsService, LineCategoryService } from './LocalStorage';
 import { isPro, getProStatus } from './FeatureFlags';
 import { getStatusMeta } from '../src/constants/projectStatus';
 import { buildCoverPageHtml, CoverStyle } from './CoverPageTemplates';
+import { calculatePolygonAreaM2, formatAreaM2 } from '../src/sketch/polygonArea';
 
 // PDF-Farbpalette (auch für die Deckblatt-Akzentfarbe im PDF-Modal)
 export const PDF_COLOR_OPTIONS: { [key: string]: { color: string; textColor: string } } = {
@@ -568,6 +569,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
       ? [...sketches].sort((a: any, b: any) => sketchFolderOf(a).localeCompare(sketchFolderOf(b)))
       : sketches;
 
+    const sketchAreas: { title: string; areas: { label: string; area: number }[] }[] = [];
     const sketchItems = await Promise.all(sortedSketches.map(async (sketch, index) => {
       // Read pdf_size and notes from sketch object or metadata
       let size = sketch.pdf_size || 'large';
@@ -604,6 +606,14 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
             .filter((el: any) => el.type === 'memo' && el.data?.text)
             .map((el: any) => el.data.text.trim())
             .filter((t: string) => t.length > 0);
+          // Flächen (m²) aller vollständig bemaßten, geschlossenen Grundrisse sammeln
+          const segMeasures = metadata.lineSegmentMeasurements || {};
+          const measuredPolylines = metadata.elements.filter((el: any) =>
+            el.type === 'polyline' && segMeasures[el.id] && Object.keys(segMeasures[el.id]).length > 0);
+          const areas = measuredPolylines
+            .map((el: any, i: number) => ({ label: `S${i + 1}`, area: calculatePolygonAreaM2(el, segMeasures) }))
+            .filter((a: any) => a.area !== null);
+          if (areas.length > 0) sketchAreas[index] = { title: sketch.title || `Skizze ${index + 1}`, areas };
         }
       } catch (e) {
         console.log('Error parsing sketch metadata:', e);
@@ -663,11 +673,42 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
         ? 'sketches-container sketches-container-ipad'
         : 'sketches-container';
     
+    // Flächenübersicht: berechnete m² aller Skizzen gesammelt (für schnelle Angebote)
+    const filledSketchAreas = sketchAreas.filter(Boolean);
+    const areaTotal = filledSketchAreas.reduce((sum, s) => sum + s.areas.reduce((a, b) => a + b.area, 0), 0);
+    const sketchAreaSummaryHtml = filledSketchAreas.length > 0 ? `
+      <div class="sketch-area-summary" style="page-break-inside: avoid; break-inside: avoid; margin: 12px 0;">
+        <h3 style="font-size: 12pt; margin: 0 0 6px 0; color: #333;">Flächenübersicht (Skizzen)</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10pt;">
+          <thead>
+            <tr style="background: #f0f4f8;">
+              <th style="text-align: left; padding: 5px 8px; border: 1px solid #ddd;">Skizze</th>
+              <th style="text-align: left; padding: 5px 8px; border: 1px solid #ddd;">Fläche</th>
+              <th style="text-align: right; padding: 5px 8px; border: 1px solid #ddd;">m²</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filledSketchAreas.map(s => s.areas.map(a => `
+              <tr>
+                <td style="padding: 5px 8px; border: 1px solid #ddd;">${String(s.title).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd;">${a.label}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatAreaM2(a.area)}</td>
+              </tr>`).join('')).join('')}
+            <tr style="font-weight: 700; background: #e3f2fd;">
+              <td colspan="2" style="padding: 5px 8px; border: 1px solid #ddd;">Gesamt</td>
+              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatAreaM2(Math.round(areaTotal * 100) / 100)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    ` : '';
+
     // Alle Sketches im Container zusammen - Überschrift ist im ersten Item eingebettet
     const sketchesHtml = sketches.length > 0 ? `
       <div class="${sketchesContainerClass}">
         ${sketchItems.join('')}
       </div>
+      ${sketchAreaSummaryHtml}
     ` : '';
     
     // ===== IMAGEMETER SECTION FOR PDF =====

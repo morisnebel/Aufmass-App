@@ -67,8 +67,12 @@ export default function RootLayout() {
           name="index" 
           options={{ 
             title: AppNameHeader,
-            headerShown: true
+            headerShown: false
           }} 
+        />
+        <Stack.Screen 
+          name="projects/index" 
+          options={{ title: 'Projekte' }} 
         />
         <Stack.Screen 
           name="customers" 

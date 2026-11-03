@@ -762,3 +762,8 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Skizze: Haupt-Zeichenfläche wird während eines Strichs aus Cache wiederverwendet (große Skizzen flüssig)
 - Skizze: Grundrisse benennen über Tipp in der Übersicht-Legende (element.name) – Name in Legende, Vorschau-SVG und PDF-Flächenübersicht
 - Skizze: Raumname wird rechts neben dem S-Kreis im Grundriss angezeigt (Canvas + Vorschau/PDF)
+
+## Startseite 2.0 (Nov 2026)
+- Neue Startseite app/index.tsx (Hero mit tageszeitabhängigem Dachbild assets/images/roof_{morning,day,evening,night}.jpg, Begrüßung mit Vorname aus Einstellungen owner_first_name bzw. erstes Wort owner_name, Status-Karten, Backup-/Speicher-Hinweise, Schnellaktionen, letzte 3 Projekte, Bereichs-Kacheln nach FeatureFlags)
+- Alte Startseite (Projektliste) jetzt app/projects/index.tsx, mit Projektordnern (services/ProjectFolders.ts, Key aufmassprofi_project_folders, Project.folder_id), Parameter ?status= / ?folder= / ?action=import
+- Sicherung: git tag sicherung-vor-startseite-2.0 + Branch backup-vor-startseite-2.0

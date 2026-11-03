@@ -30,6 +30,7 @@ interface CompanySettings {
   company_name: string;
   company_subtitle: string;
   owner_name: string;
+  owner_first_name?: string;
   street: string;
   zip_code: string;
   city: string;
@@ -369,7 +370,7 @@ export default function SettingsScreen() {
           <TouchableOpacity onPress={handleVersionTap} activeOpacity={1}>
             <Text style={styles.headerTitle}>{isProUnlocked ? t('settings.titlePro') : t('settings.titleBasic')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.saveButton} onPress={saveSettings} disabled={saving}>
+          <TouchableOpacity testID="settings-save-button" style={styles.saveButton} onPress={saveSettings} disabled={saving}>
             {saving ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
@@ -564,6 +565,18 @@ export default function SettingsScreen() {
                 onChangeText={(text) => setSettings({ ...settings, owner_name: text })}
                 placeholder={t('settings.ownerPlaceholder')}
               />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Vorname des Inhabers</Text>
+              <TextInput
+                testID="settings-owner-first-name"
+                style={styles.input}
+                value={settings.owner_first_name || ''}
+                onChangeText={(text) => setSettings({ ...settings, owner_first_name: text })}
+                placeholder={(settings.owner_name || '').trim().split(/\s+/)[0] || 'z. B. Moris'}
+              />
+              <Text style={{ fontSize: 12, color: '#888', marginTop: 4 }}>Für die Begrüßung auf der Startseite. Leer = erstes Wort aus „Inhaber“.</Text>
             </View>
 
             <View style={styles.inputGroup}>
@@ -1216,6 +1229,7 @@ export default function SettingsScreen() {
                   <Text style={styles.expertActiveText}>Pro aktiv</Text>
                 </View>
                 <TouchableOpacity
+                  testID="settings-pro-deactivate"
                   style={styles.expertDeactivateButton}
                   onPress={handleDeactivatePro}
                 >
@@ -1224,6 +1238,7 @@ export default function SettingsScreen() {
               </View>
             ) : (
               <TouchableOpacity
+                testID="settings-pro-unlock-open"
                 style={styles.expertButtonSmall}
                 onPress={() => setShowExpertModal(true)}
               >
@@ -1254,6 +1269,7 @@ export default function SettingsScreen() {
             <Text style={styles.expertModalSubtitle}>Geben Sie Ihren Freischaltcode ein:</Text>
             <TextInput
               style={styles.expertCodeInput}
+              testID="settings-pro-code-input"
               value={expertCode}
               onChangeText={(text) => {
                 setExpertCode(text);
@@ -1283,6 +1299,7 @@ export default function SettingsScreen() {
                 <Text style={styles.expertModalCancelText}>Abbrechen</Text>
               </TouchableOpacity>
               <TouchableOpacity
+                testID="settings-pro-code-submit"
                 style={styles.expertModalSubmitButton}
                 onPress={handleExpertCodeSubmit}
               >

@@ -686,6 +686,8 @@ export interface Project {
   deleted_at?: string;
   // Notizen/Bemerkungen zum Projekt
   remarks?: string;
+  // Projektordner (siehe services/ProjectFolders.ts), leer = ohne Ordner
+  folder_id?: string | null;
   // Projektart (Überschrift für PDF)
   project_type?: string; // z.B. "Sturmschaden", "Wartung", "Neueindeckung"
   project_type_date?: string; // Optionales Datum für die Überschrift (ISO-String)
@@ -813,6 +815,13 @@ export const ProjectService = {
     projects[index] = { ...projects[index], ...data, updated_at: new Date().toISOString() };
     await setItems(KEYS.PROJECTS, projects);
     return projects[index];
+  },
+
+  // Ordner-Zuordnung für mehrere Projekte in EINEM Schreibvorgang (kein Überschreiben bei
+  // Parallelzugriff; zählt nicht als Bearbeitung → updated_at bleibt unverändert)
+  setFolder: async (ids: string[], folderId: string | null): Promise<void> => {
+    const projects = await getItems<Project>(KEYS.PROJECTS);
+    await setItems(KEYS.PROJECTS, projects.map(p => (ids.includes(p.id) ? { ...p, folder_id: folderId } : p)));
   },
 
   // Löscht ein Projekt ENDGÜLTIG inkl. ALLER zugehörigen Daten:
@@ -2018,6 +2027,8 @@ export const ChecklistTemplateService = {
 // ============ SETTINGS ============
 export interface Settings {
   company_name?: string;
+  owner_name?: string;
+  owner_first_name?: string; // Vorname des Inhabers (für die Begrüßung auf der Startseite)
   company_address?: string;
   company_phone?: string;
   company_mobile_phone?: string;

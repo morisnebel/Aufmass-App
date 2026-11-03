@@ -1,0 +1,51 @@
+{
+  "summary": "Frontend-only test of Startseite 2.0 + project folders (Expo web, 390x844 / 800x1280 / 1180x820). Everything requested works: BASIC/PRO tiles, switching tariff with PROFI2024 and Deaktivieren (home updates on focus), all 4 times of day plus boundaries 04/05/11/17/21 h, the minute timer switch (10:59→11:00 changed hero and greeting with no reload), greeting fallbacks, stat card → filtered /projects, Alle anzeigen, recent → detail, header/nav/action tiles, backup banner (Jetzt sichern download contains aufmassprofi_project_folders; Dismiss works), PRO import (file chooser opens) and BASIC deep link ignoring action=import, the empty state, the legacy status 'active' counted as Anfrage, and the old projects page functions (search, status filter, sort, duplicate, status change, delete→trash, Pro multi-select export/archive/folder). Folders: create, move, picker 'Neuer Ordner', filter, Ohne Ordner, rename (button), long-press manage, delete (projects kept → Ohne Ordner), and persistence after reload. Found and FIXED 1 critical data-loss bug: parallel ProjectService.update calls. Remaining issues are design/minor.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Projects multi-select → Ordner (multi-folder) and folder delete", "issue": "FIXED by testing agent. moveProjectsToFolder and the folder delete handler used Promise.all(ids.map(ProjectService.update)). ProjectService.update reads the whole project list, changes it and writes it back, so parallel calls overwrite each other. Only the last project was saved, while the UI showed all of them moved (chip showed 4, after reload 2). Changed to a sequential for…of loop; re-verified that 3 projects moved and all persisted after reload, and that deleting a folder with 4 projects resets them all to null.", "testID": "multi-folder", "priority": "CRITICAL"},
+      {"component": "Home backup banner", "issue": "Dismiss (X) is not persisted. load() runs on every focus and sets backupDueDays again, so the banner comes back every time the user returns to home.", "testID": "home-backup-banner-dismiss", "priority": "LOW"},
+      {"component": "Settings owner_first_name input", "issue": "value={settings.owner_first_name} is undefined at first, so React shows the 'A component is changing an uncontrolled input…' warning toast on web. Use value={settings.owner_first_name || ''}.", "testID": "settings-owner-first-name", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Move project into folder", "issue": "ProjectService.update always sets updated_at. Putting a project into a folder counts as an edit: the card date jumps to today, and it changes Home 'Letzte Projekte' and the 'Bearbeitet' sort order. Decide whether sorting into folders should change updated_at (suggest no).", "affected_testIDs": ["project-folder-<id>", "home-recent-<id>"]}
+    ],
+    "design_issues": [
+      {"screen": "Home 800x1280 (tablet portrait, isTablet but not isWide)", "issues": ["5 stat columns are too narrow: labels are cut off as 'Pro…', 'Anf…', 'An…', 'Aus…'. Use 3+2 / 2 columns between 768 and 1000 px, or let the label wrap.", "In the action tiles, 'Checklisten' breaks mid-word into 'Checkliste/n' and 'Projekt importier…' is cut off (4 action columns at ~90px width).", "Nav tile subtitles are cut off ('Ordner, filtern, bearbe…', 'Materiallisten und Be…')."]},
+      {"screen": "Home 390x844", "issues": ["The stat label 'Ausführung' is cut off to 'Ausführ…'.", "Hero header icon buttons are 40x40 in compact mode (below the 44pt minimum).", "Brand subtitle is cut off ('Die App für digitale Aufm…').", "On phones the roof motif is barely visible (cover crop shows mostly sky/gradient)."]},
+      {"screen": "Home tablet/iPad (800 & 1180)", "issues": ["The Schnellaktionen panel stretches to the height of Letzte Projekte, leaving a large empty white area under the tiles. Use alignItems:'flex-start' or fill the space."]},
+      {"screen": "Projects page", "issues": ["FolderBar chips start at x=16 while the search, filters and buttons start at x=32, so the edges don't line up.", "Language mix: folder strings ('Alle Ordner', 'Ohne Ordner', 'Ordner', the manage dialog) and the whole Home screen are hard-coded German, while the rest of the projects page uses i18n (shows 'Search projects…', 'New Project', 'Newest' with an English device locale)."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/home2_seed.py"],
+  "action_items": [
+    "Review the agent fix in app/projects/index.tsx (sequential folder_id updates). Also look for other places that call ProjectService.update / similar read-modify-write services in parallel.",
+    "Fix stat/action/nav tile cut-off text at 768–999 px width (800x1280), plus 'Ausführung' at 390 px.",
+    "Make hero icon buttons at least 44x44 in compact mode.",
+    "Remove the empty space in the Schnellaktionen panel on tablet.",
+    "Persist the backup banner dismiss (e.g. snooze for one day) so it doesn't come back on every focus.",
+    "Settings: use value={settings.owner_first_name || ''} to avoid the uncontrolled→controlled warning.",
+    "Decide whether moving into a folder should update updated_at (it currently changes Letzte Projekte and the card date).",
+    "Optional: align FolderBar padding with the page content; make Home and folder strings consistent with i18n.",
+    "Not tested: storage-warning-banner (needs >20MB of freeable data); native iOS/Android rendering."
+  ],
+  "critical_code_review_comments": [
+    "app/projects/index.tsx is 2378 lines (>700). Split it: folder logic, multi-select bar, card, filters.",
+    "Promise.all over the read-modify-write ProjectService.update caused data loss (fixed).",
+    "Home is hard-coded German with no t() calls, while the projects page uses i18n.",
+    "FolderBar nests a TouchableOpacity (folder-manage) inside the chip TouchableOpacity. It works on web; check on native that tapping the ellipsis doesn't also trigger the chip.",
+    "Settings expert/save buttons had no testIDs; the agent added them."
+  ],
+  "updated_files": [
+    "/app/frontend/app/projects/index.tsx (sequential folder updates – race-condition fix)",
+    "/app/frontend/app/settings/index.tsx (added testIDs: settings-save-button, settings-pro-unlock-open, settings-pro-code-input, settings-pro-code-submit, settings-pro-deactivate)",
+    "/app/tests/e2e/home2_seed.py (new seeding helpers)"
+  ],
+  "success_rate": {"backend": "N/A", "frontend": "97% functional (1 critical bug found and fixed; remaining issues are design/minor)"},
+  "seed_data_creation": "Only in isolated browser-automation localStorage: TEST_Max Muster, TEST_Projekt 1-6 (statuses anfrage/angebot/ausfuehrung/fertig/anfrage/archiviert), TEST_Ordner A/B. No server data.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Use G={}; exec(open('/app/tests/e2e/home2_seed.py').read(), G); await G['seed'](page, pro=bool, settings={...}); G['SEED_FOLDERS_JS'] seeds folders fA(p1)/fB(p2); page.add_init_script(G['mock_hour_js'](h)) mocks the clock hour. Each browser_automation run gets a fresh context. Multi-option Alerts on web become a sequence of confirm() dialogs ('→ „X\" wählen?'); accept the one you want and dismiss the others. The browser locale is English, so i18n strings appear in English.",
+  "rca_of_issue": "Multi-folder move lost data: moveProjectsToFolder ran ProjectService.update for each id in parallel. Each call reads the full aufmassprofi_projects array before any write finishes, so the last setItems wins and only one project keeps folder_id. Repro: PRO, Select, pick 3 cards, multi-folder, pick a folder, reload → only 1 moved. Mitigation: sequential updates (applied), or a bulk update in ProjectService."
+}

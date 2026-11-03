@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, Alert, StyleSheet } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, Keyboard, Platform, Alert, StyleSheet, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Project, Customer, generateFullAddress } from '../../../services/LocalStorage';
 import { Appointment, AppointmentService } from '../../../services/AppointmentService';
-import { scheduleDepartureReminder, cancelReminder, departureTime } from '../../utils/appointmentTools';
+import { scheduleDepartureReminder, scheduleAppointmentReminder, cancelReminder, departureTime } from '../../utils/appointmentTools';
 import { todayKey } from './TodayOverview';
 
 const TRAVEL_OPTIONS = [0, 15, 30, 45, 60, 90];
+const REMIND_OPTIONS: [number, string][] = [[0, 'Keine'], [15, '15 Min'], [30, '30 Min'], [60, '1 Std'], [120, '2 Std'], [1440, '1 Tag']];
 const toDisplay = (k: string) => { const [y, m, d] = k.split('-'); return `${d}.${m}.${y}`; };
 const parseDate = (t: string): string | null => {
   const m = t.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);
@@ -41,7 +43,27 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   const [address, setAddress] = useState('');
   const [note, setNote] = useState('');
   const [travel, setTravel] = useState(0);
+  const [remindBefore, setRemindBefore] = useState(0);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [custOpen, setCustOpen] = useState(false);
+  const [custQuery, setCustQuery] = useState('');
   const [saving, setSaving] = useState(false);
+  const [kb, setKb] = useState(0);
+  const scrollRef = useRef<any>(null);
+  const fieldY = useRef<Record<string, number>>({});
+  const { height: winH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+
+  // Tastatur selbst verwalten: Sheet über die Tastatur schieben und Feld sichtbar scrollen
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', e => setKb(e.endCoordinates.height));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKb(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+  const focusField = (key: string) => {
+    setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, (fieldY.current[key] || 0) - 40), animated: true }), 300);
+  };
+  const trackY = (key: string) => (e: any) => { fieldY.current[key] = e.nativeEvent.layout.y; };
 
   useEffect(() => {
     if (!visible) return;
@@ -53,7 +75,29 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     setAddress(initial?.address || '');
     setNote(initial?.note || '');
     setTravel(initial?.travel_minutes || 0);
+    setRemindBefore(initial?.remind_before || 0);
+    setCustomerId(initial?.customer_id || null);
+    setCustOpen(false);
+    setCustQuery('');
   }, [visible, initial, initialDate]);
+
+  const customerList = useMemo(() => {
+    const q = custQuery.trim().toLowerCase();
+    return Object.values(customers)
+      .filter(c => !q || [c.name, c.city, c.street, c.address].some(v => (v || '').toLowerCase().includes(q)))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'))
+      .slice(0, 20);
+  }, [customers, custQuery]);
+
+  const pickCustomer = (c: Customer) => {
+    setCustomerId(c.id);
+    const addr = projectAddress(undefined, c);
+    if (addr) setAddress(addr);
+    if (!title.trim()) setTitle(c.name);
+    setCustOpen(false);
+    setCustQuery('');
+    Keyboard.dismiss();
+  };
 
   const projectChoices = useMemo(
     () => [...projects].sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || '')).slice(0, 30),
@@ -62,7 +106,9 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
 
   const pickProject = (p: Project | null) => {
     setProjectId(p?.id || null);
+    if (!p || !p.customer_id) setCustomerId(null);
     if (p) {
+      if (p.customer_id) setCustomerId(p.customer_id);
       if (!title.trim() || projects.some(x => x.name === title)) setTitle(p.name);
       const addr = projectAddress(p, customers[p.customer_id]);
       if (addr) setAddress(addr);
@@ -87,19 +133,24 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     if (!title.trim()) { Alert.alert('Titel fehlt', 'Bitte einen Titel eingeben oder ein Projekt wählen.'); return; }
     if (!date) { Alert.alert('Ungültiges Datum', 'Bitte im Format TT.MM.JJJJ eingeben, z. B. 05.11.2026.'); return; }
     if (!validTime) { Alert.alert('Ungültige Uhrzeit', 'Bitte als HH:MM eingeben, z. B. 08:30.'); return; }
-    if (travel > 0 && !normTime) { Alert.alert('Uhrzeit fehlt', 'Für die Abfahrts-Erinnerung brauche ich die Uhrzeit des Termins.'); return; }
+    if ((travel > 0 || remindBefore > 0) && !normTime) { Alert.alert('Uhrzeit fehlt', 'Für Erinnerungen brauche ich die Uhrzeit des Termins.'); return; }
     setSaving(true);
     try {
       await cancelReminder(initial?.reminder_id);
+      await cancelReminder(initial?.remind_id);
       const reminderId = travel > 0 && normTime
         ? await scheduleDepartureReminder({ title: title.trim(), date, time: normTime, travelMinutes: travel, address: address.trim() })
         : null;
+      const remindId = remindBefore > 0 && normTime
+        ? await scheduleAppointmentReminder({ title: title.trim(), date, time: normTime, beforeMinutes: remindBefore, address: address.trim() })
+        : null;
       await AppointmentService.save({
-        id: initial?.id, title: title.trim(), date, time: normTime, project_id: projectId,
+        id: initial?.id, title: title.trim(), date, time: normTime, project_id: projectId, customer_id: customerId,
         address: address.trim(), note: note.trim(), travel_minutes: travel || null, reminder_id: reminderId,
+        remind_before: remindBefore || null, remind_id: remindId,
       });
-      if (travel > 0 && !reminderId && Platform.OS !== 'web' && departure && departure.getTime() <= Date.now()) {
-        Alert.alert('Termin gespeichert', 'Die Abfahrtszeit liegt schon in der Vergangenheit – es wurde keine Erinnerung geplant.');
+      if (Platform.OS !== 'web' && ((travel > 0 && !reminderId) || (remindBefore > 0 && !remindId))) {
+        Alert.alert('Termin gespeichert', 'Mindestens eine Erinnerungszeit liegt schon in der Vergangenheit oder Mitteilungen sind aus – dafür wurde keine Erinnerung geplant.');
       }
       onSaved();
     } finally {
@@ -111,19 +162,19 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     if (!initial) return;
     Alert.alert('Termin löschen?', initial.title, [
       { text: 'Abbrechen', style: 'cancel' },
-      { text: 'Löschen', style: 'destructive', onPress: async () => { await cancelReminder(initial.reminder_id); await AppointmentService.remove(initial.id); onSaved(); } },
+      { text: 'Löschen', style: 'destructive', onPress: async () => { await cancelReminder(initial.reminder_id); await cancelReminder(initial.remind_id); await AppointmentService.remove(initial.id); onSaved(); } },
     ]);
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView style={s.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={s.sheet}>
+      <View style={s.backdrop}>
+        <View style={[s.sheet, kb > 0 && { marginBottom: kb, paddingBottom: 10, maxHeight: winH - kb - insets.top - 8 }]}>
           <View style={s.head}>
             <Text style={s.title}>{initial ? 'Termin bearbeiten' : 'Neuer Termin'}</Text>
             <TouchableOpacity testID="apt-close" onPress={onClose} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}><Ionicons name="close" size={26} color="#334155" /></TouchableOpacity>
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 16 }}>
+          <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 16 }}>
             <Text style={s.label}>Projekt (optional)</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
               <TouchableOpacity testID="apt-project-none" style={[s.chip, !projectId && s.chipOn]} onPress={() => pickProject(null)}>
@@ -137,7 +188,7 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             </ScrollView>
 
             <Text style={s.label}>Titel</Text>
-            <TextInput testID="apt-title" style={s.input} value={title} onChangeText={setTitle} placeholder="z. B. Aufmaß Dach Müller" />
+            <TextInput testID="apt-title" style={s.input} value={title} onChangeText={setTitle} placeholderTextColor="#94a3b8" placeholder="z. B. Aufmaß Dach Müller" />
 
             <Text style={s.label}>Datum</Text>
             <View style={s.row}>
@@ -150,8 +201,8 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             <View style={[s.row, { marginTop: 8 }]}>
               {Platform.OS === 'web' ? (
                 <>
-                  <TextInput testID="apt-date" style={[s.input, { flex: 1.4, minWidth: 0 }]} value={dateText} onChangeText={setDateText} placeholder="TT.MM.JJJJ" keyboardType="numbers-and-punctuation" />
-                  <TextInput testID="apt-time" style={[s.input, { flex: 1, minWidth: 0 }]} value={time} onChangeText={setTime} placeholder="08:30" keyboardType="numbers-and-punctuation" maxLength={5} />
+                  <TextInput testID="apt-date" style={[s.input, { flex: 1.4, minWidth: 0 }]} value={dateText} onChangeText={setDateText} placeholderTextColor="#94a3b8" placeholder="TT.MM.JJJJ" keyboardType="numbers-and-punctuation" />
+                  <TextInput testID="apt-time" style={[s.input, { flex: 1, minWidth: 0 }]} value={time} onChangeText={setTime} placeholderTextColor="#94a3b8" placeholder="08:30" keyboardType="numbers-and-punctuation" maxLength={5} />
                 </>
               ) : (
                 <>
@@ -197,11 +248,46 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
               </View>
             )}
 
-            <Text style={s.label}>Notiz</Text>
-            <TextInput testID="apt-note" style={[s.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: 10 }]} value={note} onChangeText={setNote} placeholder="z. B. Leiter mitnehmen, Kunde vorher anrufen" multiline />
+            <Text style={s.label} onLayout={trackY('note')}>Notiz</Text>
+            <TextInput testID="apt-note" style={[s.input, { minHeight: 70, textAlignVertical: 'top', paddingTop: 10 }]} value={note} onChangeText={setNote} onFocus={() => focusField('note')} placeholderTextColor="#94a3b8" placeholder="z. B. Leiter mitnehmen, Kunde vorher anrufen" multiline />
 
-            <Text style={s.label}>Adresse fürs Navi</Text>
-            <TextInput testID="apt-address" style={s.input} value={address} onChangeText={setAddress} placeholder="Straße, PLZ Ort" />
+            <View style={s.labelRow} onLayout={trackY('address')}>
+              <Text style={[s.label, { marginTop: 0, marginBottom: 0 }]}>Adresse fürs Navi</Text>
+              <TouchableOpacity testID="apt-customer-toggle" style={s.custBtn} onPress={() => { setCustOpen(!custOpen); if (!custOpen) focusField('address'); }}>
+                <Ionicons name="people-outline" size={16} color="#1976d2" />
+                <Text style={s.custBtnText}>Aus Kunden</Text>
+              </TouchableOpacity>
+            </View>
+            {customerId && customers[customerId] && (
+              <View style={s.custTag}>
+                <Ionicons name="person" size={14} color="#1976d2" />
+                <Text style={s.custTagText} numberOfLines={1}>{customers[customerId].name}</Text>
+                <TouchableOpacity testID="apt-customer-clear" hitSlop={10} onPress={() => setCustomerId(null)}><Ionicons name="close-circle" size={18} color="#64748b" /></TouchableOpacity>
+              </View>
+            )}
+            {custOpen && (
+              <View testID="apt-customer-list" style={s.custBox}>
+                <TextInput testID="apt-customer-search" style={[s.input, { minHeight: 42 }]} value={custQuery} onChangeText={setCustQuery} onFocus={() => focusField('address')} placeholderTextColor="#94a3b8" placeholder="Kunde suchen…" />
+                {customerList.length === 0 ? (
+                  <Text style={s.custEmpty}>Keine Kunden gefunden.</Text>
+                ) : customerList.map(c => (
+                  <TouchableOpacity key={c.id} testID={`apt-customer-${c.id}`} style={s.custItem} onPress={() => pickCustomer(c)}>
+                    <Text style={s.custName} numberOfLines={1}>{c.name}</Text>
+                    <Text style={s.custAddr} numberOfLines={1}>{projectAddress(undefined, c) || 'Keine Adresse hinterlegt'}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <TextInput testID="apt-address" style={[s.input, { marginTop: 6 }]} value={address} onChangeText={setAddress} onFocus={() => focusField('address')} placeholderTextColor="#94a3b8" placeholder="Straße, PLZ Ort" />
+
+            <Text style={s.label}>Erinnerung vor dem Termin</Text>
+            <View style={[s.row, { flexWrap: 'wrap' }]}>
+              {REMIND_OPTIONS.map(([m, l]) => (
+                <TouchableOpacity key={m} testID={`apt-remind-${m}`} style={[s.chip, remindBefore === m && s.chipOn]} onPress={() => setRemindBefore(m)}>
+                  <Text style={[s.chipText, remindBefore === m && s.chipTextOn]}>{l}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
             <Text style={s.label}>Fahrzeit → Erinnerung zum Losfahren</Text>
             <View style={[s.row, { flexWrap: 'wrap' }]}>
@@ -234,7 +320,7 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
@@ -247,7 +333,17 @@ const s = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '700', color: '#475569', marginTop: 14, marginBottom: 6 },
   input: { borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 10, minHeight: 48, paddingHorizontal: 12, fontSize: 16, color: '#0f172a' },
   row: { flexDirection: 'row', gap: 8 },
-  chip: { minHeight: 40, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: '#cbd5e1', justifyContent: 'center', maxWidth: 200 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14 },
+  custBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 12, borderRadius: 22, backgroundColor: '#eff6ff' },
+  custBtnText: { color: '#1976d2', fontWeight: '700', fontSize: 13 },
+  custTag: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: '#eff6ff', maxWidth: '100%' },
+  custTagText: { color: '#1e3a8a', fontWeight: '700', fontSize: 13, flexShrink: 1 },
+  custBox: { marginTop: 8, borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 8, gap: 4, backgroundColor: '#f8fafc' },
+  custItem: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 8, borderRadius: 8, backgroundColor: '#fff' },
+  custName: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
+  custAddr: { fontSize: 12, color: '#64748b', marginTop: 1 },
+  custEmpty: { fontSize: 13, color: '#64748b', padding: 8 },
+  chip: { minHeight: 44, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: '#cbd5e1', justifyContent: 'center', maxWidth: 200 },
   chipOn: { backgroundColor: '#1976d2', borderColor: '#1976d2' },
   chipText: { fontSize: 14, fontWeight: '600', color: '#334155' },
   chipTextOn: { color: '#fff' },

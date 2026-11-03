@@ -13,6 +13,9 @@ export interface Appointment {
   note?: string;
   travel_minutes?: number | null; // Fahrzeit → Erinnerung zur Abfahrt
   reminder_id?: string | null; // geplante lokale Benachrichtigung
+  remind_before?: number | null; // normale Terminerinnerung (Minuten vor Beginn)
+  remind_id?: string | null;
+  customer_id?: string | null;
   created_at: string;
   updated_at: string;
 }

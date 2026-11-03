@@ -780,3 +780,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 ## Nov 2026 – Startseite
 - Großer Button „Neues Projekt starten“ oben in den Schnellaktionen; Backup-Hinweis schmal & einzeilig
 - Offen: Navi + Losfahr-Erinnerung für Termine, iPhone-Test des Termin-Formulars
+- Termin-Formular: eigene Tastatur-Steuerung (Notiz sichtbar), Kunde wählen für Adresse, normale Terminerinnerung (15 Min–1 Tag), Kunde wird beim „Projekt erstellen“ übernommen

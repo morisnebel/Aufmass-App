@@ -75,6 +75,32 @@ export const scheduleDepartureReminder = async (opts: {
   });
 };
 
+// Normale Terminerinnerung: X Minuten vor Terminbeginn
+export const scheduleAppointmentReminder = async (opts: {
+  title: string; date: string; time: string; beforeMinutes: number; address?: string;
+}): Promise<string | null> => {
+  if (Platform.OS === 'web') return null;
+  const [y, m, d] = opts.date.split('-').map(Number);
+  const [hh, mm] = opts.time.split(':').map(Number);
+  const at = new Date(new Date(y, m - 1, d, hh, mm).getTime() - opts.beforeMinutes * 60000);
+  if (at.getTime() <= Date.now() + 30000) return null;
+  if (!(await ensurePermission())) return null;
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('termine', { name: 'Termine', importance: Notifications.AndroidImportance.HIGH });
+  }
+  return Notifications.scheduleNotificationAsync({
+    content: {
+      title: `Termin: ${opts.title}`,
+      body: `${reminderLabel(opts.beforeMinutes)} – ${opts.time} Uhr${opts.address ? ` · ${opts.address}` : ''}`,
+      data: { address: opts.address || '' },
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: 'termine' },
+  });
+};
+
+export const reminderLabel = (min: number) =>
+  min >= 1440 ? `in ${min / 1440 === 1 ? '1 Tag' : `${min / 1440} Tagen`}` : min >= 60 ? `in ${min / 60} Std.` : `in ${min} Min.`;
+
 export const cancelReminder = async (id?: string | null) => {
   if (!id || Platform.OS === 'web') return;
   try { await Notifications.cancelScheduledNotificationAsync(id); } catch {}

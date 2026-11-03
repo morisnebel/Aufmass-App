@@ -1,0 +1,35 @@
+{
+  "summary": "Frontend-only test on web preview (390x844, 768x1024) using localStorage seeds. All requested flows PASS. (1) The welcome dialog checkbox and 'App starten' work, and home loads. (2) Home layout: home-new-project-cta (334x80 on phone) sits on top and opens /projects/new. The slim backup banner (52px high) follows the Schnellaktionen. Tablet also OK, no horizontal overflow. (3) Kunde anlegen via UI with street/PLZ/Ort saves the customer (name 'Anna TEST_Schmidt', street/zip/city stored). (4) '+ Termin' opens 'Neuer Termin'. apt-customer-toggle opens apt-customer-list. Search works by name and city ('münch'). Nonsense text shows 'Keine Kunden gefunden.', and a customer without an address shows 'Keine Adresse hinterlegt'. Picking a customer fills apt-address='Lindenweg 7, 80331 München', prefills the empty title with the customer name, closes the list and shows the customer tag with apt-customer-clear. (5) apt-remind-0/15/30/60/120/1440 are selectable one at a time (exactly one chip highlighted). Saving with reminder 30 and an empty time shows the alert 'Uhrzeit fehlt – Für Erinnerungen brauche ich die Uhrzeit des Termins.' and nothing is stored. With 08:30 it saves {customer_id, remind_before:30, time:'08:30', address, note}, and the item appears in 'Heute'. (6) Reopening the appointment ('Termin bearbeiten') keeps the customer tag, address and highlighted reminder chip. Travel 15 + reminder 60 are also restored on /appointments. (7) apt-create-project (from home and from /appointments) opens /projects/new?...&customer_id=custA with Kunde preselected, name prefilled and description prefilled. After 'Save Project', project.customer_id=custA, appointment.project_id is linked, and the project shows the appointment date/time as its Termin. Only issue found: placeholders in the appointment modal look the same as real values (see ui_bugs). The keyboard fix for the note field is native only and was not testable on web. Native notifications skipped.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AppointmentFormModal TextInputs", "issue": "No placeholderTextColor is set, so on web the placeholders render in the same color as entered text (measured darkest pixel 23 for both the placeholder '08:30' in apt-time and the real value '03.11.2026' in apt-date). Users see '08:30', 'z. B. Aufmaß Dach Müller' and 'z. B. Leiter mitnehmen…' as if they were filled in. With a reminder chip selected, they then get the 'Uhrzeit fehlt' alert even though the field seems to show 08:30. Reference: src/components/home/AppointmentFormModal.tsx:190,203,204,251,269,280 (s.input has color #0f172a).", "testID": "apt-time", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AppointmentFormModal", "issues": ["apt-customer-toggle 'Aus Kunden' is only 36px high (minHeight 36), below the 44pt touch target. apt-customer-clear is an 18px icon with hitSlop 10 (about 38px).", "Reminder chips are 40px high (s.chip minHeight 40), slightly below 44."]},
+      {"screen": "customers/new and projects/new (pre-existing)", "issues": ["Mixed English/German labels on web ('New Customer', 'First Name', 'Street and number', 'Save Project', alert 'Success / Customer created', 'Project created').", "projects/new at 390px: the City and Email inputs still overflow the right edge.", "The project created from an appointment does not get the appointment address in Objektadresse (street/ZIP/city stay empty). The address only goes into Description."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/appointments_seed.py", "/app/tests/e2e/home2_seed.py"],
+  "action_items": [
+    "MEDIUM: Add placeholderTextColor (e.g. '#94a3b8') to all TextInputs in AppointmentFormModal (apt-title, apt-date, apt-time, apt-note, apt-customer-search, apt-address) so example values are not mistaken for real input.",
+    "LOW: Increase the apt-customer-toggle minHeight to 44 and the apt-customer-clear hitSlop to 13+. Consider making chip minHeight 44.",
+    "OPTIONAL: When creating a project from an appointment, also prefill the Objektadresse street/ZIP/city (e.g. from the selected customer) instead of only the description.",
+    "OPTIONAL: pickProject(null) / picking a project without customer_id keeps the previously chosen customer. Decide whether the customer should be cleared."
+  ],
+  "critical_code_review_comments": [
+    "AppointmentFormModal.tsx:107-115 pickProject: switching to 'Ohne Projekt', or to a project without customer_id, keeps the stale customerId and address from the previous choice. Minor.",
+    "scheduleAppointmentReminder returns null silently when the reminder time is already past (e.g. '1 Tag' for a same-day appointment). Unlike the departure reminder, the user gets no hint. Consider an alert like the one at line 151.",
+    "Keyboard handling (own Keyboard listener, marginBottom = kb height, scrollTo the field) looks reasonable, but it can only be verified on a device (keyboardWillShow on iOS). Not testable on web.",
+    "No deprecated expo packages (expo-av / expo-barcode-scanner / expo-background-fetch) found."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% of requested functional flows (1 medium UX issue: placeholder contrast)"},
+  "seed_data_creation": "Browser localStorage only, in fresh Playwright contexts: customers custA 'Anna TEST_Schmidt', custB 'TEST_Bernd Ohneadresse', and appointments aptA/aptB. One customer and one project were created via UI in throwaway browser contexts. No server data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The modal slides in. Wait about 1000ms after tapping home-add-appointment before clicking inside it, otherwise you get 'Element is outside of the viewport'. Home today rows use the testID home-today-a-<aptId>, and /appointments upcoming rows use cal-up-a-<aptId>. Alerts come as window.alert dialogs (webAlertPolyfill). The web clock showed Tue 03.11.2026.",
+  "rca_of_issue": "Placeholder issue: react-native-web uses the input text color for placeholders unless placeholderTextColor is given. s.input sets color #0f172a and no placeholderTextColor is passed."
+}

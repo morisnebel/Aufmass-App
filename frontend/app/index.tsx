@@ -305,7 +305,7 @@ export default function HomeScreen() {
           customers={customers}
           onClose={() => setAppointmentModal(false)}
           onSaved={() => { setAppointmentModal(false); AppointmentService.getAll().then(setAppointments); }}
-          onCreateProject={a => { setAppointmentModal(false); router.push({ pathname: '/projects/new', params: { from_appointment: a.id, name: a.title, description: [a.address, a.note].filter(Boolean).join('\n') } }); }}
+          onCreateProject={a => { setAppointmentModal(false); router.push({ pathname: '/projects/new', params: { from_appointment: a.id, name: a.title, ...(a.customer_id ? { customer_id: a.customer_id } : {}), description: [a.address, a.note].filter(Boolean).join('\n') } }); }}
         />
         {/* 3. Projekt-Zahlen (Smartphone: kompakt in einer Zeile) */}
         <View style={s.section}>

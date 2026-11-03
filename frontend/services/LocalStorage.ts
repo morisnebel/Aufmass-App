@@ -1598,6 +1598,19 @@ export const PhotoService = {
       updated_at: new Date().toISOString(),
     };
     photos.push(newPhoto);
+    // Projekt als „zuletzt bearbeitet“ markieren → rückt in „Letzte Projekte“ nach oben
+    try {
+      if (data.project_id) {
+        const projects = await getItems<Project>(KEYS.PROJECTS);
+        const idx = projects.findIndex(p => p.id === data.project_id);
+        if (idx !== -1) {
+          projects[idx] = { ...projects[idx], updated_at: newPhoto.created_at };
+          await setItems(KEYS.PROJECTS, projects);
+        }
+      }
+    } catch (e) {
+      console.warn('[PhotoService] Projekt-Datum nicht aktualisiert:', e);
+    }
     await setItems(KEYS.PHOTOS, photos);
     
     // Für Rückgabe: Bilddaten wieder anhängen

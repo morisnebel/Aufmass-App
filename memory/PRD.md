@@ -770,3 +770,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Header global undurchsichtig (headerTransparent:false) – Fix für überdeckte Inhalte (Fotos/Checklisten) auf iOS 26
 - Startseite: Firmenlogo (settings.logo_data) im Kopfbereich, Vorschaufoto bei letzten Projekten (PhotoService.getCoverImages), Projektordner-Kacheln
 - Haftungsausschluss beim ersten Start als dezente kleine Karte (DisclaimerGate), blendet sich auf /legal-Seiten aus
+- Neues Foto setzt updated_at des Projekts (rückt in Letzte Projekte nach oben); FolderBar scrollt zum aktiven Ordner

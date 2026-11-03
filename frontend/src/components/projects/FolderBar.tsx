@@ -17,6 +17,17 @@ type Props = {
 };
 
 export function FolderBar({ folders, counts, active, onSelect, onAdd, onManage }: Props) {
+  // Ausgewählten Ordner automatisch in den sichtbaren Bereich scrollen
+  const scrollRef = React.useRef<ScrollView>(null);
+  const chipX = React.useRef<Record<string, { x: number; w: number }>>({});
+  const viewW = React.useRef(0);
+  const scrollToActive = React.useCallback(() => {
+    const pos = chipX.current[active];
+    if (!pos || !scrollRef.current) return;
+    scrollRef.current.scrollTo({ x: Math.max(0, pos.x - (viewW.current - pos.w) / 2), animated: true });
+  }, [active]);
+  React.useEffect(() => { scrollToActive(); }, [scrollToActive, folders.length]);
+
   const chip = (id: string, label: string, color: string, icon: any, folder?: ProjectFolder) => {
     const isActive = active === id;
     return (
@@ -26,6 +37,10 @@ export function FolderBar({ folders, counts, active, onSelect, onAdd, onManage }
         style={[s.chip, isActive && { backgroundColor: color, borderColor: color }]}
         onPress={() => onSelect(id)}
         onLongPress={folder ? () => onManage(folder) : undefined}
+        onLayout={e => {
+          chipX.current[id] = { x: e.nativeEvent.layout.x, w: e.nativeEvent.layout.width };
+          if (id === active) scrollToActive();
+        }}
       >
         <Ionicons name={icon} size={16} color={isActive ? '#fff' : color} />
         <Text style={[s.chipText, isActive && { color: '#fff' }]} numberOfLines={1}>{label}</Text>
@@ -41,7 +56,13 @@ export function FolderBar({ folders, counts, active, onSelect, onAdd, onManage }
 
   return (
     <View style={s.wrap}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.row}
+        onLayout={e => { viewW.current = e.nativeEvent.layout.width; }}
+      >
         {chip(FOLDER_ALL, 'Alle Ordner', '#1976d2', 'albums-outline')}
         {folders.map(f => chip(f.id, f.name, f.color, 'folder', f))}
         {folders.length > 0 && chip(FOLDER_NONE, 'Ohne Ordner', '#64748b', 'folder-open-outline')}

@@ -9,7 +9,16 @@ import { scheduleDepartureReminder, scheduleAppointmentReminder, cancelReminder,
 import { todayKey } from './TodayOverview';
 
 const TRAVEL_OPTIONS = [0, 15, 30, 45, 60, 90];
-const REMIND_OPTIONS: [number, string][] = [[0, 'Keine'], [15, '15 Min'], [30, '30 Min'], [60, '1 Std'], [120, '2 Std'], [1440, '1 Tag']];
+const REMIND_OPTIONS: [number, string][] = [[0, 'Keine'], [15, '15 Min'], [30, '30 Min'], [60, '1 Std'], [120, '2 Std'], [1440, '1 Tag'], [-1, 'Eigene Zeit']];
+const pad = (n: number) => String(n).padStart(2, '0');
+const fmtDateTime = (d: Date) => `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const parseDateTime = (t: string): Date | null => {
+  const m = t.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  if (Number(m[4]) > 23 || Number(m[5]) > 59) return null;
+  const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]), Number(m[4]), Number(m[5]));
+  return d.getDate() === Number(m[1]) && d.getMonth() === Number(m[2]) - 1 ? d : null;
+};
 const toDisplay = (k: string) => { const [y, m, d] = k.split('-'); return `${d}.${m}.${y}`; };
 const parseDate = (t: string): string | null => {
   const m = t.trim().match(/^(\d{1,2})\.(\d{1,2})\.(\d{2}|\d{4})$/);
@@ -44,6 +53,9 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   const [note, setNote] = useState('');
   const [travel, setTravel] = useState(0);
   const [remindBefore, setRemindBefore] = useState(0);
+  const [remindAt, setRemindAt] = useState<Date | null>(null);
+  const [remindPicker, setRemindPicker] = useState<'date' | 'time' | null>(null);
+  const [remindText, setRemindText] = useState('');
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [custOpen, setCustOpen] = useState(false);
   const [custQuery, setCustQuery] = useState('');
@@ -76,6 +88,10 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     setNote(initial?.note || '');
     setTravel(initial?.travel_minutes || 0);
     setRemindBefore(initial?.remind_before || 0);
+    const ra = initial?.remind_at ? new Date(initial.remind_at) : null;
+    setRemindAt(ra);
+    setRemindText(ra ? fmtDateTime(ra) : '');
+    setRemindPicker(null);
     setCustomerId(initial?.customer_id || null);
     setCustOpen(false);
     setCustQuery('');
@@ -134,6 +150,12 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     if (!date) { Alert.alert('Ungültiges Datum', 'Bitte im Format TT.MM.JJJJ eingeben, z. B. 05.11.2026.'); return; }
     if (!validTime) { Alert.alert('Ungültige Uhrzeit', 'Bitte als HH:MM eingeben, z. B. 08:30.'); return; }
     if ((travel > 0 || remindBefore > 0) && !normTime) { Alert.alert('Uhrzeit fehlt', 'Für Erinnerungen brauche ich die Uhrzeit des Termins.'); return; }
+    const customAt = remindBefore === -1 ? (Platform.OS === 'web' ? parseDateTime(remindText) : remindAt) : null;
+    if (remindBefore === -1 && !customAt) { Alert.alert('Erinnerungszeit fehlt', 'Bitte Datum und Uhrzeit für die Erinnerung wählen (TT.MM.JJJJ HH:MM).'); return; }
+    if (customAt && customAt.getTime() <= Date.now()) { Alert.alert('Erinnerung liegt in der Vergangenheit', 'Bitte eine Erinnerungszeit in der Zukunft wählen.'); return; }
+    const [ry, rm, rd] = date.split('-').map(Number);
+    const [rh, rmin] = (normTime || '08:00').split(':').map(Number);
+    const remindTime = customAt || (remindBefore > 0 ? new Date(new Date(ry, rm - 1, rd, rh, rmin).getTime() - remindBefore * 60000) : null);
     setSaving(true);
     try {
       await cancelReminder(initial?.reminder_id);
@@ -141,15 +163,15 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
       const reminderId = travel > 0 && normTime
         ? await scheduleDepartureReminder({ title: title.trim(), date, time: normTime, travelMinutes: travel, address: address.trim() })
         : null;
-      const remindId = remindBefore > 0 && normTime
-        ? await scheduleAppointmentReminder({ title: title.trim(), date, time: normTime, beforeMinutes: remindBefore, address: address.trim() })
+      const remindId = remindTime
+        ? await scheduleAppointmentReminder({ title: title.trim(), date, time: normTime || '', at: remindTime, address: address.trim() })
         : null;
       await AppointmentService.save({
         id: initial?.id, title: title.trim(), date, time: normTime, project_id: projectId, customer_id: customerId,
         address: address.trim(), note: note.trim(), travel_minutes: travel || null, reminder_id: reminderId,
-        remind_before: remindBefore || null, remind_id: remindId,
+        remind_before: remindBefore || null, remind_id: remindId, remind_at: customAt ? customAt.toISOString() : null,
       });
-      if (Platform.OS !== 'web' && ((travel > 0 && !reminderId) || (remindBefore > 0 && !remindId))) {
+      if (Platform.OS !== 'web' && ((travel > 0 && !reminderId) || (remindTime && !remindId))) {
         Alert.alert('Termin gespeichert', 'Mindestens eine Erinnerungszeit liegt schon in der Vergangenheit oder Mitteilungen sind aus – dafür wurde keine Erinnerung geplant.');
       }
       onSaved();
@@ -283,11 +305,70 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             <Text style={s.label}>Erinnerung vor dem Termin</Text>
             <View style={[s.row, { flexWrap: 'wrap' }]}>
               {REMIND_OPTIONS.map(([m, l]) => (
-                <TouchableOpacity key={m} testID={`apt-remind-${m}`} style={[s.chip, remindBefore === m && s.chipOn]} onPress={() => setRemindBefore(m)}>
+                <TouchableOpacity key={m} testID={`apt-remind-${m}`} style={[s.chip, remindBefore === m && s.chipOn]} onPress={() => {
+                  setRemindBefore(m);
+                  if (m === -1 && Platform.OS !== 'web') {
+                    Keyboard.dismiss();
+                    if (!remindAt) {
+                      // Startwert: 1 Std vor Termin (oder morgen 08:00)
+                      const base = new Date(pickerValue.getTime() - 60 * 60000);
+                      setRemindAt(base.getTime() > Date.now() ? base : new Date(Date.now() + 60 * 60000));
+                    }
+                    setRemindPicker('date');
+                  } else setRemindPicker(null);
+                }}>
+                  {m === -1 && <Ionicons name="calendar-outline" size={14} color={remindBefore === m ? '#fff' : '#334155'} style={{ marginRight: 4 }} />}
                   <Text style={[s.chipText, remindBefore === m && s.chipTextOn]}>{l}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+            {remindBefore === -1 && (Platform.OS === 'web' ? (
+              <TextInput testID="apt-remind-custom" style={[s.input, { marginTop: 8 }]} value={remindText} onChangeText={setRemindText} placeholderTextColor="#94a3b8" placeholder="TT.MM.JJJJ HH:MM" />
+            ) : (
+              <>
+                <View style={[s.row, { marginTop: 8 }]}>
+                  <TouchableOpacity testID="apt-remind-date" style={[s.input, s.pickBtn, { flex: 1.4 }, remindPicker === 'date' && s.pickOn]} onPress={() => setRemindPicker(remindPicker === 'date' ? null : 'date')}>
+                    <Ionicons name="calendar-outline" size={18} color="#1976d2" />
+                    <Text style={s.pickText}>{remindAt ? fmtDateTime(remindAt).slice(0, 10) : 'Datum'}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="apt-remind-time" style={[s.input, s.pickBtn, { flex: 1 }, remindPicker === 'time' && s.pickOn]} onPress={() => setRemindPicker(remindPicker === 'time' ? null : 'time')}>
+                    <Ionicons name="alarm-outline" size={18} color="#1976d2" />
+                    <Text style={s.pickText}>{remindAt ? fmtDateTime(remindAt).slice(11) : 'Uhrzeit'}</Text>
+                  </TouchableOpacity>
+                </View>
+                {remindPicker && (
+                  <View style={Platform.OS === 'ios' ? s.pickerBox : undefined}>
+                    <DateTimePicker
+                      value={remindAt || new Date()}
+                      mode={remindPicker}
+                      display={Platform.OS === 'ios' ? (remindPicker === 'date' ? 'inline' : 'spinner') : 'default'}
+                      locale="de-DE"
+                      is24Hour
+                      minuteInterval={5}
+                      themeVariant="light"
+                      accentColor="#1976d2"
+                      onChange={(e, d) => {
+                        const step = remindPicker;
+                        if (Platform.OS === 'android') setRemindPicker(null);
+                        if (!d || e.type === 'dismissed') return;
+                        const cur = remindAt || new Date();
+                        const next = new Date(cur);
+                        if (step === 'date') next.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+                        else next.setHours(d.getHours(), d.getMinutes(), 0, 0);
+                        setRemindAt(next);
+                        // Nach dem Datum direkt die Uhrzeit wählen
+                        if (step === 'date') setTimeout(() => setRemindPicker('time'), Platform.OS === 'android' ? 300 : 0);
+                      }}
+                    />
+                    {Platform.OS === 'ios' && remindPicker === 'time' && (
+                      <TouchableOpacity style={s.pickDone} onPress={() => setRemindPicker(null)}>
+                        <Text style={s.pickDoneText}>Fertig</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </>
+            ))}
 
             <Text style={s.label}>Fahrzeit → Erinnerung zum Losfahren</Text>
             <View style={[s.row, { flexWrap: 'wrap' }]}>
@@ -343,7 +424,7 @@ const s = StyleSheet.create({
   custName: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
   custAddr: { fontSize: 12, color: '#64748b', marginTop: 1 },
   custEmpty: { fontSize: 13, color: '#64748b', padding: 8 },
-  chip: { minHeight: 44, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: '#cbd5e1', justifyContent: 'center', maxWidth: 200 },
+  chip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: '#cbd5e1', justifyContent: 'center', maxWidth: 200 },
   chipOn: { backgroundColor: '#1976d2', borderColor: '#1976d2' },
   chipText: { fontSize: 14, fontWeight: '600', color: '#334155' },
   chipTextOn: { color: '#fff' },

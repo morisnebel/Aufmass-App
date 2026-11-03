@@ -552,10 +552,10 @@ export default function NewCustomerScreen() {
 
           {/* Kundennummer */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t('customers.customerNumber')} ({t('projects.autoAssignHint').toLowerCase()})</Text>
+            <Text style={styles.label}>{t('customers.customerNumber')}</Text>
             <TextInput
               style={styles.input}
-              placeholder={t('customers.customerNumberAutoHint')}
+              placeholderTextColor="#94a3b8" placeholder={t('customers.customerNumberAutoHint')}
               value={customerNumber}
               onChangeText={setCustomerNumber}
             />
@@ -582,7 +582,7 @@ export default function NewCustomerScreen() {
               <Text style={styles.label}>Bezeichnung {customerType}</Text>
               <TextInput
                 style={styles.input}
-                placeholder={customerType === 'Privat' ? 'z.B. Familie Mustermann' : 'z.B. Elektro Mustermann GmbH'}
+                placeholderTextColor="#94a3b8" placeholder={customerType === 'Privat' ? 'z.B. Familie Mustermann' : 'z.B. Elektro Mustermann GmbH'}
                 value={customerTypeName}
                 onChangeText={setCustomerTypeName}
               />
@@ -609,7 +609,7 @@ export default function NewCustomerScreen() {
               <Text style={styles.label}>{t('common.firstName')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder={t('common.firstName')}
+                placeholderTextColor="#94a3b8" placeholder={t('common.firstName')}
                 value={firstName}
                 onChangeText={setFirstName}
                 autoComplete="given-name"
@@ -619,7 +619,7 @@ export default function NewCustomerScreen() {
               <Text style={styles.label}>{t('common.lastName')}{customerTypeName.trim() ? '' : ' *'}</Text>
               <TextInput
                 style={styles.input}
-                placeholder={t('common.lastName')}
+                placeholderTextColor="#94a3b8" placeholder={t('common.lastName')}
                 value={lastName}
                 onChangeText={setLastName}
                 autoComplete="family-name"
@@ -631,7 +631,7 @@ export default function NewCustomerScreen() {
             <Text style={styles.label}>{t('settings.street')}</Text>
             <TextInput
               style={styles.input}
-              placeholder={t('common.streetAndNumber')}
+              placeholderTextColor="#94a3b8" placeholder={t('common.streetAndNumber')}
               value={street}
               onChangeText={setStreet}
               autoComplete="street-address"
@@ -643,7 +643,7 @@ export default function NewCustomerScreen() {
               <Text style={styles.label}>{t('settings.zipCode')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="PLZ"
+                placeholderTextColor="#94a3b8" placeholder="PLZ"
                 value={plz}
                 onChangeText={setPlz}
                 keyboardType="number-pad"
@@ -654,7 +654,7 @@ export default function NewCustomerScreen() {
               <Text style={styles.label}>{t('settings.city')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Ort"
+                placeholderTextColor="#94a3b8" placeholder="Ort"
                 value={city}
                 onChangeText={setCity}
               />
@@ -666,7 +666,7 @@ export default function NewCustomerScreen() {
               <Text style={styles.label}>{t('common.mobilePhone')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder={t('customers.mobilePlaceholder')}
+                placeholderTextColor="#94a3b8" placeholder={t('customers.mobilePlaceholder')}
                 value={mobile}
                 onChangeText={setMobile}
                 keyboardType="phone-pad"
@@ -676,7 +676,7 @@ export default function NewCustomerScreen() {
               <Text style={styles.label}>{t('settings.phone')}</Text>
               <TextInput
                 style={styles.input}
-                placeholder={t('customers.phonePlaceholder')}
+                placeholderTextColor="#94a3b8" placeholder={t('customers.phonePlaceholder')}
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
@@ -689,7 +689,7 @@ export default function NewCustomerScreen() {
             <Text style={styles.label}>{t('settings.email')}</Text>
             <TextInput
               style={styles.input}
-              placeholder={t('customers.emailPlaceholder')}
+              placeholderTextColor="#94a3b8" placeholder={t('customers.emailPlaceholder')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -818,7 +818,7 @@ export default function NewCustomerScreen() {
               <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder={t('customers.searchContact')}
+                placeholderTextColor="#94a3b8" placeholder={t('customers.searchContact')}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
                 autoFocus

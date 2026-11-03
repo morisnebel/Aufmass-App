@@ -16,20 +16,30 @@ if (Platform.OS !== 'web') {
 
 export const REMINDER_BUFFER_MIN = 10; // Puffer zusätzlich zur Fahrzeit
 
-// Öffnet die Navigation des Handys (Apple Karten / Google Maps) zur Adresse
-export const openNavigation = async (address: string) => {
-  const q = encodeURIComponent(address);
-  const urls = Platform.select({
-    ios: [`maps://?daddr=${q}&dirflg=d`, `https://maps.apple.com/?daddr=${q}&dirflg=d`],
-    android: [`google.navigation:q=${q}`, `geo:0,0?q=${q}`],
-    default: [`https://www.google.com/maps/dir/?api=1&destination=${q}`],
-  }) as string[];
+// Öffnet die gewählte Navi-App (Apple Karten / Google Maps / Waze) zur Adresse
+const tryOpen = async (urls: string[]) => {
   for (const url of urls) {
-    try {
-      if (Platform.OS === 'web' || (await Linking.canOpenURL(url))) { await Linking.openURL(url); return; }
-    } catch {}
+    try { await Linking.openURL(url); return; } catch {}
   }
-  await Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${q}`);
+};
+export const navApps = (address: string) => {
+  const q = encodeURIComponent(address);
+  const google = Platform.OS === 'android'
+    ? [`google.navigation:q=${q}`, `https://www.google.com/maps/dir/?api=1&destination=${q}`]
+    : [`comgooglemaps://?daddr=${q}&directionsmode=driving`, `https://www.google.com/maps/dir/?api=1&destination=${q}`];
+  return [
+    ...(Platform.OS === 'ios' ? [{ label: 'Apple Karten', urls: [`maps://?daddr=${q}&dirflg=d`, `https://maps.apple.com/?daddr=${q}&dirflg=d`] }] : []),
+    { label: 'Google Maps', urls: google },
+    { label: 'Waze', urls: [`waze://?q=${q}&navigate=yes`, `https://waze.com/ul?q=${q}&navigate=yes`] },
+  ];
+};
+export const openNavigation = async (address: string) => {
+  const apps = navApps(address);
+  if (Platform.OS === 'web') { await tryOpen(apps[0].urls.slice(-1)); return; }
+  Alert.alert('Navigation starten', address, [
+    ...apps.map(a => ({ text: a.label, onPress: () => { tryOpen(a.urls); } })),
+    { text: 'Abbrechen', style: 'cancel' as const },
+  ]);
 };
 
 export const departureTime = (date: string, time: string, travelMinutes: number): Date => {
@@ -75,31 +85,27 @@ export const scheduleDepartureReminder = async (opts: {
   });
 };
 
-// Normale Terminerinnerung: X Minuten vor Terminbeginn
+// Normale Terminerinnerung zu einem festen Zeitpunkt (X Min vorher oder frei gewählt)
 export const scheduleAppointmentReminder = async (opts: {
-  title: string; date: string; time: string; beforeMinutes: number; address?: string;
+  title: string; date: string; time: string; at: Date; address?: string;
 }): Promise<string | null> => {
   if (Platform.OS === 'web') return null;
-  const [y, m, d] = opts.date.split('-').map(Number);
-  const [hh, mm] = opts.time.split(':').map(Number);
-  const at = new Date(new Date(y, m - 1, d, hh, mm).getTime() - opts.beforeMinutes * 60000);
+  const at = opts.at;
   if (at.getTime() <= Date.now() + 30000) return null;
   if (!(await ensurePermission())) return null;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('termine', { name: 'Termine', importance: Notifications.AndroidImportance.HIGH });
   }
+  const [y, m, d] = opts.date.split('-');
   return Notifications.scheduleNotificationAsync({
     content: {
       title: `Termin: ${opts.title}`,
-      body: `${reminderLabel(opts.beforeMinutes)} – ${opts.time} Uhr${opts.address ? ` · ${opts.address}` : ''}`,
+      body: `${d}.${m}.${y}${opts.time ? ` um ${opts.time} Uhr` : ''}${opts.address ? ` · ${opts.address}` : ''}`,
       data: { address: opts.address || '' },
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: 'termine' },
   });
 };
-
-export const reminderLabel = (min: number) =>
-  min >= 1440 ? `in ${min / 1440 === 1 ? '1 Tag' : `${min / 1440} Tagen`}` : min >= 60 ? `in ${min / 60} Std.` : `in ${min} Min.`;
 
 export const cancelReminder = async (id?: string | null) => {
   if (!id || Platform.OS === 'web') return;

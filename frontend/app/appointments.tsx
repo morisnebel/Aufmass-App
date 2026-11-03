@@ -129,7 +129,7 @@ export default function AppointmentsScreen() {
         customers={customers}
         onClose={() => setModal(false)}
         onSaved={() => { setModal(false); load(); }}
-        onCreateProject={a => { setModal(false); router.push({ pathname: '/projects/new', params: { from_appointment: a.id, name: a.title, ...(a.customer_id ? { customer_id: a.customer_id } : {}), description: [a.address, a.note].filter(Boolean).join('\n') } }); }}
+        onCreateProject={a => { setModal(false); router.push({ pathname: '/projects/new', params: { from_appointment: a.id, name: a.title, ...(a.customer_id ? { customer_id: a.customer_id } : {}), description: a.note || '', ...(a.address ? { address: a.address } : {}) } }); }}
       />
     </>
   );

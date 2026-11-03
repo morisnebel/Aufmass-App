@@ -86,7 +86,14 @@ function extractContactData(contact: Contacts.Contact) {
 export default function NewProjectScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const params = useLocalSearchParams<{ customer_id?: string; from_appointment?: string; name?: string; description?: string }>();
+  const params = useLocalSearchParams<{ customer_id?: string; from_appointment?: string; name?: string; description?: string; address?: string }>();
+  // Termin-Adresse („Straße, PLZ Ort“) in Objektadress-Felder zerlegen
+  const aptAddr = (() => {
+    const raw = (params.address || '').trim();
+    if (!raw) return { street: '', zip: '', city: '' };
+    const m = raw.match(/^(.*?)[,\s]+(\d{4,5})\s+(.+)$/);
+    return m ? { street: m[1].trim(), zip: m[2], city: m[3].trim() } : { street: raw, zip: '', city: '' };
+  })();
   const [projectNumber, setProjectNumber] = useState(''); // PR-26001 etc.
   // Aus einem Termin erstellt → Name/Beschreibung vorausfüllen
   const [name, setName] = useState(params.name || '');
@@ -127,9 +134,9 @@ export default function NewProjectScreen() {
   const [selectedProjectAddress, setSelectedProjectAddress] = useState<ProjectAddress | null>(null);
   const [objektAddressName, setObjektAddressName] = useState(''); // Bezeichnung z.B. "Dorfscheune"
   const [objektName, setObjektName] = useState(''); // Objektname z.B. "Scheune im Dorf 2"
-  const [objektStreet, setObjektStreet] = useState('');
-  const [objektPlz, setObjektPlz] = useState('');
-  const [objektCity, setObjektCity] = useState('');
+  const [objektStreet, setObjektStreet] = useState(aptAddr.street);
+  const [objektPlz, setObjektPlz] = useState(aptAddr.zip);
+  const [objektCity, setObjektCity] = useState(aptAddr.city);
   const [objektContactPerson, setObjektContactPerson] = useState('');
   const [objektPhone, setObjektPhone] = useState('');
   const [objektEmail, setObjektEmail] = useState('');
@@ -993,7 +1000,7 @@ export default function NewProjectScreen() {
             {/* Telefon und E-Mail */}
             <View style={styles.addressRow}>
               <TextInput
-                style={[styles.input, { flex: 1, marginRight: 8 }]}
+                style={[styles.input, { flex: 1, marginRight: 8, minWidth: 0 }]}
                 placeholderTextColor="#999" placeholder={t('common.phone')}
                 value={objektPhone}
                 onChangeText={(text) => {
@@ -1003,7 +1010,7 @@ export default function NewProjectScreen() {
                 keyboardType="phone-pad"
               />
               <TextInput
-                style={[styles.input, { flex: 1.5 }]}
+                style={[styles.input, { flex: 1.5, minWidth: 0 }]}
                 placeholderTextColor="#999" placeholder={t('common.email')}
                 value={objektEmail}
                 onChangeText={(text) => {
@@ -1931,9 +1938,11 @@ const styles = StyleSheet.create({
   },
   plzInput: {
     flex: 1,
+    minWidth: 0,
   },
   cityInput: {
     flex: 2,
+    minWidth: 0,
   },
   // Address Picker Modal
   addressPickerContent: {

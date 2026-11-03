@@ -1,0 +1,37 @@
+{
+  "summary": "Frontend-only test on the web preview at 390x844 with app_language='de'. The welcome dialog works. Most requested flows PASS, with one validation bug. (1) /projects/new: no horizontal overflow (scrollWidth 390). PLZ/Ort row is 16-141 and 149-374, Telefon/E-Mail row is 16-158 and 174-374. All labels and placeholders are German. (2) /customers/new: all labels German, label 'Kunden-Nr.' (no duplicate hint), placeholder color rgb(148,163,184)=#94a3b8, all fields inside 390px. (3) Customer 'Lena TEST_Berger' (Lindenweg 7, 80331 München) created via the UI. '+ Termin' -> 'Aus Kunden' fills the address 'Lindenweg 7, 80331 München' and the title. Saved with 08:30 and the note 'Leiter mitnehmen'. Reopen -> apt-create-project opens /projects/new?...&customer_id&address with the customer preselected (with address subtitle), Straße='Lindenweg 7', PLZ='80331', Ort='München', description='Leiter mitnehmen' only. After 'Adresse speichern?' (confirm) and 'Adresse benennen' -> Überspringen, the project saved with objekt_street/plz/city correct and customer_id set, appointment.project_id was linked, and the project details show the Termin. (4) The 'Eigene Zeit' chip (apt-remind--1) shows apt-remind-custom (placeholder TT.MM.JJJJ HH:MM). Empty, 'abc', '20.12.2026' and '20.12.2026 7:4' each show the 'Erinnerungszeit fehlt' alert and nothing is saved. A valid value '20.12.2026 07:45' saves remind_before=-1 and remind_at, and on reopen the chip is highlighted and the input is prefilled. BUG: an out-of-range value '32.13.2026 25:99' is ACCEPTED and silently rolls over to 02.02.2027 03:39. A past value '01.01.2020 08:00' is also saved on web without any warning. (5) Regression: switching to the 30 Min chip hides the custom input. Travel 15 shows departure info 08:05. Reopen restores the 30 and 15 chips. The customer picker works. (6) The web Navi button (44x44) opens google.com/maps/dir/?api=1&destination=Lindenweg%207%2C%2080331%20M%C3%BCnchen in a new tab. The native Apple Karten/Google/Waze choice was only code-reviewed; it is OK (iOS 4 buttons, Android 3 buttons, fallback to https URLs).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AppointmentFormModal parseDateTime", "issue": "The custom reminder parser only checks the format, not the ranges, and has no rollover check. '32.13.2026 25:99' is accepted and stored as remind_at 2027-02-02T02:39Z. Unlike parseDate, it does not verify d.getDate()/getMonth() and hours<24/minutes<60. Reference: /app/frontend/src/components/home/AppointmentFormModal.tsx:15-20", "testID": "apt-remind-custom", "priority": "MEDIUM"},
+      {"component": "AppointmentFormModal save (web)", "issue": "A custom reminder in the past (e.g. 01.01.2020 08:00) is saved without any feedback on web. On native, a generic 'Termin gespeichert…' alert appears after the save. Suggest validating customAt > now before saving and showing an 'Erinnerung liegt in der Vergangenheit' alert. Reference: AppointmentFormModal.tsx:152-153", "testID": "apt-remind-custom", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/projects/new", "issues": ["The Objektadresse inputs (Bezeichnung/Objektname/Straße/Ansprechpartner) have about 0-4px vertical spacing and look glued together. Use an 8px gap.", "The save button label 'Neues Projekt' duplicates the header. 'Projekt erstellen' would be clearer. It becomes 'Projekt speichern' once a customer is chosen, so the label is inconsistent.", "Placeholders use #999 here, while /customers/new and the appointment modal use #94a3b8 (inconsistent)."]},
+      {"screen": "/projects/new -> Kunde auswählen", "issues": ["The customer picker screen shows two stacked headers ('Startseite' and 'Projekteingabe' back bars). Possibly pre-existing."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/ui_flow_iter50.py"],
+  "action_items": [
+    "MEDIUM: Harden parseDateTime in AppointmentFormModal.tsx. Reject hours>23 and minutes>59, and check that d.getDate()===day and d.getMonth()===month-1 (same as parseDate), so that '32.13.2026 25:99' shows 'Erinnerungszeit fehlt'.",
+    "LOW: Reject or warn on a custom reminder time in the past before saving (both web and native).",
+    "LOW: Add 8px spacing between the Objektadresse inputs on /projects/new, and align the placeholder color (#94a3b8).",
+    "OPTIONAL: When the Objektadresse equals the customer's main address (as it does from an appointment), skip the 'Adresse speichern?' / 'Adresse benennen' prompts.",
+    "OPTIONAL: Add testIDs to the Objektadresse TextInputs in projects/new.tsx (objekt-street, objekt-plz, objekt-city, objekt-phone, objekt-email, project-description) and to the customers/new inputs."
+  ],
+  "critical_code_review_comments": [
+    "projects/new.tsx aptAddr regex /^(.*?)[,\\s]+(\\d{4,5})\\s+(.+)$/ handles 'Str 7, 80331 München' and the version without a comma. An address with a country suffix ('…, 80331 München, Deutschland') puts the country into city. Acceptable.",
+    "projects/new.tsx is 2068 lines and customers/new.tsx is 1125 lines. Both exceed 700 lines and should be split.",
+    "openNavigation: iOS Alert has 4 buttons and Android 3 (within the Android limit). tryOpen falls back to https if the app scheme fails. OK.",
+    "router.back() in customers/new after saving throws 'GO_BACK was not handled' when the page is deep-linked with no history. Consider a canGoBack() fallback."
+  ],
+  "updated_files": ["/app/tests/ui_flow_iter50.py"],
+  "success_rate": {"backend": "N/A", "frontend": "93% (14/15 checks; custom reminder range validation failed)"},
+  "seed_data_creation": "Customer 'Lena TEST_Berger', its appointments and the project were created only in isolated browser-context localStorage. Nothing persists.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Each browser_automation call is a fresh context (empty localStorage), so do the full flow in one script. Keys: aufmassprofi_customers, aufmassprofi_appointments, aufmassprofi_projects. Navigating away from /customers/new triggers a beforeunload dialog. Saving a project with an Objektadresse shows window.confirm 'Adresse speichern?' and then the 'Adresse benennen' modal: click 'Überspringen'. The Objekt fields have no testIDs, so use placeholders ('Straße und Hausnummer', 'PLZ', 'Ort'). The web clock showed 03.11.2026.",
+  "rca_of_issue": "parseDateTime (AppointmentFormModal.tsx:15) builds new Date(y, m-1, d, h, min) without range checks. JS Date normalizes overflow (month 13 -> next year, day 32 -> next month, 25h/99min -> next day), so invalid input produces a valid but wrong Date. Fix: validate the components or compare them with the result."
+}

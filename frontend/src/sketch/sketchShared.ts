@@ -33,6 +33,7 @@ export interface DrawElement {
   fontWeight?: 'normal' | 'bold';
   fontStyle?: 'normal' | 'italic';
   fontFamily?: string;
+  name?: string; // Raumname für Grundrisse (polyline), z. B. „Wohnzimmer“
 }
 
 export type DrawMode = 'select' | 'pen' | 'line' | 'circle' | 'rect' | 'arrow' | 'pointer' | 'text' | 'image' | 'polygon' | 'polyline' | 'memo' | 'crop' | 'addPoint' | 'removePoint';

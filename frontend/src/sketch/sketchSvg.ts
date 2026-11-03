@@ -168,7 +168,9 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
     // Berechne Legend-Position für die viewBox-Erweiterung
     // VERGRÖSSERTE Legend für PDF/Vorschau
     const polylinesForLegend = getPolylineElementsWithMeasurements();
-    const svgLegendWidth = 220; // Noch breiter für bessere Lesbarkeit
+    // Breite an den längsten Eintrag (inkl. Raumname) anpassen, damit nichts abgeschnitten wird
+    const longestLegendName = polylinesForLegend.reduce((m: number, p: any) => Math.max(m, (p.name || '').length), 0);
+    const svgLegendWidth = Math.max(220, 62 + (longestLegendName + 22) * 8);
     const svgLegendLineHeight = 36; // Deutlich höhere Zeilen
     const svgLegendHeight = polylinesForLegend.length > 0 ? (55 + polylinesForLegend.length * svgLegendLineHeight + 25) : 0;
     
@@ -482,7 +484,8 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
         
         // Value text - größere Schrift
         const legendAreaM2 = polygonAreaVisible[element.id] ? calculatePolygonAreaM2(element) : null;
-        const legendValueText = `= ${totalForElement.toString().replace('.', ',')} lfm${legendAreaM2 !== null ? ` • ${formatAreaM2(legendAreaM2)}` : ''}`;
+        const legendName = element.name ? `${String(element.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')} ` : '';
+        const legendValueText = `${legendName}= ${totalForElement.toString().replace('.', ',')} lfm${legendAreaM2 !== null ? ` • ${formatAreaM2(legendAreaM2)}` : ''}`;
         svgElements += `<text x="${svgLegendXPos + 62}" y="${itemY + 2}" fill="#333" font-size="16">${legendValueText}</text>`;
       });
     }

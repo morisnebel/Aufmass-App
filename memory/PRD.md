@@ -759,3 +759,5 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Skizze: Live-Ebene für Strich/Form – Hauptfläche wird beim Zeichnen nicht mehr pro Bewegung neu aufgebaut
 - Projekt-PDF: Flächenübersicht (m²) aller Skizzen-Grundrisse (src/sketch/polygonArea.ts)
 - Rechner: Umbenennen von Grund-/Abzugsflächen über eigenes Eingabefenster (RenamePromptModal) auf allen Plattformen
+- Skizze: Haupt-Zeichenfläche wird während eines Strichs aus Cache wiederverwendet (große Skizzen flüssig)
+- Skizze: Grundrisse benennen über Tipp in der Übersicht-Legende (element.name) – Name in Legende, Vorschau-SVG und PDF-Flächenübersicht

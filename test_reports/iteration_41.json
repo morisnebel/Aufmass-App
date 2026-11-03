@@ -1,0 +1,34 @@
+{
+  "summary": "Frontend-only retest of the iteration_40 fixes in the Chromium web preview at 390x844. Storage was seeded with setup_snippet.py and the page opened at /sketches/draw?projectId=p1. 0 pageerrors. BUG1 FIXED: 3 pen strokes, then a stroke ending on the 'Elemente' badge (mouse and CDP touch) is committed (3->4, main SVG paths 4->5). Undo gives Elemente 3 and paths 4 right away; redo gives 4/5. A pen stroke across the legend row (mouse) and across the legend title (touch) is committed (1->2). The legend does not move, the rename modal does not open, and undo updates the canvas at once (paths 3->2). A circle drag ending on the badge (tempElement path) is committed too, and undo/redo update the canvas. BUG2 FIXED: the saved sketch SVG (decoded from localStorage, rendered, getBBox) keeps the legend text inside both the box and the viewBox for 'Wohnzimmer' (text right 271, box right 378, viewBox right 388), 'Wohnzimmer mit Essbereich' (234/378/388), worst case 'WWWWWWWWWWWWWWWW' (371/378/388) and 'TEST_Bad'. Regressions PASS: tapping legend-row-0 (mouse and touch) opens the rename modal, and 'Wohnzimmer' gives 'S1 Wohnzimmer = 18 lfm • 20,00 m²'. A touch drag from the title moves the legend (-60,-80) and a touch drag from the row moves it (-32,+64) without opening the modal. Pen, rect (live layer z=2 during the drag, then committed) and circle drawing, undo/redo, gallery image insert (x20 y50 w350) and moving the image with the Position tool (-> -20/110) all work. Still open (LOW, web only): a mouse drag on a legend row does not move the legend, and mouse drags select the overlay/SVG text (blue highlight). Deprecated packages detected: none in scope. SafeAreaView issues detected: none in scope.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Legend mouse drag on row (web only)", "issue": "This is unchanged from iteration 40. A MOUSE drag that starts on legend-row-0 does not move the legend (it stays at 205,660). A touch drag works. Web only.", "testID": "legend-row-0", "priority": "LOW"},
+      {"component": "Text selection during mouse drags (web only)", "issue": "When a pen stroke or a drag passes over the 'Elemente' badge, the legend ('Overview', '= 18 lfm') or the SVG measurement/area labels, the browser selects the text and shows a blue highlight. This is a cosmetic, web-only issue. Fix it with userSelect: 'none' on the overlays and labels (style or selectable={false} on Text).", "testID": "legend-row-0", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "PDF sketch SVG legend", "issues": ["The width estimate of 9px per character is generous. 'Wohnzimmer mit Essbereich' leaves about 144px of empty space at the right of the box (text right 234, box right 378). The box also grows leftwards (box x=-143), which widens the viewBox and makes the drawing smaller in the PDF. This is cosmetic only."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/polygon_rename_helpers.py", "/app/tests/e2e/large_sketch_helpers.py", "/app/tests/e2e/setup_snippet.py", "/app/tests/e2e/sketch_area_pdf_helpers.py"],
+  "action_items": [
+    "LOW (optional): Add userSelect 'none' (web) to the info overlay, the legend Texts and the SVG label texts so mouse drags do not highlight text.",
+    "LOW (optional): Make a legend row mouse drag work on web, or ignore it because touch works.",
+    "LOW (optional): Tighten svgLegendWidth (e.g. about 8px per char) to reduce empty space in the PDF legend."
+  ],
+  "critical_code_review_comments": [
+    "draw.tsx:6962 The cache is now keyed on `elements` identity plus isLiveDrawing, which is good. Other render inputs (selectedElementId, lineSegmentMeasurements, polygonAreaVisible, measureLineStyles) are still not part of the key, so a change to them during a live phase would be stale until release. This is not reproducible today because those cannot change mid-stroke.",
+    "draw.tsx:6901-6902 onResponderTerminationRequest={() => !isLiveDrawing} uses the render-time closure value. This works in practice, but a ref would be more robust.",
+    "Save calls router.back(). When the editor is opened directly by URL (no history), web shows the toast 'The action GO_BACK was not handled'. Consider router.canGoBack() ? back() : replace(...). Low priority.",
+    "draw.tsx is still about 9.7k lines; split it."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100% of the requested retest items (BUG1, BUG2 and regressions); 2 LOW web-only cosmetic items remain"},
+  "seed_data_creation": "Only localStorage in throwaway browser sessions (TEST_Projekt p1, TEST_Max Muster, TEST_SVG_* sketches). No backend data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The UI language may be English: the legend title is 'Overview' and the badge is 'Elemente: N\\nAusgewählt'. Badge rect is about (310,154,64,14). The legend after build_square is at row (205,660). Opening /sketches/draw?projectId=p1 directly works. SVG legend check: after sketch-save-button, scan localStorage for data:image/svg+xml;base64, decode it, inject it into the DOM, and compare the text getBBox with rect[stroke='#e3f2fd'] and the viewBox.",
+  "rca_of_issue": "The iteration_40 BUG1 (responder stolen by overlays plus a frozen cache) and BUG2 (fixed legend width) are both verified fixed."
+}

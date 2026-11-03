@@ -611,7 +611,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
           const measuredPolylines = metadata.elements.filter((el: any) =>
             el.type === 'polyline' && segMeasures[el.id] && Object.keys(segMeasures[el.id]).length > 0);
           const areas = measuredPolylines
-            .map((el: any, i: number) => ({ label: `S${i + 1}`, area: calculatePolygonAreaM2(el, segMeasures) }))
+            .map((el: any, i: number) => ({ label: el.name ? `S${i + 1} – ${el.name}` : `S${i + 1}`, area: calculatePolygonAreaM2(el, segMeasures) }))
             .filter((a: any) => a.area !== null);
           if (areas.length > 0) sketchAreas[index] = { title: sketch.title || `Skizze ${index + 1}`, areas };
         }
@@ -691,7 +691,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
             ${filledSketchAreas.map(s => s.areas.map(a => `
               <tr>
                 <td style="padding: 5px 8px; border: 1px solid #ddd;">${String(s.title).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
-                <td style="padding: 5px 8px; border: 1px solid #ddd;">${a.label}</td>
+                <td style="padding: 5px 8px; border: 1px solid #ddd;">${String(a.label).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
                 <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatAreaM2(a.area)}</td>
               </tr>`).join('')).join('')}
             <tr style="font-weight: 700; background: #e3f2fd;">

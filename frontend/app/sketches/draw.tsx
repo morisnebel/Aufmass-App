@@ -39,6 +39,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deepCloneElement, simplifyPath, DrawElement, FontFamily, FONT_FAMILIES, DrawMode, TOOL_SIZES_KEY } from '../../src/sketch/sketchShared';
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
 import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared } from '../../src/sketch/polygonArea';
+import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import Svg, { 
   Path, 
   Line, 
@@ -113,6 +114,10 @@ export default function DrawSketchScreen() {
   // stehen (kein Neuaufbau pro Bewegung). Nur die kleine Live-Ebene wird aktualisiert.
   const isLiveDrawing = !!tempElement || (currentPath.length > 0 && (drawMode === 'pen' || drawMode === 'polygon'));
   const mainCanvasKeyRef = useRef(0);
+  const mainSvgCacheRef = useRef<React.ReactElement | null>(null);
+  const mainSvgCacheElementsRef = useRef<DrawElement[] | null>(null);
+  // Grundriss benennen (z. B. „Wohnzimmer“) – Name erscheint in Übersicht und Projekt-PDF
+  const [renamePolyline, setRenamePolyline] = useState<{ id: string; name: string } | null>(null);
   if (!isLiveDrawing) mainCanvasKeyRef.current++;
   const mainCanvasKey = mainCanvasKeyRef.current;
   
@@ -841,7 +846,7 @@ export default function DrawSketchScreen() {
   const legendPanResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) + Math.abs(g.dy) > 8, // Zeile ziehen verschiebt Legende; laufende Striche verweigern die Übernahme
       onPanResponderGrant: () => {
         legendPan.setOffset({
           x: (legendPan.x as any)._value,
@@ -6094,7 +6099,7 @@ export default function DrawSketchScreen() {
           />
           <Text style={styles.pdfSizeHeaderLabel}>PDF</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={saveSketch} style={styles.headerButton} disabled={loading}>
+        <TouchableOpacity testID="sketch-save-button" onPress={saveSketch} style={styles.headerButton} disabled={loading}>
           <Ionicons name="checkmark" size={24} color={loading ? '#888' : '#fff'} />
         </TouchableOpacity>
       </View>
@@ -6670,6 +6675,7 @@ export default function DrawSketchScreen() {
           <View style={styles.toolGroupRow}>
             <TouchableOpacity
               style={[styles.toolButtonInner, !canUndo && styles.toolButtonDisabled]}
+              testID="sketch-undo-button"
               onPress={undo}
               disabled={!canUndo}
             >
@@ -6678,6 +6684,7 @@ export default function DrawSketchScreen() {
             
             <TouchableOpacity
               style={[styles.toolButtonInner, !canRedo && styles.toolButtonDisabled]}
+              testID="sketch-redo-button"
               onPress={redo}
               disabled={!canRedo}
             >
@@ -6890,6 +6897,9 @@ export default function DrawSketchScreen() {
           onResponderGrant={onTouchStart}
           onResponderMove={onTouchMove}
           onResponderRelease={onTouchEnd}
+          // Laufender Strich darf nicht von Overlays (Legende, Zähler) übernommen werden
+          onResponderTerminationRequest={() => !isLiveDrawing}
+          onResponderTerminate={onTouchEnd}
           onLayout={(event) => {
             // Speichere die Canvas-Position auf dem Bildschirm für präzise Koordinaten-Berechnung
             if (Platform.OS === 'web') {
@@ -6947,6 +6957,9 @@ export default function DrawSketchScreen() {
             </Svg>
           );
         })()}
+        {/* Große Skizzen: Während ein Strich entsteht, wird die fertige Haupt-Zeichenfläche
+            aus dem Zwischenspeicher wiederverwendet (keine Neuberechnung aller Elemente pro Bewegung) */}
+        {(isLiveDrawing && mainSvgCacheRef.current && mainSvgCacheElementsRef.current === elements) ? mainSvgCacheRef.current : (mainSvgCacheElementsRef.current = elements, mainSvgCacheRef.current = (
         <Svg
           ref={svgRef}
           key={Platform.OS === 'web' ? 'canvas' : `canvas-${mainCanvasKey}`}
@@ -7094,6 +7107,7 @@ export default function DrawSketchScreen() {
             <Circle key={`inv-${fabricInvalidateTick.current++}`} cx={-99999} cy={-99999} r={0.1} fill="none" stroke="none" opacity={0} />
           )}
         </Svg>
+        ))}
         {/* Live-Ebene: nur der aktuell entstehende Strich / die Form-Vorschau.
             Diese kleine Ebene wird pro Bewegung neu aufgebaut, die Haupt-Zeichenfläche
             mit allen Elementen bleibt währenddessen unverändert -> flüssiges Zeichnen */}
@@ -7128,7 +7142,7 @@ export default function DrawSketchScreen() {
         <View 
           style={styles.infoOverlay}
           onStartShouldSetResponder={() => true}
-          onMoveShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => false}
           onResponderTerminationRequest={() => false}
         >
           <Text style={styles.infoText}>Elemente: {elements.length}</Text>
@@ -7442,15 +7456,22 @@ export default function DrawSketchScreen() {
             if (totalForElement <= 0) return null;
             const legendAreaM2 = polygonAreaVisible[element.id] ? calculatePolygonAreaM2(element) : null;
             return (
-              <View key={`legend-${element.id}`} style={styles.sketchLegendRow}>
+              <Pressable
+                key={`legend-${element.id}`}
+                testID={`legend-row-${index}`}
+                style={styles.sketchLegendRow}
+                onPress={() => setRenamePolyline({ id: element.id, name: element.name || '' })}
+                hitSlop={4}
+              >
                 <View style={styles.sketchLegendLabel}>
                   <Text style={styles.sketchLegendLabelText}>S{index + 1}</Text>
                 </View>
                 <Text style={styles.sketchLegendValue}>
-                  = {totalForElement.toString().replace('.', ',')} lfm
+                  {element.name ? `${element.name} ` : ''}= {totalForElement.toString().replace('.', ',')} lfm
                   {legendAreaM2 !== null ? ` • ${formatAreaM2(legendAreaM2)}` : ''}
                 </Text>
-              </View>
+                <Ionicons name="pencil" size={11} color="#999" style={{ marginLeft: 4 }} />
+              </Pressable>
             );
           })}
         </Animated.View>
@@ -9637,6 +9658,20 @@ export default function DrawSketchScreen() {
           </TouchableOpacity>
         </View>
       )}
+      <RenamePromptModal
+        visible={!!renamePolyline}
+        title="Grundriss benennen"
+        message="Raumname, z. B. „Wohnzimmer“ (leer = nur S-Nummer)"
+        defaultValue={renamePolyline?.name}
+        onCancel={() => setRenamePolyline(null)}
+        onSubmit={(value) => {
+          const target = renamePolyline;
+          setRenamePolyline(null);
+          if (!target) return;
+          const trimmed = value.trim();
+          addToHistory(elements.map(el => el.id === target.id ? { ...el, name: trimmed || undefined } : el));
+        }}
+      />
     </View>
   );
 }

@@ -202,6 +202,27 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
       if (svgLegendYPos - svgLegendHeight < minY) minY = svgLegendYPos - svgLegendHeight - 10;
       if (svgLegendYPos > maxY) maxY = svgLegendYPos + 10;
     }
+
+    // Raumliste (geschlossene Räume mit Umfang und Fläche) unterhalb der Zeichnung
+    const esc = (v: string) => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const fmt = (n: number) => n.toFixed(2).replace('.', ',');
+    const roomRows = polylinesForLegend
+      .map((el: any, i: number) => ({ el, nr: `S${i + 1}` }))
+      .filter(({ el }: any) => el.data?.closed && calculateTotalLfmForElement(el.id) > 0)
+      .map(({ el, nr }: any) => ({
+        nr, name: el.name || 'Raum', color: (measureLineStyles[el.id] || { color: '#1976d2' }).color,
+        perimeter: calculateTotalLfmForElement(el.id),
+        area: polygonAreaVisible[el.id] !== false ? calculatePolygonAreaM2(el) : null,
+      }));
+    const roomRowH = 30;
+    const roomTableW = 480;
+    const roomTableX = minX + 10;
+    const roomTableY = maxY + 24;
+    const roomTableH = roomRows.length ? 76 + roomRows.length * roomRowH + (roomRows.length > 1 ? roomRowH : 0) : 0;
+    if (roomRows.length) {
+      maxY = roomTableY + roomTableH + 10;
+      if (roomTableX + roomTableW + 10 > maxX) maxX = roomTableX + roomTableW + 10;
+    }
     
     // Calculate actual drawing dimensions
     const drawWidth = Math.max(maxX - minX, 100);
@@ -452,7 +473,7 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
           }
           
           // Flächenanzeige (m²) unter dem Label wenn aktiviert
-          if (polygonAreaVisible[el.id]) {
+          if (polygonAreaVisible[el.id] !== false) {
             const exportAreaM2 = calculatePolygonAreaM2(el);
             if (exportAreaM2 !== null) {
               const areaText = formatAreaM2(exportAreaM2);
@@ -492,13 +513,44 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
         svgElements += `<text x="${svgLegendXPos + 34}" y="${itemY + 2}" fill="#fff" font-size="14" font-weight="bold" text-anchor="middle">${labelText}</text>`;
         
         // Value text - größere Schrift
-        const legendAreaM2 = polygonAreaVisible[element.id] ? calculatePolygonAreaM2(element) : null;
+        const legendAreaM2 = polygonAreaVisible[element.id] !== false ? calculatePolygonAreaM2(element) : null;
         const legendName = element.name ? `${String(element.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')} ` : '';
         const legendValueText = `${legendName}= ${totalForElement.toString().replace('.', ',')} lfm${legendAreaM2 !== null ? ` • ${formatAreaM2(legendAreaM2)}` : ''}`;
         svgElements += `<text x="${svgLegendXPos + 62}" y="${itemY + 2}" fill="#333" font-size="16">${legendValueText}</text>`;
       });
     }
     
+    if (roomRows.length) {
+      const x = roomTableX;
+      const y = roomTableY;
+      const colPerim = x + 330;
+      const colArea = x + roomTableW - 14;
+      svgElements += `<rect x="${x}" y="${y}" width="${roomTableW}" height="${roomTableH}" fill="white" stroke="#cbd5e1" stroke-width="1.5" rx="8" ry="8"/>`;
+      svgElements += `<text x="${x + 14}" y="${y + 28}" fill="#0f172a" font-size="18" font-weight="bold">Raumliste</text>`;
+      const headY = y + 58;
+      svgElements += `<text x="${x + 14}" y="${headY}" fill="#64748b" font-size="13" font-weight="bold">Raum</text>`;
+      svgElements += `<text x="${colPerim}" y="${headY}" fill="#64748b" font-size="13" font-weight="bold" text-anchor="end">Umfang</text>`;
+      svgElements += `<text x="${colArea}" y="${headY}" fill="#64748b" font-size="13" font-weight="bold" text-anchor="end">Fläche</text>`;
+      svgElements += `<line x1="${x + 10}" y1="${headY + 8}" x2="${x + roomTableW - 10}" y2="${headY + 8}" stroke="#e2e8f0" stroke-width="1"/>`;
+      roomRows.forEach((r: any, i: number) => {
+        const ry = headY + 8 + (i + 1) * roomRowH - 9;
+        svgElements += `<rect x="${x + 14}" y="${ry - 15}" width="34" height="20" fill="${r.color}" rx="4" ry="4"/>`;
+        svgElements += `<text x="${x + 31}" y="${ry}" fill="#fff" font-size="12" font-weight="bold" text-anchor="middle">${r.nr}</text>`;
+        svgElements += `<text x="${x + 56}" y="${ry}" fill="#0f172a" font-size="15">${esc(r.name.length > 24 ? r.name.slice(0, 23) + '…' : r.name)}</text>`;
+        svgElements += `<text x="${colPerim}" y="${ry}" fill="#0f172a" font-size="15" text-anchor="end">${fmt(r.perimeter)} m</text>`;
+        svgElements += `<text x="${colArea}" y="${ry}" fill="#0f172a" font-size="15" font-weight="bold" text-anchor="end">${r.area !== null ? `${fmt(r.area)} m²` : 'Seiten fehlen'}</text>`;
+      });
+      if (roomRows.length > 1) {
+        const ty = headY + 8 + (roomRows.length + 1) * roomRowH - 9;
+        const totalArea = roomRows.reduce((s: number, r: any) => s + (r.area || 0), 0);
+        const totalPerim = roomRows.reduce((s: number, r: any) => s + r.perimeter, 0);
+        svgElements += `<line x1="${x + 10}" y1="${ty - 20}" x2="${x + roomTableW - 10}" y2="${ty - 20}" stroke="#94a3b8" stroke-width="1"/>`;
+        svgElements += `<text x="${x + 14}" y="${ty}" fill="#0f172a" font-size="15" font-weight="bold">${roomRows.some((r: any) => r.area === null) ? 'Gesamt (nur vollständig bemaßte)' : 'Gesamt'}</text>`;
+        svgElements += `<text x="${colPerim}" y="${ty}" fill="#0f172a" font-size="15" font-weight="bold" text-anchor="end">${fmt(totalPerim)} m</text>`;
+        svgElements += `<text x="${colArea}" y="${ty}" fill="#0f172a" font-size="15" font-weight="bold" text-anchor="end">${fmt(totalArea)} m²</text>`;
+      }
+    }
+
     // Create SVG with viewBox that matches the drawing bounds
     // This allows the SVG to scale correctly when embedded in PDF without distorting proportions
     const previewSvg = `<svg width="100%" height="100%" viewBox="${minX} ${minY} ${drawWidth} ${drawHeight}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"><rect x="${minX}" y="${minY}" width="${drawWidth}" height="${drawHeight}" fill="#ffffff"/>${svgElements}</svg>`;

@@ -3,7 +3,8 @@ import { Modal, View, Text, TextInput, TouchableOpacity, ScrollView, Keyboard, P
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Project, Customer, generateFullAddress } from '../../../services/LocalStorage';
+import { Project, Customer, generateFullAddress, generateFullName, CustomerService } from '../../../services/LocalStorage';
+import { pickPhoneContact, PhoneContact } from '../../utils/phoneContact';
 import { Appointment, AppointmentService, PackItem } from '../../../services/AppointmentService';
 import { PackingList } from './PackingList';
 import { scheduleDepartureReminder, scheduleAppointmentReminder, cancelReminder, departureTime } from '../../utils/appointmentTools';
@@ -25,7 +26,8 @@ const parseDate = (t: string): string | null => {
 export const projectAddress = (p?: Project, c?: Customer) =>
   (p ? generateFullAddress(p.objekt_street, p.objekt_plz, p.objekt_city) : '') ||
   (p?.address || '').trim() ||
-  (c ? generateFullAddress(c.street, c.zip, c.city) || c.address || '' : '');
+  (c ? generateFullAddress(c.street, c.zip, c.city) || c.address ||
+    (c.projectAddresses || []).map(a => generateFullAddress(a.street, a.zip, a.city)).find(Boolean) || '' : '');
 
 type Props = {
   visible: boolean;
@@ -41,7 +43,12 @@ type Props = {
 };
 
 // Termin direkt von der Startseite anlegen/bearbeiten – mit Notiz, Navi-Adresse und Abfahrts-Erinnerung
-export function AppointmentFormModal({ visible, initial, projects, customers, onClose, onSaved, onCreateProject, initialDate, initialTime, initialProjectId }: Props) {
+export function AppointmentFormModal({ visible, initial, projects, customers: customerProp, onClose, onSaved, onCreateProject, initialDate, initialTime, initialProjectId }: Props) {
+  // Im Formular neu angelegte Kunden (aus dem Telefonbuch) sofort mit anzeigen
+  const [addedCustomers, setAddedCustomers] = useState<Record<string, Customer>>({});
+  const customers = useMemo(() => ({ ...customerProp, ...addedCustomers }), [customerProp, addedCustomers]);
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
   const [picker, setPicker] = useState<'date' | 'time' | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -95,6 +102,8 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
     setDepartAt(initial?.depart_at ? new Date(initial.depart_at) : null);
     setCustomerId(initial?.customer_id || proj?.customer_id || null);
     setPacking(initial?.packing || []);
+    setContactName(initial?.contact_name || '');
+    setContactPhone(initial?.contact_phone || '');
     baseline.current = '';
     // Ausgangszustand merken, sobald die Felder gesetzt sind
     setTimeout(() => { baseline.current = currentRef.current; }, 0);
@@ -113,12 +122,61 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
 
   const pickCustomer = (c: Customer) => {
     setCustomerId(c.id);
+    setContactName('');
+    setContactPhone('');
     const addr = projectAddress(undefined, c);
-    if (addr) setAddress(addr);
-    if (!title.trim()) setTitle(c.name);
+    setAddress(addr);
+    if (!addr) Alert.alert('Keine Adresse hinterlegt', `Für ${c.name} ist keine Adresse gespeichert. Bitte die Adresse fürs Navi unten eintragen.`);
+    const prevName = customerId ? customers[customerId]?.name : contactName;
+    if (!title.trim() || title === prevName) setTitle(c.name);
     setCustOpen(false);
     setCustQuery('');
     Keyboard.dismiss();
+  };
+
+  // Kontakt aus dem Telefonbuch: als Kunde speichern oder nur im Termin merken
+  const applyContact = (pc: PhoneContact, asCustomer: boolean) => {
+    const addr = generateFullAddress(pc.street, pc.zip, pc.city);
+    setAddress(addr);
+    const prevName = customerId ? customers[customerId]?.name : contactName;
+    if (!title.trim() || title === prevName) setTitle(pc.name);
+    if (asCustomer) {
+      CustomerService.create({
+        firstName: pc.firstName, lastName: pc.lastName,
+        name: generateFullName(undefined, pc.firstName, pc.lastName) || pc.name,
+        phone: pc.phone, mobile: pc.mobile, email: pc.email, street: pc.street, zip: pc.zip, city: pc.city,
+      }).then(c => {
+        setAddedCustomers(prev => ({ ...prev, [c.id]: c }));
+        setCustomerId(c.id);
+        setContactName('');
+        setContactPhone('');
+      }).catch(() => {
+        // Speichern als Kunde fehlgeschlagen → Kontakt wenigstens im Termin merken
+        setCustomerId(null);
+        setContactName(pc.name);
+        setContactPhone(pc.mobile || pc.phone);
+        Alert.alert('Kunde nicht gespeichert', 'Der Kontakt wird nur in diesem Termin gemerkt.');
+      });
+    } else {
+      setCustomerId(null);
+      setContactName(pc.name);
+      setContactPhone(pc.mobile || pc.phone);
+    }
+    if (!addr) Alert.alert('Keine Adresse im Kontakt', `Für ${pc.name} ist im Telefonbuch keine Adresse gespeichert. Bitte die Adresse fürs Navi unten eintragen.`);
+  };
+  const pickFromPhonebook = async () => {
+    Keyboard.dismiss();
+    const pc = await pickPhoneContact();
+    if (!pc || !pc.name) return;
+    const existing = Object.values(customers).find(c => (c.name || '').trim().toLowerCase() === pc.name.toLowerCase());
+    // Android zeigt max. 3 Knöpfe – gibt es den Kunden schon, wird er statt eines Duplikats angeboten
+    Alert.alert(pc.name, existing ? 'Dieser Kunde ist schon in der App gespeichert.' : 'Wie möchtest du den Kontakt übernehmen?', [
+      existing
+        ? { text: 'Vorhandenen Kunden nutzen', onPress: () => pickCustomer(existing) }
+        : { text: 'Als Kunde speichern', onPress: () => applyContact(pc, true) },
+      { text: 'Nur im Termin merken', onPress: () => applyContact(pc, false) },
+      { text: 'Abbrechen', style: 'cancel' as const },
+    ]);
   };
 
   const projectChoices = useMemo(
@@ -144,7 +202,7 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
   const normTime = tm ? `${tm[1].padStart(2, '0')}:${tm[2]}` : null;
   const date = parseDate(dateText);
   // Ungespeicherte Änderungen gegenüber dem Zustand beim Öffnen?
-  const current = JSON.stringify({ title, dateText, time, address, note, travel, remindBefore, customerId, projectId, packing, remindAt: remindAt?.getTime(), departAt: departAt?.getTime() });
+  const current = JSON.stringify({ title, dateText, time, address, note, travel, remindBefore, customerId, contactName, contactPhone, projectId, packing, remindAt: remindAt?.getTime(), departAt: departAt?.getTime() });
   const dirty = !!baseline.current && current !== baseline.current;
   currentRef.current = current;
   // Schließen ohne Speichern: bei Änderungen nachfragen
@@ -222,7 +280,7 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
         id: initial?.id, title: title.trim(), date, time: normTime, project_id: projectId, customer_id: customerId,
         address: address.trim(), note: note.trim(), travel_minutes: travel || null, reminder_id: reminderId, depart_at: customDepart ? customDepart.toISOString() : null,
         remind_before: remindBefore || null, remind_id: remindId, remind_at: customAt ? customAt.toISOString() : null,
-        packing,
+        packing, contact_name: contactName || null, contact_phone: contactPhone || null,
       });
       if (Platform.OS !== 'web' && ((travel !== 0 && !reminderId) || (remindTime && !remindId))) {
         Alert.alert('Termin gespeichert', 'Mindestens eine Erinnerungszeit liegt schon in der Vergangenheit oder Mitteilungen sind aus – dafür wurde keine Erinnerung geplant.');
@@ -332,12 +390,25 @@ export function AppointmentFormModal({ visible, initial, projects, customers, on
             </View>
 
             <View style={s.labelRow} onLayout={trackY('address')}>
-              <Text style={[s.label, { marginTop: 0, marginBottom: 0 }]}>Adresse fürs Navi</Text>
-              <TouchableOpacity testID="apt-customer-toggle" style={s.custBtn} onPress={() => { setCustOpen(!custOpen); if (!custOpen) focusField('address'); }}>
-                <Ionicons name="people-outline" size={16} color="#1976d2" />
-                <Text style={s.custBtnText}>Aus Kunden</Text>
-              </TouchableOpacity>
+              <Text style={[s.label, { marginTop: 0, marginBottom: 0, flexShrink: 1 }]}>Adresse fürs Navi</Text>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <TouchableOpacity testID="apt-customer-toggle" style={s.custBtn} onPress={() => { setCustOpen(!custOpen); if (!custOpen) focusField('address'); }}>
+                  <Ionicons name="people-outline" size={16} color="#1976d2" />
+                  <Text style={s.custBtnText}>Kunden</Text>
+                </TouchableOpacity>
+                <TouchableOpacity testID="apt-phonebook" style={s.custBtn} onPress={pickFromPhonebook}>
+                  <Ionicons name="call-outline" size={16} color="#1976d2" />
+                  <Text style={s.custBtnText}>Telefonbuch</Text>
+                </TouchableOpacity>
+              </View>
             </View>
+            {!!contactName && !customerId && (
+              <View style={s.custTag}>
+                <Ionicons name="call" size={14} color="#1976d2" />
+                <Text style={s.custTagText} numberOfLines={1}>{contactName}{contactPhone ? ` · ${contactPhone}` : ''}</Text>
+                <TouchableOpacity testID="apt-contact-clear" hitSlop={10} onPress={() => { setContactName(''); setContactPhone(''); }}><Ionicons name="close-circle" size={18} color="#64748b" /></TouchableOpacity>
+              </View>
+            )}
             {customerId && customers[customerId] && (
               <View style={s.custTag}>
                 <Ionicons name="person" size={14} color="#1976d2" />

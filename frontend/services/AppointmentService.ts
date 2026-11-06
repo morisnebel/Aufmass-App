@@ -39,6 +39,8 @@ export interface Appointment {
   packing?: PackItem[]; // Checkliste: was mitnehmen
   remind_id?: string | null;
   customer_id?: string | null;
+  contact_name?: string | null; // Kontakt aus dem Telefonbuch (nur im Termin gemerkt)
+  contact_phone?: string | null;
   created_at: string;
   updated_at: string;
 }

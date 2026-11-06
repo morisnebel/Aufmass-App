@@ -41,6 +41,7 @@ import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
 import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared } from '../../src/sketch/polygonArea';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import { SketchTour } from '../../src/components/SketchTour';
+import { SketchDemoModal } from '../../src/components/SketchDemo';
 import { HelpButton } from '../../src/components/HelpButton';
 import { tourRef } from '../../src/components/home/HomeTour';
 import Svg, { 
@@ -402,6 +403,7 @@ export default function DrawSketchScreen() {
   const [lineSegmentMeasurements, setLineSegmentMeasurements] = useState<{ [key: string]: { [segmentIndex: number]: string } }>({});
   // Polygon-Flächenanzeige (m²) pro Element ein-/ausschaltbar
   const [polygonAreaVisible, setPolygonAreaVisible] = useState<{ [elementId: string]: boolean }>({});
+  const [showDemo, setShowDemo] = useState(false);
   const [showLineMeasurementNumpad, setShowLineMeasurementNumpad] = useState(false);
   const [lineMeasurementExpression, setLineMeasurementExpression] = useState('');
   const lineMeasurementInputRef = useRef<TextInput>(null);
@@ -5462,7 +5464,7 @@ export default function DrawSketchScreen() {
                   />
                   {/* Flächenanzeige (m²) unter dem Label wenn aktiviert */}
                   {(() => {
-                    if (!polygonAreaVisible[element.id]) return null;
+                    if (polygonAreaVisible[element.id] === false) return null;
                     const areaM2 = calculatePolygonAreaM2(element);
                     if (areaM2 === null) return null;
                     const areaText = formatAreaM2(areaM2);
@@ -6129,7 +6131,10 @@ export default function DrawSketchScreen() {
           />
           <Text style={styles.pdfSizeHeaderLabel}>PDF</Text>
         </TouchableOpacity>
-        <View ref={tourRef('sk-help')} collapsable={false} style={{ marginHorizontal: 4 }}>
+        <View ref={tourRef('sk-help')} collapsable={false} style={{ marginHorizontal: 4, flexDirection: 'row', gap: 4 }}>
+          <TouchableOpacity testID="sketch-demo-open" onPress={() => setShowDemo(true)} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="Erklärvideo">
+            <Ionicons name="play-circle-outline" size={26} color="#fff" />
+          </TouchableOpacity>
           <HelpButton section="skizzen" light testID="sketch-help" />
         </View>
         <View ref={tourRef('sk-save')} collapsable={false}>
@@ -6139,6 +6144,7 @@ export default function DrawSketchScreen() {
         </View>
       </View>
       <SketchTour />
+      <SketchDemoModal visible={showDemo} onClose={() => setShowDemo(false)} />
 
       {/* Auto-Save Hinweis */}
       {autoSaveNotice && (
@@ -7490,7 +7496,7 @@ export default function DrawSketchScreen() {
           {getPolylineElementsWithMeasurements().map((element, index) => {
             const totalForElement = calculateTotalLfmForElement(element.id);
             if (totalForElement <= 0) return null;
-            const legendAreaM2 = polygonAreaVisible[element.id] ? calculatePolygonAreaM2(element) : null;
+            const legendAreaM2 = polygonAreaVisible[element.id] !== false ? calculatePolygonAreaM2(element) : null;
             return (
               <Pressable
                 key={`legend-${element.id}`}
@@ -7594,7 +7600,7 @@ export default function DrawSketchScreen() {
             const polyEl = elements.find(e => e.id === selectedLineSegment.elementId);
             if (!polyEl || polyEl.type !== 'polyline' || !polyEl.data?.closed || !polyEl.data.points || polyEl.data.points.length < 3) return null;
             const areaM2 = calculatePolygonAreaM2(polyEl);
-            const isAreaVisible = !!polygonAreaVisible[polyEl.id];
+            const isAreaVisible = polygonAreaVisible[polyEl.id] !== false;
             return (
               <TouchableOpacity
                 style={{
@@ -7603,11 +7609,11 @@ export default function DrawSketchScreen() {
                   backgroundColor: isAreaVisible ? '#e8f5e9' : '#f5f5f5',
                   borderRadius: 8, borderWidth: 1, borderColor: isAreaVisible ? '#a5d6a7' : '#ddd',
                 }}
-                onPress={() => setPolygonAreaVisible(prev => ({ ...prev, [polyEl.id]: !prev[polyEl.id] }))}
+                onPress={() => setPolygonAreaVisible(prev => ({ ...prev, [polyEl.id]: prev[polyEl.id] === false }))}
               >
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
                   <Ionicons name={isAreaVisible ? 'eye' : 'eye-off'} size={16} color={isAreaVisible ? '#2e7d32' : '#888'} />
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: isAreaVisible ? '#2e7d32' : '#666' }} numberOfLines={1}>
+                  <Text style={{ fontSize: 12, fontWeight: '600', color: isAreaVisible ? '#2e7d32' : '#666', flexShrink: 1 }} numberOfLines={2}>
                     {areaM2 !== null ? `Fläche: ${formatAreaM2(areaM2)}` : 'Fläche (m²) – alle Seiten bemaßen'}
                   </Text>
                 </View>

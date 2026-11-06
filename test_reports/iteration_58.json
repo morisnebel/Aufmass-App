@@ -1,0 +1,46 @@
+{
+  "summary": "Frontend-only test at 390x844 (de) covering the phonebook button in the appointment form, customer address auto-fill, the 2-mode sketch demo, the sketch-editor demo button, automatic m² for closed polygons, and the Raumliste in the saved preview SVG. ALL CORE FLOWS PASS. (1) Appointment form (home-add-appointment): apt-phonebook (122x44) shows the alert 'Nur in der App' on web, as expected. In apt-customer-toggle the list shows each customer's address and falls back to projectAddresses. Picking a customer with no address shows the alert 'Keine Adresse hinterlegt' and leaves the address field empty. Picking a customer with only projectAddresses fills apt-address with 'Gartenweg 2, 80331 München'. Picking a customer with street/zip/city fills 'Hauptstr. 5, 10115 Berlin'. apt-save stored customer_id and address. Today overview shows the row with a -navi button (44x44), which opens google.com/maps/dir/?api=1&destination=<address>. A seeded appointment with only contact_name/contact_phone shows the contact tag 'TEST_Kontakt Nur · 0170123' in the edit form. (2) /help?section=skizzen: help-sketch-demo opens sketch-demo ('So geht die Skizze'). Video mode auto-advanced through 4 scenes in 12s. Dots 0..6 map to the 7 correct scenes. In pics mode, next walks pages 0->6 (next is hidden on the last page) and prev works. sketch-demo-start ('Fertig') closes the modal. (3) The editor header button sketch-demo-open opens the same modal, and close works. (4) Polygon tool: closing the room and measuring 4/2,5/4/2,5 in edit mode shows the '10,00 m²' label automatically, with no toggle needed. Before all sides are measured, the toggle reads 'Fläche (m²) – alle Seiten bemaßen' with AN (default ON). The Übersicht shows 'S1 = 13 lfm • 10,00 m²'. Toggling gives AUS (m² disappears from the canvas and the legend), then AN again. (5) Saving shows 'Erfolg: Skizze wurde gespeichert' with no crash. In the decoded sketch_data SVG for 2 rooms, the Raumliste table is Raum/Umfang/Fläche, S1 Raum 13,00 m 10,00 m², S2 Raum 10,00 m 6,00 m², Gesamt 23,00 m 16,00 m², rendered correctly below the drawing. The native contact picker and the 'Als Kunde speichern' / 'Nur im Termin merken' paths could NOT be tested on web and need a device test.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AppointmentFormModal pickCustomer", "issue": "When you switch from a customer with an address to one without, the old customer's address stays in apt-address, even though the alert says no address is stored. The appointment then navigates to the wrong customer's address. Clear the address, or only keep it if the user typed it. Reference: src/components/home/AppointmentFormModal.tsx:127-129", "testID": "apt-address", "priority": "MEDIUM"},
+      {"component": "AppointmentFormModal title", "issue": "The title is only set from the customer name when it is empty. If you pick customer B and then customer A, the title stays 'B'. In the test, the title stayed 'TEST_Bernd Ohne' after picking TEST_Anna. Overwrite the title if it still equals the previously auto-filled customer or contact name. Reference: AppointmentFormModal.tsx:130,140", "testID": "apt-title", "priority": "LOW"},
+      {"component": "SketchDemo pics mode (web)", "issue": "A manual swipe or scroll of sketch-demo-pager does not update page, title or dots on web, because onMomentumScrollEnd does not fire on react-native-web. A programmatic scroll to page 1 left the title at 'Raum benennen'. This works on native. Optionally add onScroll with a debounce. Reference: src/components/SketchDemo.tsx:234", "testID": "sketch-demo-pager", "priority": "LOW"}
+    ],
+    "integration_issues": [
+      {"flow": "Phonebook 'Nur im Termin merken'", "issue": "contact_name/contact_phone are saved in the appointment but only shown inside the edit form. The Today overview, calendar and reminders do not show the contact or a call button, so the remembered phone number is hard to use.", "affected_testIDs": ["home-today-*", "apt-contact-clear"]}
+    ],
+    "design_issues": [
+      {"screen": "Sketch editor measure panel (390px)", "issues": ["The area toggle text is truncated to 'Fläche: 10,00 …' / 'Fläche (m²) – a…', so the m² value cannot be read in the panel.", "The measure panel's input runs past the right edge (no right border is visible) at 390px width."]},
+      {"screen": "Sketch editor header", "issues": ["sketch-demo-open is 36x36, below the 44pt minimum touch target."]},
+      {"screen": "Sketch editor canvas", "issues": ["When the room is selected, the orange move handle partly covers the auto m² label under the S-badge."]},
+      {"screen": "SketchDemo", "issues": ["The mode tabs are 40px high and the dots are 30x32, both below 44.", "In the pics page 7 'Speichern & PDF', the Raumliste overlay hides the bottom side and dimension of the room."]},
+      {"screen": "AppointmentFormModal", "issues": ["The apt-contact-clear and apt-customer-clear icons are 18x20 with hitSlop 10 (about 38x40), slightly below 44."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/tests/e2e/iter58_polygon_area_helpers.py", "/app/tests/e2e/setup_snippet.py"],
+  "action_items": [
+    "AppointmentFormModal.pickCustomer: clear the auto-filled address when the newly picked customer has no address (the stale address leads to wrong navigation).",
+    "Optionally replace the auto-filled title when switching customers or contacts.",
+    "useContact(asCustomer): add a .catch on CustomerService.create with an error alert. Rename useContact to avoid the hook-naming lint rule (it is not a hook).",
+    "Consider showing contact_name/contact_phone (with a call button) in the Today/Agenda rows for appointments where the contact is only remembered.",
+    "Measure panel on phones: let the area-toggle text wrap or shorten it so the m² value is visible.",
+    "Increase the sketch-demo-open touch target to 44x44.",
+    "Test on a device: the native contact picker, 'Als Kunde speichern' (creates a customer and selects it) and 'Nur im Termin merken'."
+  ],
+  "critical_code_review_comments": [
+    "AppointmentFormModal.tsx:142-151: the CustomerService.create promise has no catch, so a failure is silent. setCustomerId runs asynchronously after the Alert, and a fast save before it resolves would store the appointment without a customer_id.",
+    "AppointmentFormModal.tsx:163: an existing customer is matched by exact name only. A contact 'Max Muster' and a customer 'Herr Max Muster' (salutation in name) would create a duplicate.",
+    "sketchSvg.ts:209-216: the Raumliste includes closed rooms with only some sides measured (filter is lfm > 0), so Umfang shows a partial perimeter as if complete. Gesamt silently excludes rooms whose area is toggled off or incomplete. Consider marking incomplete rows.",
+    "Default ON (polygonAreaVisible[id] !== false) changes old sketches: measured polygons without an explicit flag will now show m² when reopened or re-exported. Existing saved sketch_data only gets a Raumliste after re-saving.",
+    "app.json NSContactsUsageDescription reads 'Kunden als Kontakte speichern'. It should also mention reading or picking contacts for appointments, to avoid App Store review issues.",
+    "draw.tsx is 9719 lines and should be split into modules (raised before)."
+  ],
+  "updated_files": ["/app/tests/e2e/iter58_polygon_area_helpers.py (new test helper only)"],
+  "success_rate": {"backend": "N/A", "frontend": "100% of web-testable flows (native contact picker not testable)"},
+  "seed_data_creation": "Only in the browser localStorage of fresh automation contexts (TEST_ customers cA/cB/cC/cust1, project p1, appointments apt_t1/apt_t2). No server data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "See /app/tests/e2e/iter58_polygon_area_helpers.py. The polygon tool has no testID: it is the next sibling of the 'M' tool, found with POLY_TOOL_JS. The edit tool is found by clicking 22px above the 'Bearbeiten' label. In polyline mode, tapping a side starts a NEW polygon, so switch to edit mode before measuring. Measure keys are leaf divs: click the digits and ',' and then 'Hinzufügen'. The area toggle is the text starting with 'Fläche: '. The saved preview is aufmassprofi_sketches[-1].sketch_data (base64 SVG); decode it with DECODE_SVG_JS. AppointmentFormModal slides in; wait about 2s before clicking or the elements are off-viewport. The 'GO_BACK not handled' toast on a direct deep-link save is expected."
+}

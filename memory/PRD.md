@@ -796,3 +796,8 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Erklärvideo für Skizze entfernt (passte nicht zur Skizze, später neu)
 - Version 1.1.31 (Build 141) bereit für TestFlight
 - Backlog: automatische qm-Anzeige in Skizze (später), neues Erklärvideo
+
+## Juni 2026 (2)
+- Termin: Telefonbuch-Kontakt wählen (als Kunde speichern oder nur im Termin), Kunden-Adresse mit Fallback auf Objektadressen
+- Skizze: m² automatisch (Standard AN), Raumliste (Umfang/Fläche/Gesamt) im Skizzenbild/PDF
+- Neues Erklärvideo SketchDemo.tsx (Video + Bilder), in Hilfe und Skizzen-Kopfzeile

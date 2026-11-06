@@ -10,6 +10,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { getManual, QUICK_START, manualHtml, ManualSection } from '../src/content/manual';
 import { createPdfFile } from '../services/PdfExport';
+import { SketchDemoModal } from '../src/components/SketchDemo';
 
 // Bedienungsanleitung: Kurzanleitung + aufklappbare Kapitel mit Erklärungen, als PDF teilbar
 export default function HelpScreen() {
@@ -173,8 +174,10 @@ function Hl({ text, q }: { text: string; q: string }) {
 
 function Chapter({ sec, open, onToggle }: { sec: ManualSection; open: boolean; onToggle: () => void }) {
   const [info, setInfo] = useState<number | null>(null);
+  const [demo, setDemo] = useState(false);
   return (
     <View style={s.card}>
+      {sec.id === 'skizzen' && <SketchDemoModal visible={demo} onClose={() => setDemo(false)} />}
       <TouchableOpacity testID={`help-sec-${sec.id}`} style={s.cardHead} onPress={onToggle} activeOpacity={0.7}>
         <View style={[s.icon, { backgroundColor: sec.color + '1f' }]}><Ionicons name={sec.icon as any} size={22} color={sec.color} /></View>
         <View style={{ flex: 1 }}>
@@ -185,6 +188,12 @@ function Chapter({ sec, open, onToggle }: { sec: ManualSection; open: boolean; o
       </TouchableOpacity>
       {open && (
         <View style={s.body}>
+          {sec.id === 'skizzen' && (
+            <TouchableOpacity testID="help-sketch-demo" style={s.tourBtn} onPress={() => setDemo(true)}>
+              <Ionicons name="play-circle-outline" size={20} color="#1565c0" />
+              <Text style={s.tourText}>Erklärvideo ansehen (Video oder Bilder)</Text>
+            </TouchableOpacity>
+          )}
           {sec.steps.map((st, i) => (
             <View key={i} style={s.step}>
               <View style={s.stepRow}>

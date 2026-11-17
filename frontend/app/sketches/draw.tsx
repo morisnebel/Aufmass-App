@@ -41,6 +41,7 @@ import { deepCloneElement, simplifyPath, DrawElement, FontFamily, FONT_FAMILIES,
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
 import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared } from '../../src/sketch/polygonArea';
 import BufferedTextInput from '../../src/components/BufferedTextInput';
+import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import { SketchTour } from '../../src/components/SketchTour';
 import { SketchDemoModal } from '../../src/components/SketchDemo';
@@ -827,6 +828,40 @@ export default function DrawSketchScreen() {
     setLineAutoAdd(enabled);
     AsyncStorage.setItem('aufmassprofi_line_auto_add', enabled ? '1' : '0');
   };
+  // Ton/Vibration bei empfangenem Laser-Messwert (ein-/ausschaltbar)
+  const [laserSound, setLaserSound] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_laser_sound').then(saved => setLaserSound(saved === '1'));
+  }, []);
+  const changeLaserSound = (enabled: boolean) => {
+    setLaserSound(enabled);
+    AsyncStorage.setItem('aufmassprofi_laser_sound', enabled ? '1' : '0');
+    if (enabled) playLaserFeedback();
+  };
+  // Zuletzt übernommene Linien-Maße (für „Zurück“), mit dem vorherigen Wert
+  const [lineMeasureHistory, setLineMeasureHistory] = useState<{ elementId: string; segmentIndex: number; previous?: string }[]>([]);
+  const undoLastLineMeasurement = () => {
+    const last = [...lineMeasureHistory].reverse().find(h => elements.some(e => e.id === h.elementId));
+    if (!last) {
+      setLineMeasureHistory([]);
+      return;
+    }
+    setLineMeasureHistory(prev => prev.slice(0, prev.lastIndexOf(last)));
+    setLineSegmentMeasurements(prev => {
+      const segmentMeasures = { ...prev[last.elementId] };
+      if (last.previous) segmentMeasures[last.segmentIndex] = last.previous;
+      else delete segmentMeasures[last.segmentIndex];
+      const next = { ...prev };
+      if (Object.keys(segmentMeasures).length === 0) delete next[last.elementId];
+      else next[last.elementId] = segmentMeasures;
+      return next;
+    });
+    setLineMeasurementExpression('');
+    setSelectedLineSegment({ elementId: last.elementId, segmentIndex: last.segmentIndex });
+    setShowLineMeasurementNumpad(true);
+    setTimeout(() => lineMeasurementInputRef.current?.focus(), 10);
+  };
+
   const changeLineAutoNext = (enabled: boolean) => {
     setLineAutoNext(enabled);
     AsyncStorage.setItem('aufmassprofi_line_auto_next', enabled ? '1' : '0');
@@ -975,6 +1010,15 @@ export default function DrawSketchScreen() {
       },
     }));
     
+    setLineMeasureHistory(prev => [
+      ...prev.slice(-49),
+      {
+        elementId: selectedLineSegment.elementId,
+        segmentIndex: selectedLineSegment.segmentIndex,
+        previous: lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex],
+      },
+    ]);
+
     // Reset
     setLineMeasurementExpression('');
 
@@ -5276,16 +5320,10 @@ export default function DrawSketchScreen() {
                 : points[selectedSegIdx + 1];
               if (!p1 || !p2) return null;
               return (
-                <Line
-                  x1={p1.x}
-                  y1={p1.y}
-                  x2={p2.x}
-                  y2={p2.y}
-                  stroke="#FF9800"
-                  strokeWidth={element.strokeWidth + 4}
-                  strokeLinecap="round"
-                  opacity={0.7}
-                />
+                <G>
+                  <Line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#fff" strokeWidth={element.strokeWidth + 9} strokeLinecap="round" />
+                  <Line x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#FF3D00" strokeWidth={element.strokeWidth + 5} strokeLinecap="round" />
+                </G>
               );
             })()}
             
@@ -7624,6 +7662,7 @@ export default function DrawSketchScreen() {
               showSoftInputOnFocus={false}
               caretHidden={false}
               onDeviceInput={(value) => {
+                if (laserSound) playLaserFeedback();
                 if (lineAutoAdd) addMeasurementToSelectedLine(value);
               }}
             />
@@ -7670,6 +7709,40 @@ export default function DrawSketchScreen() {
                 <Text style={{ fontSize: 10, fontWeight: '700', color: opt.on ? '#1976d2' : '#999' }}>{opt.on ? 'AN' : 'AUS'}</Text>
               </TouchableOpacity>
             ))}
+          </View>
+
+          {/* Ton bei Laser-Messwert / letztes Maß zurücknehmen */}
+          <View style={{ flexDirection: 'row', gap: 6, marginHorizontal: 10, marginBottom: 6 }}>
+            <TouchableOpacity
+              testID="line-laser-sound-toggle"
+              accessibilityRole="switch"
+              accessibilityState={{ checked: laserSound }}
+              style={{
+                flex: 1, flexDirection: 'row', alignItems: 'center', gap: 3, minHeight: 44,
+                paddingHorizontal: 5, paddingVertical: 6,
+                backgroundColor: laserSound ? '#e3f2fd' : '#f5f5f5',
+                borderRadius: 8, borderWidth: 1, borderColor: laserSound ? '#90caf9' : '#ddd',
+              }}
+              onPress={() => changeLaserSound(!laserSound)}
+            >
+              <Ionicons name={laserSound ? 'volume-high' : 'volume-mute'} size={14} color={laserSound ? '#1976d2' : '#888'} />
+              <Text style={{ flex: 1, fontSize: 11, fontWeight: '600', color: laserSound ? '#1976d2' : '#666' }} numberOfLines={1}>Ton</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: laserSound ? '#1976d2' : '#999' }}>{laserSound ? 'AN' : 'AUS'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="line-measure-undo"
+              disabled={lineMeasureHistory.length === 0}
+              style={{
+                flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 44,
+                paddingHorizontal: 8, paddingVertical: 6,
+                backgroundColor: '#f5f5f5', borderRadius: 8, borderWidth: 1, borderColor: '#ddd',
+                opacity: lineMeasureHistory.length === 0 ? 0.4 : 1,
+              }}
+              onPress={undoLastLineMeasurement}
+            >
+              <Ionicons name="arrow-undo" size={14} color="#f44336" />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#f44336' }} numberOfLines={1}>Zurück</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Flächen-Toggle für geschlossene Polygone */}
@@ -8138,6 +8211,7 @@ export default function DrawSketchScreen() {
                 autoFocus
                 showSoftInputOnFocus={!showModalNumpad}
                 onDeviceInput={(value) => {
+                  if (laserSound) playLaserFeedback();
                   if (arrowAutoAdd) {
                     addArrowElement(value);
                     closeModalNumpad();
@@ -8149,6 +8223,10 @@ export default function DrawSketchScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
                 <Text style={[styles.modalLabel, { flex: 1, marginBottom: 0 }]}>Laser-Messwert sofort übernehmen</Text>
                 <Switch testID="arrow-auto-add-switch" value={arrowAutoAdd} onValueChange={changeArrowAutoAdd} />
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+                <Text style={[styles.modalLabel, { flex: 1, marginBottom: 0 }]}>Ton bei Laser-Messwert</Text>
+                <Switch testID="arrow-laser-sound-switch" value={laserSound} onValueChange={changeLaserSound} />
               </View>
               
               {/* Numpad Toggle */}

@@ -7,7 +7,8 @@ import assert from 'node:assert';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 require('node:module').prototype.require = new Proxy(require('node:module').prototype.require, {
   apply(target, thisArg, args) {
-    if (args[0] === 'react-native') return { TextInput: () => null };
+    if (args[0] === 'react-native') return { TextInput: () => null, View: () => null, StyleSheet: { create: (x: unknown) => x } };
+    if (args[0] === '@react-native-vector-icons/ionicons') return {};
     return Reflect.apply(target, thisArg, args);
   },
 });

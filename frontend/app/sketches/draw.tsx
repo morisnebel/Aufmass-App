@@ -11,6 +11,7 @@ import {
   ScrollView,
   Modal,
   KeyboardAvoidingView,
+  Switch,
   BackHandler,
   Animated,
   PanResponder,
@@ -805,6 +806,32 @@ export default function DrawSketchScreen() {
     });
   }, []);
   
+  // Bemaßungspfeil nach einer Laser-Übertragung sofort übernehmen (auf Wunsch)
+  const [arrowAutoAdd, setArrowAutoAdd] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_arrow_auto_add').then(saved => setArrowAutoAdd(saved === '1'));
+  }, []);
+  const changeArrowAutoAdd = (enabled: boolean) => {
+    setArrowAutoAdd(enabled);
+    AsyncStorage.setItem('aufmassprofi_arrow_auto_add', enabled ? '1' : '0');
+  };
+
+  // Linien-Maß (Polygon): Laser-Messwert sofort übernehmen / danach nächste Linie auswählen
+  const [lineAutoAdd, setLineAutoAdd] = useState(false);
+  const [lineAutoNext, setLineAutoNext] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_line_auto_add').then(saved => setLineAutoAdd(saved === '1'));
+    AsyncStorage.getItem('aufmassprofi_line_auto_next').then(saved => setLineAutoNext(saved === '1'));
+  }, []);
+  const changeLineAutoAdd = (enabled: boolean) => {
+    setLineAutoAdd(enabled);
+    AsyncStorage.setItem('aufmassprofi_line_auto_add', enabled ? '1' : '0');
+  };
+  const changeLineAutoNext = (enabled: boolean) => {
+    setLineAutoNext(enabled);
+    AsyncStorage.setItem('aufmassprofi_line_auto_next', enabled ? '1' : '0');
+  };
+
   const changeNumpadSize = (newSize: 'S' | 'M' | 'L') => {
     setNumpadSize(newSize);
     AsyncStorage.setItem('aufmassprofi_numpad_size', newSize);
@@ -931,11 +958,11 @@ export default function DrawSketchScreen() {
   };
   
   // Maß zur ausgewählten Linie hinzufügen
-  const addMeasurementToSelectedLine = () => {
-    if (!selectedLineSegment || !lineMeasurementExpression.trim()) return;
+  const addMeasurementToSelectedLine = (expression: string = lineMeasurementExpression) => {
+    if (!selectedLineSegment || !expression.trim()) return;
     
     // Formatiere das Maß (füge 'm' hinzu wenn nur Zahl)
-    let formattedMeasurement = lineMeasurementExpression.trim();
+    let formattedMeasurement = expression.trim();
     if (/^[\d.,]+$/.test(formattedMeasurement)) {
       formattedMeasurement = formattedMeasurement.replace('.', ',') + 'm';
     }
@@ -950,6 +977,25 @@ export default function DrawSketchScreen() {
     
     // Reset
     setLineMeasurementExpression('');
+
+    // Auf Wunsch: nächste noch unbemaßte Linie desselben Polygons auswählen
+    if (lineAutoNext) {
+      const el = elements.find(e => e.id === selectedLineSegment.elementId);
+      const pointCount = el?.type === 'polyline' ? (el.data?.points?.length || 0) : 0;
+      const segmentCount = el?.data?.closed ? pointCount : pointCount - 1;
+      const measured = lineSegmentMeasurements[selectedLineSegment.elementId] || {};
+      for (let step = 1; step < segmentCount; step++) {
+        const candidate = selectedLineSegment.segmentIndex + step;
+        if (!el?.data?.closed && candidate >= segmentCount) break;
+        const nextIndex = candidate % segmentCount;
+        if (!measured[nextIndex]) {
+          setSelectedLineSegment({ elementId: selectedLineSegment.elementId, segmentIndex: nextIndex });
+          setTimeout(() => lineMeasurementInputRef.current?.focus(), 10);
+          return;
+        }
+      }
+    }
+
     setShowLineMeasurementNumpad(false);
     setSelectedLineSegment(null);
   };
@@ -3637,7 +3683,7 @@ export default function DrawSketchScreen() {
   };
 
   // Add arrow element
-  const addArrowElement = () => {
+  const addArrowElement = (text: string = arrowText) => {
     if (pendingArrow) {
       const newElement: DrawElement = {
         id: generateId(),
@@ -3647,7 +3693,7 @@ export default function DrawSketchScreen() {
           y1: pendingArrow.y1,
           x2: pendingArrow.x2,
           y2: pendingArrow.y2,
-          text: arrowText,
+          text,
           heads: arrowHeads,
           fontSize: editArrowFontSize, // Gespeicherte Schriftgröße verwenden
         },
@@ -7566,7 +7612,8 @@ export default function DrawSketchScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, marginBottom: 6 }}>
             <BufferedTextInput replaceOnBurst
               ref={lineMeasurementInputRef}
-              style={[styles.modalInput, { flex: 1, marginBottom: 0, fontSize: 15, paddingVertical: 8 }]}
+              containerStyle={{ flex: 1 }}
+              style={[styles.modalInput, { marginBottom: 0, fontSize: 15, paddingVertical: 8 }]}
               value={lineMeasurementExpression}
               onChangeText={setLineMeasurementExpression}
               placeholder={
@@ -7576,6 +7623,9 @@ export default function DrawSketchScreen() {
               }
               showSoftInputOnFocus={false}
               caretHidden={false}
+              onDeviceInput={(value) => {
+                if (lineAutoAdd) addMeasurementToSelectedLine(value);
+              }}
             />
             {selectedLineSegment && lineSegmentMeasurements[selectedLineSegment.elementId]?.[selectedLineSegment.segmentIndex] && (
               <TouchableOpacity
@@ -7596,6 +7646,32 @@ export default function DrawSketchScreen() {
             )}
           </View>
           
+          {/* Laser sofort übernehmen / nächste Linie auswählen */}
+          <View style={{ flexDirection: 'row', gap: 6, marginHorizontal: 10, marginBottom: 6 }}>
+            {([
+              { id: 'line-auto-add-toggle', label: 'Laser sofort übernehmen', icon: 'bluetooth', on: lineAutoAdd, set: changeLineAutoAdd },
+              { id: 'line-auto-next-toggle', label: 'Nächste Linie', icon: 'arrow-forward', on: lineAutoNext, set: changeLineAutoNext },
+            ] as const).map(opt => (
+              <TouchableOpacity
+                key={opt.id}
+                testID={opt.id}
+                accessibilityRole="switch"
+                accessibilityState={{ checked: opt.on }}
+                style={{
+                  flex: 1, flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 44,
+                  paddingHorizontal: 8, paddingVertical: 6,
+                  backgroundColor: opt.on ? '#e3f2fd' : '#f5f5f5',
+                  borderRadius: 8, borderWidth: 1, borderColor: opt.on ? '#90caf9' : '#ddd',
+                }}
+                onPress={() => opt.set(!opt.on)}
+              >
+                <Ionicons name={opt.icon} size={14} color={opt.on ? '#1976d2' : '#888'} />
+                <Text style={{ flex: 1, fontSize: 11, fontWeight: '600', color: opt.on ? '#1976d2' : '#666' }} numberOfLines={2}>{opt.label}</Text>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: opt.on ? '#1976d2' : '#999' }}>{opt.on ? 'AN' : 'AUS'}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           {/* Flächen-Toggle für geschlossene Polygone */}
           {selectedLineSegment && (() => {
             const polyEl = elements.find(e => e.id === selectedLineSegment.elementId);
@@ -8061,7 +8137,19 @@ export default function DrawSketchScreen() {
                 placeholder="Maß eingeben (z.B. 5,5m)"
                 autoFocus
                 showSoftInputOnFocus={!showModalNumpad}
+                onDeviceInput={(value) => {
+                  if (arrowAutoAdd) {
+                    addArrowElement(value);
+                    closeModalNumpad();
+                  }
+                }}
               />
+
+              {/* Laser-Messwert ohne Bestätigen übernehmen */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+                <Text style={[styles.modalLabel, { flex: 1, marginBottom: 0 }]}>Laser-Messwert sofort übernehmen</Text>
+                <Switch testID="arrow-auto-add-switch" value={arrowAutoAdd} onValueChange={changeArrowAutoAdd} />
+              </View>
               
               {/* Numpad Toggle */}
               <TouchableOpacity 
@@ -8155,7 +8243,7 @@ export default function DrawSketchScreen() {
                     closeModalNumpad();
                   }}
                 >
-                  <Text style={styles.cancelButtonText}>{t('common.cancel')}</Text>
+                  <Text style={styles.cancelButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.confirmButton]}
@@ -8164,7 +8252,7 @@ export default function DrawSketchScreen() {
                     closeModalNumpad();
                   }}
                 >
-                  <Text style={styles.confirmButtonText}>{t('common.add')}</Text>
+                  <Text style={styles.confirmButtonText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('common.add')}</Text>
                 </TouchableOpacity>
               </View>
             </View>

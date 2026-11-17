@@ -1,5 +1,6 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { TextInput, TextInputProps } from 'react-native';
+import { StyleProp, StyleSheet, TextInput, TextInputProps, View, ViewStyle } from 'react-native';
+import Ionicons from '@react-native-vector-icons/ionicons';
 
 // Eingabefeld für schnelle Bluetooth-Tastatureingaben (z.B. Leica DISTO).
 // 1) Der Text wird lokal gehalten und erst nach einer kurzen Eingabepause an den
@@ -45,16 +46,20 @@ export const advanceSequence = (seq: InputSequence, prev: string, next: string, 
   return { base: prev, pos: p, typed: inserted, count: 1, startAt: now, lastAt: now };
 };
 
+// Wurde ein vollständiger Messwert in Geräte-Geschwindigkeit übertragen?
+export const isDeviceMeasurement = (seq: InputSequence): boolean =>
+  seq.count >= DEVICE_MIN_EVENTS &&
+  (seq.lastAt - seq.startAt) / (seq.count - 1) <= DEVICE_AVG_GAP_MS &&
+  MEASUREMENT_RE.test(seq.typed);
+
 // Soll-Inhalt des Feldes für die laufende Eingabe
 export const expectedText = (seq: InputSequence, current: string, replace: boolean): string => {
   if (seq.count < 2) return current;
   const before = seq.base.slice(0, seq.pos);
   const after = seq.base.slice(seq.pos);
-  const isDevice =
-    seq.count >= DEVICE_MIN_EVENTS && (seq.lastAt - seq.startAt) / (seq.count - 1) <= DEVICE_AVG_GAP_MS;
   // Ein vom Gerät übertragener Messwert ersetzt den alten Inhalt, außer davor
   // steht ein Rechenzeichen (z.B. "2,50 + ")
-  if (replace && isDevice && seq.base.trim() && MEASUREMENT_RE.test(seq.typed) && !OPEN_EXPRESSION_RE.test(before)) {
+  if (replace && isDeviceMeasurement(seq) && seq.base.trim() && !OPEN_EXPRESSION_RE.test(before)) {
     return seq.typed.trim();
   }
   return before + seq.typed + after;
@@ -63,14 +68,22 @@ export const expectedText = (seq: InputSequence, current: string, replace: boole
 type Props = Omit<TextInputProps, 'value' | 'onChangeText'> & {
   value: string;
   onChangeText: (text: string) => void;
-  // Maßfeld: ein neu übertragener Messwert ersetzt den bestehenden Feldinhalt
+  // Maßfeld: ein neu übertragener Messwert ersetzt den bestehenden Feldinhalt,
+  // der Empfang wird kurz mit einem grünen Häkchen am Feld bestätigt
   replaceOnBurst?: boolean;
+  // Wird nach einer vollständigen Geräte-Übertragung mit dem Feldinhalt aufgerufen
+  onDeviceInput?: (text: string) => void;
+  // Stil des Rahmens um das Maßfeld (z.B. flex: 1 in einer Zeile)
+  containerStyle?: StyleProp<ViewStyle>;
 };
+
+const CHECK_SIZE = 22;
+const CHECK_VISIBLE_MS = 1500;
 
 type InputInstance = React.ComponentRef<typeof TextInput>;
 
 const BufferedTextInput = forwardRef<any, Props>(
-  ({ value, onChangeText, replaceOnBurst, onBlur, onSubmitEditing, ...rest }, ref) => {
+  ({ value, onChangeText, replaceOnBurst, onDeviceInput, containerStyle, onBlur, onSubmitEditing, onLayout, ...rest }, ref) => {
     const [text, setText] = useState(value);
     const inputRef = useRef<InputInstance>(null);
     const textRef = useRef(value);
@@ -80,12 +93,17 @@ const BufferedTextInput = forwardRef<any, Props>(
     const seq = useRef<InputSequence>(EMPTY_SEQUENCE);
     const emitRef = useRef(onChangeText);
     const replaceRef = useRef(!!replaceOnBurst);
+    const deviceRef = useRef(onDeviceInput);
+    const [checkVisible, setCheckVisible] = useState(false);
+    const [checkTop, setCheckTop] = useState(0);
+    const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useImperativeHandle(ref, () => inputRef.current);
 
     useEffect(() => {
       emitRef.current = onChangeText;
       replaceRef.current = !!replaceOnBurst;
+      deviceRef.current = onDeviceInput;
     });
 
     const clearTimers = () => {
@@ -106,6 +124,7 @@ const BufferedTextInput = forwardRef<any, Props>(
     const finalize = useCallback((mounted = true) => {
       clearTimers();
       const next = expectedText(seq.current, textRef.current, replaceRef.current);
+      const fromDevice = isDeviceMeasurement(seq.current);
       seq.current = EMPTY_SEQUENCE;
       if (next !== textRef.current) {
         textRef.current = next;
@@ -120,6 +139,12 @@ const BufferedTextInput = forwardRef<any, Props>(
         }
       }
       emit(next);
+      if (fromDevice && mounted) {
+        setCheckVisible(true);
+        if (checkTimer.current) clearTimeout(checkTimer.current);
+        checkTimer.current = setTimeout(() => setCheckVisible(false), CHECK_VISIBLE_MS);
+        deviceRef.current?.(next);
+      }
     }, []);
 
     const handleChange = useCallback(
@@ -148,14 +173,25 @@ const BufferedTextInput = forwardRef<any, Props>(
       }
     }, [value]);
 
-    useEffect(() => () => finalize(false), [finalize]);
+    useEffect(
+      () => () => {
+        finalize(false);
+        if (checkTimer.current) clearTimeout(checkTimer.current);
+      },
+      [finalize]
+    );
 
-    return (
+    const input = (
       <TextInput
         // Maßfelder: keine Autokorrektur, die Zeichen oder Cursor verändert
         {...(replaceOnBurst ? { autoCorrect: false, spellCheck: false, autoCapitalize: 'none' as const } : null)}
         {...rest}
         ref={inputRef}
+        onLayout={(e) => {
+          const { y, height } = e.nativeEvent.layout;
+          setCheckTop(y + (height - CHECK_SIZE) / 2);
+          onLayout?.(e);
+        }}
         value={text}
         onChangeText={handleChange}
         onBlur={(e) => {
@@ -168,8 +204,25 @@ const BufferedTextInput = forwardRef<any, Props>(
         }}
       />
     );
+
+    if (!replaceOnBurst) return input;
+
+    return (
+      <View style={containerStyle}>
+        {input}
+        {checkVisible && (
+          <View testID="laser-received-check" pointerEvents="none" style={[styles.check, { top: checkTop }]}>
+            <Ionicons name="checkmark-circle" size={CHECK_SIZE} color="#4caf50" />
+          </View>
+        )}
+      </View>
+    );
   }
 );
+
+const styles = StyleSheet.create({
+  check: { position: 'absolute', right: 10 },
+});
 
 BufferedTextInput.displayName = 'BufferedTextInput';
 

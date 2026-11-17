@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
@@ -16,10 +16,20 @@ type Props = {
   onChange: (wall: PolygonWall) => void;
   // false: kein eigener Scrollbereich (das Maß-Fenster scrollt selbst, z.B. iPhone)
   scrollable?: boolean;
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  // Eingabe über das Numpad des Maß-Fensters (auch wenn ein Laser als Tastatur verbunden ist):
+  // das angetippte Feld meldet sich als Ziel an
+  useNumpad: boolean;
+  activeFieldId: string | null;
+  onFieldFocus: (id: string, target: NumpadTarget) => void;
 };
 
-export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange, scrollable = true }: Props) => {
-  const [open, setOpen] = useState(false);
+export type NumpadTarget = { get: () => string; set: (value: string) => void };
+
+export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange, scrollable = true, open, onToggle, useNumpad, activeFieldId, onFieldFocus }: Props) => {
+  // Aktuelle Werte/Handler je Feld, damit das Numpad immer auf dem neuesten Stand schreibt
+  const fields = useRef<{ [id: string]: { value: string; onChangeText: (t: string) => void } }>({});
   const segment: WallSegment = wall?.segments?.[segmentIndex] || {};
   const openings = segment.openings || [];
   const deduction = segmentDeductionM2(segment);
@@ -32,12 +42,19 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
   const setOpening = (index: number, patch: { width?: string; height?: string }) =>
     setSegment({ openings: openings.map((o, i) => (i === index ? { ...o, ...patch } : o)) });
 
-  const input = (testID: string, value: string, placeholder: string, onChangeText: (t: string) => void, flex = false) => (
+  const input = (testID: string, value: string, placeholder: string, onChangeText: (t: string) => void, flex = false) => {
+    fields.current[testID] = { value, onChangeText };
+    return (
       <BufferedTextInput
         testID={testID}
         replaceOnBurst
         containerStyle={flex ? styles.flex : undefined}
-        style={styles.input}
+        style={[styles.input, useNumpad && activeFieldId === testID && styles.inputActive]}
+        showSoftInputOnFocus={!useNumpad}
+        onFocus={() => onFieldFocus(testID, {
+          get: () => fields.current[testID]?.value ?? '',
+          set: (next) => fields.current[testID]?.onChangeText(next),
+        })}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -45,7 +62,8 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
         keyboardType="numbers-and-punctuation"
         returnKeyType="done"
       />
-  );
+    );
+  };
 
   const field = (testID: string, label: string, value: string, placeholder: string, onChangeText: (t: string) => void) => (
     <View style={styles.field}>
@@ -56,7 +74,7 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
 
   return (
     <View style={styles.box}>
-      <TouchableOpacity testID="wall-section-toggle" style={styles.header} onPress={() => setOpen(!open)}>
+      <TouchableOpacity testID="wall-section-toggle" style={styles.header} onPress={() => onToggle(!open)}>
         <Ionicons name="resize" size={14} color="#5d4037" />
         <Text style={styles.headerText} numberOfLines={2}>
           {sum ? `Wandfläche: ${formatAreaM2(sum.total)}` : 'Wandhöhe'}
@@ -146,5 +164,6 @@ const styles = StyleSheet.create({
   addButtonText: { fontSize: 12, fontWeight: '600', color: '#5d4037' },
   label: { fontSize: 10, fontWeight: '600', color: '#6d4c41' },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d7ccc8', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 8, fontSize: 14, color: '#333', minHeight: 40 },
+  inputActive: { borderColor: '#1976d2', borderWidth: 2 },
   result: { fontSize: 12, fontWeight: '700', color: '#4e342e' },
 });

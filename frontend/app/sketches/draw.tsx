@@ -43,7 +43,7 @@ import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePo
 import BufferedTextInput from '../../src/components/BufferedTextInput';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { LaserSoundOptions } from '../../src/components/sketch/LaserSoundOptions';
-import { WallHeightSection } from '../../src/components/sketch/WallHeightSection';
+import { WallHeightSection, NumpadTarget } from '../../src/components/sketch/WallHeightSection';
 import { PolygonWalls, segmentCountOf, hasWallHeights, segmentNumberPositions } from '../../src/sketch/wallArea';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import { SketchTour } from '../../src/components/SketchTour';
@@ -870,6 +870,53 @@ export default function DrawSketchScreen() {
     setTimeout(() => lineMeasurementInputRef.current?.focus(), 10);
   };
 
+  // Maß-Fenster: Optionen und Tastatur einklappbar (nur Eingabefeld + Knöpfe bleiben)
+  const [panelOptionsOpen, setPanelOptionsOpen] = useState(false);
+  const [panelKeyboardOpen, setPanelKeyboardOpen] = useState(true);
+  const [wallSectionOpen, setWallSectionOpen] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_panel_options_open').then(saved => setPanelOptionsOpen(saved === '1'));
+    AsyncStorage.getItem('aufmassprofi_panel_keyboard_open').then(saved => setPanelKeyboardOpen(saved !== '0'));
+  }, []);
+  const changePanelOptionsOpen = (open: boolean) => {
+    setPanelOptionsOpen(open);
+    AsyncStorage.setItem('aufmassprofi_panel_options_open', open ? '1' : '0');
+  };
+  const changePanelKeyboardOpen = (open: boolean) => {
+    setPanelKeyboardOpen(open);
+    AsyncStorage.setItem('aufmassprofi_panel_keyboard_open', open ? '1' : '0');
+  };
+  // Ziel des Numpads: Wand-/Öffnungsfeld, sonst das Maß-Feld
+  const numpadTargetRef = useRef<NumpadTarget | null>(null);
+  const [numpadTargetId, setNumpadTargetId] = useState<string | null>(null);
+  const clearNumpadTarget = () => {
+    numpadTargetRef.current = null;
+    setNumpadTargetId(null);
+  };
+  const typeIntoPanelField = (update: (prev: string) => string) => {
+    const target = numpadTargetRef.current;
+    if (target) target.set(update(target.get()));
+    else setLineMeasurementExpression(update);
+  };
+  useEffect(() => {
+    clearNumpadTarget();
+  }, [selectedLineSegment?.elementId, selectedLineSegment?.segmentIndex, showLineMeasurementNumpad]);
+
+  // Angetippte Linien-Nummer in der Skizze finden
+  const findLineNumberAtPoint = (x: number, y: number): { element: DrawElement; segmentIndex: number } | null => {
+    const numberScale = Math.max(scale, 0.5);
+    const hitRadius = Math.max(10, 14 / numberScale);
+    for (let i = elements.length - 1; i >= 0; i--) {
+      const el = elements[i];
+      if (el.type !== 'polyline' || !el.data?.points || el.data.points.length < 2) continue;
+      if (selectedLineSegment?.elementId !== el.id && !hasWallHeights(polygonWalls[el.id])) continue;
+      const hit = segmentNumberPositions(el.data.points, !!el.data.closed, Math.max(8, 16 / numberScale))
+        .find(n => Math.hypot(n.x - x, n.y - y) <= hitRadius);
+      if (hit) return { element: el, segmentIndex: hit.line - 1 };
+    }
+    return null;
+  };
+
   const changeLineAutoNext = (enabled: boolean) => {
     setLineAutoNext(enabled);
     AsyncStorage.setItem('aufmassprofi_line_auto_next', enabled ? '1' : '0');
@@ -991,13 +1038,13 @@ export default function DrawSketchScreen() {
   // Handler für Linien-Maß Numpad
   const handleLineMeasurementNumpadPress = (key: string) => {
     if (key === '⌫') {
-      setLineMeasurementExpression(prev => prev.slice(0, -1));
+      typeIntoPanelField(prev => prev.slice(0, -1));
     } else if (key === 'C') {
-      setLineMeasurementExpression('');
+      typeIntoPanelField(() => '');
     } else {
-      setLineMeasurementExpression(prev => prev + key);
+      typeIntoPanelField(prev => prev + key);
     }
-    setTimeout(() => lineMeasurementInputRef.current?.focus(), 10);
+    if (!numpadTargetRef.current) setTimeout(() => lineMeasurementInputRef.current?.focus(), 10);
   };
   
   // Maß zur ausgewählten Linie hinzufügen
@@ -4023,7 +4070,13 @@ export default function DrawSketchScreen() {
     setEditingPolylinePoint(null);
     
     // Prüfe ob auf ein Polyline-Segment geklickt wurde (für Maß-Funktion)
-    const segmentHit = findPolylineSegmentAtPoint(locationX, locationY);
+    const numberHit = findLineNumberAtPoint(locationX, locationY);
+    if (numberHit) {
+      // Linien-Nummer angetippt: Wand-Bereich (Höhe/Öffnungen) dieser Linie direkt aufklappen
+      setPanelOptionsOpen(true);
+      setWallSectionOpen(true);
+    }
+    const segmentHit = numberHit || findPolylineSegmentAtPoint(locationX, locationY);
     if (segmentHit) {
       // Segment gefunden - Maß-Eingabe DIREKT öffnen (ohne "Maß hinzufügen" Button)
       setSelectedLineSegment({ 
@@ -7640,10 +7693,12 @@ export default function DrawSketchScreen() {
         const measureNumericWidth = isPhoneDevice
           ? (numpadSize === 'L' ? Math.max(Math.round(screenWidth * 0.55), 200) : numpadSize === 'M' ? Math.max(Math.round(screenWidth * 0.45), 170) : Math.max(Math.round(screenWidth * 0.35), 140))
           : (numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22));
-        const MeasurePanelBody: React.ElementType = isPhoneDevice ? ScrollView : View;
-        const measurePanelBodyProps = isPhoneDevice
-          ? { style: { maxHeight: Math.max(160, screenHeight - insets.top - insets.bottom - 250) }, keyboardShouldPersistTaps: 'always' as const, nestedScrollEnabled: true, testID: 'line-measure-scroll' }
-          : {};
+        // Inhalt scrollbar, damit die Knöpfe unten immer erreichbar bleiben
+        const MeasurePanelBody = ScrollView;
+        const measurePanelBodyProps = {
+          style: { maxHeight: Math.max(160, screenHeight - insets.top - insets.bottom - (isPhoneDevice ? 250 : 300)) },
+          keyboardShouldPersistTaps: 'always' as const, testID: 'line-measure-scroll',
+        };
         const measurePanelWidth = (isPhoneDevice && measureKeyboardMode === 'letters')
           ? Math.round(screenWidth * 0.92)
           : measureNumericWidth;
@@ -7710,6 +7765,7 @@ export default function DrawSketchScreen() {
               }
               showSoftInputOnFocus={false}
               caretHidden={false}
+              onFocus={clearNumpadTarget}
               onDeviceInput={(value) => {
                 if (laserSound) playLaserFeedback();
                 if (lineAutoAdd) addMeasurementToSelectedLine(value);
@@ -7734,8 +7790,34 @@ export default function DrawSketchScreen() {
             )}
           </View>
           
-          {/* Laser sofort übernehmen / nächste Linie auswählen */}
+          {/* Einklappen: Optionen / Tastatur */}
           <View style={{ flexDirection: 'row', gap: 6, marginHorizontal: 10, marginBottom: 6 }}>
+            {([
+              { id: 'panel-options-toggle', label: 'Mehr', icon: 'options', open: panelOptionsOpen, set: changePanelOptionsOpen },
+              { id: 'panel-keyboard-toggle', label: 'Tastatur', icon: 'keypad', open: panelKeyboardOpen, set: changePanelKeyboardOpen },
+            ] as const).map(sec => (
+              <TouchableOpacity
+                key={sec.id}
+                testID={sec.id}
+                accessibilityState={{ expanded: sec.open }}
+                style={{
+                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 36,
+                  paddingHorizontal: 4, borderRadius: 8, borderWidth: 1,
+                  backgroundColor: sec.open ? '#e3f2fd' : '#f5f5f5', borderColor: sec.open ? '#90caf9' : '#ddd',
+                }}
+                onPress={() => sec.set(!sec.open)}
+              >
+                <Ionicons name={sec.icon} size={14} color={sec.open ? '#1976d2' : '#666'} />
+                {!isPhoneDevice && <Text style={{ fontSize: 11, fontWeight: '600', color: sec.open ? '#1976d2' : '#666' }} numberOfLines={1}>{sec.label}</Text>}
+                <Ionicons name={sec.open ? 'chevron-up' : 'chevron-down'} size={14} color={sec.open ? '#1976d2' : '#666'} />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {panelOptionsOpen && (
+          <>
+          {/* Laser sofort übernehmen / nächste Linie auswählen */}
+          <View style={{ flexDirection: isPhoneDevice ? 'column' : 'row', gap: 6, marginHorizontal: 10, marginBottom: 6 }}>
             {([
               { id: 'line-auto-add-toggle', label: 'Laser sofort übernehmen', icon: 'bluetooth', on: lineAutoAdd, set: changeLineAutoAdd },
               { id: 'line-auto-next-toggle', label: 'Nächste Linie', icon: 'arrow-forward', on: lineAutoNext, set: changeLineAutoNext },
@@ -7761,7 +7843,7 @@ export default function DrawSketchScreen() {
           </View>
 
           {/* Ton bei Laser-Messwert / letztes Maß zurücknehmen */}
-          <View style={{ flexDirection: 'row', gap: 6, marginHorizontal: 10, marginBottom: 6 }}>
+          <View style={{ flexDirection: isPhoneDevice ? 'column' : 'row', gap: 6, marginHorizontal: 10, marginBottom: 6 }}>
             <TouchableOpacity
               testID="line-laser-sound-toggle"
               accessibilityRole="switch"
@@ -7809,7 +7891,15 @@ export default function DrawSketchScreen() {
               measures={lineSegmentMeasurements[selectedLineSegment.elementId]}
               wall={polygonWalls[selectedLineSegment.elementId]}
               onChange={(wall) => setPolygonWalls(prev => ({ ...prev, [selectedLineSegment.elementId]: wall }))}
-              scrollable={!isPhoneDevice}
+              scrollable={false}
+              open={wallSectionOpen}
+              onToggle={setWallSectionOpen}
+              useNumpad={panelKeyboardOpen}
+              activeFieldId={numpadTargetId}
+              onFieldFocus={(id, target) => {
+                numpadTargetRef.current = target;
+                setNumpadTargetId(id);
+              }}
             />
           )}
 
@@ -7842,7 +7932,11 @@ export default function DrawSketchScreen() {
             );
           })()}
           
-          {/* Tastatur-Bereich */}
+          </>
+          )}
+
+          {/* Tastatur-Bereich (einklappbar) */}
+          {panelKeyboardOpen && (
           <View style={{ paddingHorizontal: 10 }}>
             {/* Umschalt-Leiste: S/M/L + Zahlen/ABC */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -7942,7 +8036,7 @@ export default function DrawSketchScreen() {
                             key={letter} 
                             style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(28 * sc) }]}
                             onPress={() => {
-                              setLineMeasurementExpression(prev => prev + (measureKeyboardCaps ? letter : letter.toLowerCase()));
+                              typeIntoPanelField(prev => prev + (measureKeyboardCaps ? letter : letter.toLowerCase()));
                               if (measureKeyboardCaps) setMeasureKeyboardCaps(false);
                             }}
                           >
@@ -7955,7 +8049,7 @@ export default function DrawSketchScreen() {
                     <View style={[styles.floatingKeyRow, { gap: 3 }]}>
                       {['ä','ö','ü','ß'].map(k => (
                         <TouchableOpacity key={k} style={[styles.floatingLetterKey, { height: letterKH }]} onPress={() => {
-                          setLineMeasurementExpression(prev => prev + (measureKeyboardCaps ? k.toUpperCase() : k));
+                          typeIntoPanelField(prev => prev + (measureKeyboardCaps ? k.toUpperCase() : k));
                           if (measureKeyboardCaps) setMeasureKeyboardCaps(false);
                         }}>
                           <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>{measureKeyboardCaps ? k.toUpperCase() : k}</Text>
@@ -7967,16 +8061,16 @@ export default function DrawSketchScreen() {
                     </View>
                     {/* . + Leer (breit) + / + - + Backspace */}
                     <View style={[styles.floatingKeyRow, { gap: 3 }]}>
-                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '.')}>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => typeIntoPanelField(prev => prev + '.')}>
                         <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>.</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, flex: 3, backgroundColor: '#e3f2fd' }]} onPress={() => setLineMeasurementExpression(prev => prev + ' ')}>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, flex: 3, backgroundColor: '#e3f2fd' }]} onPress={() => typeIntoPanelField(prev => prev + ' ')}>
                         <Text style={[styles.floatingKeyText, { fontSize: letterFS, color: '#1976d2' }]}>{t('sketches.space')}</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '/')}>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => typeIntoPanelField(prev => prev + '/')}>
                         <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>/</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => setLineMeasurementExpression(prev => prev + '-')}>
+                      <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, minWidth: Math.round(24 * sc) }]} onPress={() => typeIntoPanelField(prev => prev + '-')}>
                         <Text style={[styles.floatingKeyText, { fontSize: letterFS }]}>-</Text>
                       </TouchableOpacity>
                       <TouchableOpacity style={[styles.floatingLetterKey, { height: letterKH, flex: 1, backgroundColor: '#ffebee' }]} onPress={() => handleLineMeasurementNumpadPress('\u232b')}>
@@ -7988,8 +8082,10 @@ export default function DrawSketchScreen() {
               }
             })()}
           </View>
+          )}
           
-          {/* Einklappbare Maßlinien-Darstellung */}
+          {/* Einklappbare Maßlinien-Darstellung (Teil der Optionen) */}
+          {panelOptionsOpen && (
           <View style={{ paddingHorizontal: 10 }}>
             <TouchableOpacity 
               style={{ 
@@ -8099,6 +8195,7 @@ export default function DrawSketchScreen() {
               </View>
             )}
           </View>
+          )}
           
           </MeasurePanelBody>
           {/* Buttons */}

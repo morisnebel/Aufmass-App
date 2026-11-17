@@ -1,3 +1,4 @@
+import { PolygonWalls, hasWallHeights, segmentNumberPositions } from './wallArea';
 // SVG-Vorschau-Erzeugung für Skizzen (ausgelagert aus app/sketches/draw.tsx)
 // Baut aus den Zeichen-Elementen ein eigenständiges SVG (als data:-URI) für PDF/Vorschau.
 import { DrawElement } from './sketchShared';
@@ -15,6 +16,7 @@ export interface PreviewSvgContext {
   formatAreaM2: (n: number) => string;
   calculateTotalLfmForElement: (el: any) => number;
   labelOffsets?: { [id: string]: { x: number; y: number } };
+  polygonWalls?: PolygonWalls;
 }
 
 export function buildPreviewSvg(ctx: PreviewSvgContext): string {
@@ -22,7 +24,7 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
     elements, canvasHeight, screenWidth, legendPosition,
     lineSegmentMeasurements, measureLineStyles, polygonAreaVisible,
     getPolylineElementsWithMeasurements, calculatePolygonAreaM2,
-    formatAreaM2, calculateTotalLfmForElement, labelOffsets = {},
+    formatAreaM2, calculateTotalLfmForElement, labelOffsets = {}, polygonWalls = {},
   } = ctx;
     // NEW ARCHITECTURE: Use viewBox for scaling instead of transforming coordinates
     // This preserves original element sizes (especially text) and lets the browser handle scaling
@@ -449,6 +451,14 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
           svgElements += `<text x="${midX + offsetX}" y="${midY + offsetY + 3}" fill="${expStyle.color}" font-size="${expStyle.fontSize}" font-weight="bold" text-anchor="middle">${measurementText}</text>`;
         });
         
+        // Linien-Nummern (passend zur Wandliste), wenn Wandhöhen eingegeben sind
+        if (hasWallHeights(polygonWalls[el.id])) {
+          segmentNumberPositions(points, !!isClosed, 16).forEach(n => {
+            svgElements += `<circle cx="${n.x}" cy="${n.y}" r="9" fill="#fff" stroke="#5d4037" stroke-width="1.2"/>`;
+            svgElements += `<text x="${n.x}" y="${n.y + 3.5}" fill="#5d4037" font-size="10" font-weight="bold" text-anchor="middle">${n.line}</text>`;
+          });
+        }
+
         // Render label (S1, S2, S3...) at center if this polyline has measurements
         const polylinesWithMeasurements = getPolylineElementsWithMeasurements();
         const labelIndex = polylinesWithMeasurements.findIndex(p => p.id === el.id);

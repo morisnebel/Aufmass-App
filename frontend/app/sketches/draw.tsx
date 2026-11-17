@@ -44,7 +44,7 @@ import BufferedTextInput from '../../src/components/BufferedTextInput';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { LaserSoundOptions } from '../../src/components/sketch/LaserSoundOptions';
 import { WallHeightSection } from '../../src/components/sketch/WallHeightSection';
-import { PolygonWalls, segmentCountOf } from '../../src/sketch/wallArea';
+import { PolygonWalls, segmentCountOf, hasWallHeights, segmentNumberPositions } from '../../src/sketch/wallArea';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import { SketchTour } from '../../src/components/SketchTour';
 import { SketchDemoModal } from '../../src/components/SketchDemo';
@@ -5343,6 +5343,19 @@ export default function DrawSketchScreen() {
               );
             })()}
             
+            {/* Linien-Nummern (passend zu „Linie x von n“ und zur Wandliste) */}
+            {(hasSelectedSegment || hasWallHeights(polygonWalls[element.id])) && (() => {
+              const numberScale = Math.max(scale, 0.5);
+              return segmentNumberPositions(points, !!closed, Math.max(8, 16 / numberScale)).map(n => (
+                <G key={`line-number-${element.id}-${n.line}`}>
+                  <Circle cx={n.x} cy={n.y} r={Math.max(5, 9 / numberScale)} fill="#fff" stroke="#5d4037" strokeWidth={Math.max(0.6, 1.2 / numberScale)} />
+                  <SvgText x={n.x} y={n.y + Math.max(2, 3.5 / numberScale)} fill="#5d4037" fontSize={Math.max(6, 10 / numberScale)} fontWeight="bold" textAnchor="middle">
+                    {n.line}
+                  </SvgText>
+                </G>
+              ));
+            })()}
+
             {/* Maßlinien für alle Segmente mit Maßen anzeigen */}
             {Object.keys(elementMeasurements).map((segIdxStr) => {
               const segIdx = parseInt(segIdxStr, 10);
@@ -5968,7 +5981,7 @@ export default function DrawSketchScreen() {
       elements, canvasHeight, screenWidth, legendPosition,
       lineSegmentMeasurements, measureLineStyles, polygonAreaVisible,
       getPolylineElementsWithMeasurements, calculatePolygonAreaM2,
-      formatAreaM2, calculateTotalLfmForElement, labelOffsets,
+      formatAreaM2, calculateTotalLfmForElement, labelOffsets, polygonWalls,
     });
 
   const saveSketch = async () => {
@@ -7627,6 +7640,10 @@ export default function DrawSketchScreen() {
         const measureNumericWidth = isPhoneDevice
           ? (numpadSize === 'L' ? Math.max(Math.round(screenWidth * 0.55), 200) : numpadSize === 'M' ? Math.max(Math.round(screenWidth * 0.45), 170) : Math.max(Math.round(screenWidth * 0.35), 140))
           : (numpadSize === 'L' ? Math.round(screenWidth * 0.33) : numpadSize === 'M' ? Math.round(screenWidth * 0.27) : Math.round(screenWidth * 0.22));
+        const MeasurePanelBody: React.ElementType = isPhoneDevice ? ScrollView : View;
+        const measurePanelBodyProps = isPhoneDevice
+          ? { style: { maxHeight: Math.max(160, screenHeight - insets.top - insets.bottom - 250) }, keyboardShouldPersistTaps: 'always' as const, nestedScrollEnabled: true, testID: 'line-measure-scroll' }
+          : {};
         const measurePanelWidth = (isPhoneDevice && measureKeyboardMode === 'letters')
           ? Math.round(screenWidth * 0.92)
           : measureNumericWidth;
@@ -7663,6 +7680,8 @@ export default function DrawSketchScreen() {
             </Pressable>
           </View>
           
+          {/* Inhalt: auf dem iPhone scrollbar, damit die Knöpfe unten erreichbar bleiben */}
+          <MeasurePanelBody {...measurePanelBodyProps}>
           {/* Fortschritt: Linie x von n */}
           {selectedLineSegment && (() => {
             const segmentCount = segmentCountOf(elements.find(e => e.id === selectedLineSegment.elementId));
@@ -7790,6 +7809,7 @@ export default function DrawSketchScreen() {
               measures={lineSegmentMeasurements[selectedLineSegment.elementId]}
               wall={polygonWalls[selectedLineSegment.elementId]}
               onChange={(wall) => setPolygonWalls(prev => ({ ...prev, [selectedLineSegment.elementId]: wall }))}
+              scrollable={!isPhoneDevice}
             />
           )}
 
@@ -8080,6 +8100,7 @@ export default function DrawSketchScreen() {
             )}
           </View>
           
+          </MeasurePanelBody>
           {/* Buttons */}
           <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 10, paddingBottom: 10, paddingTop: 6 }}>
             <TouchableOpacity

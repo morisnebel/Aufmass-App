@@ -74,3 +74,34 @@ export const wallRows = (element: any, measures: { [segmentIndex: number]: strin
   }
   return rows;
 };
+
+// Hat das Polygon Wandhöhen? (dann werden die Linien in der Skizze nummeriert)
+export const hasWallHeights = (wall: PolygonWall | undefined): boolean =>
+  !!wall && (parseMeasurementToMeters(wall.height || '') > 0 ||
+    Object.values(wall.segments || {}).some(s => parseMeasurementToMeters(s.height || '') > 0));
+
+// Positionen der Linien-Nummern: Linienmitte, um `offset` nach innen (zum Schwerpunkt) versetzt
+export const segmentNumberPositions = (points: { x: number; y: number }[], closed: boolean, offset: number) => {
+  const cx = points.reduce((a, p) => a + p.x, 0) / points.length;
+  const cy = points.reduce((a, p) => a + p.y, 0) / points.length;
+  const count = closed ? points.length : points.length - 1;
+  const result: { line: number; x: number; y: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    const p1 = points[i];
+    const p2 = points[(i + 1) % points.length];
+    const midX = (p1.x + p2.x) / 2;
+    const midY = (p1.y + p2.y) / 2;
+    const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+    const nx = -Math.sin(angle);
+    const ny = Math.cos(angle);
+    const sign = nx * (cx - midX) + ny * (cy - midY) >= 0 ? 1 : -1;
+    result.push({ line: i + 1, x: midX + nx * offset * sign, y: midY + ny * offset * sign });
+  }
+  return result;
+};
+
+// Schnellvorlagen für Öffnungen
+export const OPENING_PRESETS: { id: string; label: string; opening: WallOpening }[] = [
+  { id: 'door', label: 'Tür', opening: { width: '0,885m', height: '2,01m' } },
+  { id: 'window', label: 'Fenster', opening: { width: '1,00m', height: '1,20m' } },
+];

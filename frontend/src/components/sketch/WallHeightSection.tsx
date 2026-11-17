@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
 import { formatAreaM2 } from '../../sketch/polygonArea';
-import { PolygonWall, WallSegment, calculateWallAreaM2, openingAreaM2, segmentDeductionM2, wallSegmentAreaM2 } from '../../sketch/wallArea';
+import { OPENING_PRESETS, PolygonWall, WallSegment, calculateWallAreaM2, openingAreaM2, segmentDeductionM2, wallSegmentAreaM2 } from '../../sketch/wallArea';
 
 // Aufklappbarer Bereich im Maß-Fenster: Wandhöhe (für alle Linien / diese Linie),
 // Abzug für Öffnungen und die daraus berechnete Wandfläche.
@@ -14,9 +14,11 @@ type Props = {
   measures: { [segmentIndex: number]: string } | undefined;
   wall: PolygonWall | undefined;
   onChange: (wall: PolygonWall) => void;
+  // false: kein eigener Scrollbereich (das Maß-Fenster scrollt selbst, z.B. iPhone)
+  scrollable?: boolean;
 };
 
-export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange }: Props) => {
+export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange, scrollable = true }: Props) => {
   const [open, setOpen] = useState(false);
   const segment: WallSegment = wall?.segments?.[segmentIndex] || {};
   const openings = segment.openings || [];
@@ -62,7 +64,7 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#5d4037" />
       </TouchableOpacity>
       {open && (
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+        <ScrollView style={scrollable ? styles.scroll : undefined} scrollEnabled={scrollable} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
           {field('wall-height-all', 'Höhe alle Linien', wall?.height || '', 'z.B. 2,50m', (t) => onChange({ ...wall, height: t }))}
           {field('wall-height-line', 'Höhe diese Linie', segment.height || '', wall?.height || 'wie oben', (t) => setSegment({ height: t }))}
 
@@ -84,13 +86,29 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
               <Text testID={`wall-opening-area-${i}`} style={styles.openingArea}>= {formatAreaM2(openingAreaM2(opening))}</Text>
             </View>
           ))}
+          <View style={styles.presetRow}>
+            {OPENING_PRESETS.map(preset => (
+              <TouchableOpacity
+                key={preset.id}
+                testID={`wall-opening-preset-${preset.id}`}
+                style={[styles.addButton, styles.flex]}
+                onPress={() => setSegment({ openings: [...openings, { ...preset.opening }] })}
+              >
+                <Ionicons name="add" size={14} color="#5d4037" />
+                <View>
+                  <Text style={styles.addButtonText}>{preset.label}</Text>
+                  <Text style={styles.presetSize}>{preset.opening.width.replace('m', '')} × {preset.opening.height.replace('m', '')}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
           <TouchableOpacity
             testID="wall-opening-add"
             style={styles.addButton}
             onPress={() => setSegment({ openings: [...openings, { width: '', height: '' }] })}
           >
             <Ionicons name="add" size={16} color="#5d4037" />
-            <Text style={styles.addButtonText}>Tür / Fenster</Text>
+            <Text style={styles.addButtonText}>Eigenes Maß</Text>
           </TouchableOpacity>
           {field('wall-deduction-line', 'Weiterer Abzug diese Linie (m²)', segment.deduction || '', 'z.B. 1,8', (t) => setSegment({ deduction: t }))}
           {deduction > 0 && (
@@ -123,6 +141,8 @@ const styles = StyleSheet.create({
   removeButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   openingArea: { width: '100%', fontSize: 11, fontWeight: '600', color: '#6d4c41' },
   addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 40, borderRadius: 6, borderWidth: 1, borderColor: '#bcaaa4', backgroundColor: '#fff' },
+  presetRow: { flexDirection: 'row', gap: 6 },
+  presetSize: { fontSize: 10, color: '#6d4c41' },
   addButtonText: { fontSize: 12, fontWeight: '600', color: '#5d4037' },
   label: { fontSize: 10, fontWeight: '600', color: '#6d4c41' },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d7ccc8', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 8, fontSize: 14, color: '#333', minHeight: 40 },

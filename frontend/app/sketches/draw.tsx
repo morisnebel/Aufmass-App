@@ -893,6 +893,22 @@ export default function DrawSketchScreen() {
     numpadTargetRef.current = null;
     setNumpadTargetId(null);
   };
+  const [measureKeyboardHeight, setMeasureKeyboardHeight] = useState(0);
+  const numpadTargetLabel = (id: string) => {
+    const opening = id.match(/^wall-opening-(width|height)-(\d+)$/);
+    if (opening) return `Öffnung ${parseInt(opening[2], 10) + 1} ${opening[1] === 'width' ? 'Breite' : 'Höhe'}`;
+    return ({ 'wall-height-all': 'Höhe alle Linien', 'wall-height-line': 'Höhe diese Linie', 'wall-deduction-line': 'Weiterer Abzug' } as { [key: string]: string })[id] || 'Eingabe';
+  };
+  const numpadTargetValue = (id: string): string => {
+    if (!selectedLineSegment) return '';
+    const wall = polygonWalls[selectedLineSegment.elementId];
+    const segment = wall?.segments?.[selectedLineSegment.segmentIndex];
+    const opening = id.match(/^wall-opening-(width|height)-(\d+)$/);
+    if (opening) return segment?.openings?.[parseInt(opening[2], 10)]?.[opening[1] as 'width' | 'height'] || '';
+    if (id === 'wall-height-all') return wall?.height || '';
+    if (id === 'wall-height-line') return segment?.height || '';
+    return segment?.deduction || '';
+  };
   const typeIntoPanelField = (update: (prev: string) => string) => {
     const target = numpadTargetRef.current;
     if (target) target.set(update(target.get()));
@@ -7744,7 +7760,7 @@ export default function DrawSketchScreen() {
         // Inhalt scrollbar, damit die Knöpfe unten immer erreichbar bleiben
         const MeasurePanelBody = ScrollView;
         const measurePanelBodyProps = {
-          style: { maxHeight: Math.max(160, screenHeight - insets.top - insets.bottom - (isPhoneDevice ? 250 : 300)) },
+          style: { maxHeight: Math.max(120, screenHeight - insets.top - insets.bottom - (isPhoneDevice ? 250 : 300) - (panelKeyboardOpen ? measureKeyboardHeight : 0)) },
           keyboardShouldPersistTaps: 'always' as const, testID: 'line-measure-scroll',
         };
         const measurePanelWidth = (isPhoneDevice && measureKeyboardMode === 'letters')
@@ -7985,9 +8001,130 @@ export default function DrawSketchScreen() {
           </>
           )}
 
-          {/* Tastatur-Bereich (einklappbar) */}
-          {panelKeyboardOpen && (
+          {/* Einklappbare Maßlinien-Darstellung (Teil der Optionen) */}
+          {panelOptionsOpen && (
           <View style={{ paddingHorizontal: 10 }}>
+            <TouchableOpacity 
+              style={{ 
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#e0e0e0', marginTop: 4,
+              }}
+              onPress={() => setShowMeasureStyleSettings(!showMeasureStyleSettings)}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#555' }}>Maßlinien-Darstellung</Text>
+              <Ionicons name={showMeasureStyleSettings ? 'chevron-up' : 'chevron-down'} size={16} color="#888" />
+            </TouchableOpacity>
+            
+            {showMeasureStyleSettings && (
+              <View style={{ paddingBottom: 4 }}>
+                <View style={{ marginBottom: 6 }}>
+                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>{t('sketches.colorLabel')}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+                    {['#1976d2', '#f44336', '#4caf50', '#ff9800', '#9c27b0', '#000000', '#795548', '#607d8b'].map(c => (
+                      <TouchableOpacity
+                        key={`ml-${c}`}
+                        style={{
+                          width: 24, height: 24, borderRadius: 12, backgroundColor: c,
+                          borderWidth: tempMeasureLineColor === c ? 3 : 1.5,
+                          borderColor: tempMeasureLineColor === c ? '#fff' : '#ddd',
+                        }}
+                        onPress={() => {
+                          setTempMeasureLineColor(c);
+                          if (selectedLineSegment) {
+                            setMeasureLineStyles(prev => ({
+                              ...prev,
+                              [selectedLineSegment.elementId]: {
+                                ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
+                                color: c,
+                              }
+                            }));
+                          }
+                        }}
+                      />
+                    ))}
+                  </View>
+                </View>
+                <View style={{ marginBottom: 6 }}>
+                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>Linienstärke:</Text>
+                  <View style={{ flexDirection: 'row', gap: 5 }}>
+                    {[0.8, 1.2, 2, 3, 4].map(w => (
+                      <TouchableOpacity
+                        key={`mlw-${w}`}
+                        style={{
+                          alignItems: 'center', justifyContent: 'center',
+                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+                          backgroundColor: tempMeasureLineStrokeWidth === w ? tempMeasureLineColor : '#f0f0f0',
+                          minWidth: 36,
+                        }}
+                        onPress={() => {
+                          setTempMeasureLineStrokeWidth(w);
+                          if (selectedLineSegment) {
+                            setMeasureLineStyles(prev => ({
+                              ...prev,
+                              [selectedLineSegment.elementId]: {
+                                ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
+                                strokeWidth: w,
+                              }
+                            }));
+                          }
+                        }}
+                      >
+                        <View style={{
+                          width: Math.max(w * 2.5, 4), height: Math.max(w * 2.5, 4),
+                          borderRadius: 50, backgroundColor: tempMeasureLineStrokeWidth === w ? '#fff' : '#333',
+                        }} />
+                        <Text style={{ fontSize: 8, color: tempMeasureLineStrokeWidth === w ? '#fff' : '#666', fontWeight: '500' }}>{w}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <View>
+                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>{t('sketches.fontSize')}:</Text>
+                  <View style={{ flexDirection: 'row', gap: 5 }}>
+                    {[8, 11, 14, 18, 22].map(fs => (
+                      <TouchableOpacity
+                        key={`mlfs-${fs}`}
+                        style={{
+                          alignItems: 'center', justifyContent: 'center',
+                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+                          backgroundColor: tempMeasureLineFontSize === fs ? tempMeasureLineColor : '#f0f0f0',
+                          minWidth: 36,
+                        }}
+                        onPress={() => {
+                          setTempMeasureLineFontSize(fs);
+                          if (selectedLineSegment) {
+                            setMeasureLineStyles(prev => ({
+                              ...prev,
+                              [selectedLineSegment.elementId]: {
+                                ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
+                                fontSize: fs,
+                              }
+                            }));
+                          }
+                        }}
+                      >
+                        <Text style={{ fontSize: Math.min(fs, 14), color: tempMeasureLineFontSize === fs ? '#fff' : '#333', fontWeight: '700' }}>A</Text>
+                        <Text style={{ fontSize: 8, color: tempMeasureLineFontSize === fs ? '#fff' : '#666', fontWeight: '500' }}>{fs}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+          )}
+          
+          </MeasurePanelBody>
+          {/* Tastatur fest unter dem scrollbaren Inhalt: Eingabefeld und Tastatur gleichzeitig sichtbar */}
+          {panelKeyboardOpen && (
+          <View
+            style={{ paddingHorizontal: 10, paddingTop: 4, borderTopWidth: 1, borderTopColor: '#e0e0e0' }}
+            onLayout={(e) => setMeasureKeyboardHeight(e.nativeEvent.layout.height)}
+          >
+            {/* Anzeige: in welches Feld die Tastatur gerade schreibt */}
+            <Text testID="numpad-target-display" style={{ fontSize: 12, fontWeight: '700', color: '#1976d2', marginBottom: 4 }} numberOfLines={1}>
+              {numpadTargetId ? `${numpadTargetLabel(numpadTargetId)}: ${numpadTargetValue(numpadTargetId) || '–'}` : `Maß: ${lineMeasurementExpression || '–'}`}
+            </Text>
             {/* Umschalt-Leiste: S/M/L + Zahlen/ABC */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -8134,120 +8271,6 @@ export default function DrawSketchScreen() {
           </View>
           )}
           
-          {/* Einklappbare Maßlinien-Darstellung (Teil der Optionen) */}
-          {panelOptionsOpen && (
-          <View style={{ paddingHorizontal: 10 }}>
-            <TouchableOpacity 
-              style={{ 
-                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                paddingVertical: 6, borderTopWidth: 1, borderTopColor: '#e0e0e0', marginTop: 4,
-              }}
-              onPress={() => setShowMeasureStyleSettings(!showMeasureStyleSettings)}
-            >
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#555' }}>Maßlinien-Darstellung</Text>
-              <Ionicons name={showMeasureStyleSettings ? 'chevron-up' : 'chevron-down'} size={16} color="#888" />
-            </TouchableOpacity>
-            
-            {showMeasureStyleSettings && (
-              <View style={{ paddingBottom: 4 }}>
-                <View style={{ marginBottom: 6 }}>
-                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>{t('sketches.colorLabel')}</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
-                    {['#1976d2', '#f44336', '#4caf50', '#ff9800', '#9c27b0', '#000000', '#795548', '#607d8b'].map(c => (
-                      <TouchableOpacity
-                        key={`ml-${c}`}
-                        style={{
-                          width: 24, height: 24, borderRadius: 12, backgroundColor: c,
-                          borderWidth: tempMeasureLineColor === c ? 3 : 1.5,
-                          borderColor: tempMeasureLineColor === c ? '#fff' : '#ddd',
-                        }}
-                        onPress={() => {
-                          setTempMeasureLineColor(c);
-                          if (selectedLineSegment) {
-                            setMeasureLineStyles(prev => ({
-                              ...prev,
-                              [selectedLineSegment.elementId]: {
-                                ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
-                                color: c,
-                              }
-                            }));
-                          }
-                        }}
-                      />
-                    ))}
-                  </View>
-                </View>
-                <View style={{ marginBottom: 6 }}>
-                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>Linienstärke:</Text>
-                  <View style={{ flexDirection: 'row', gap: 5 }}>
-                    {[0.8, 1.2, 2, 3, 4].map(w => (
-                      <TouchableOpacity
-                        key={`mlw-${w}`}
-                        style={{
-                          alignItems: 'center', justifyContent: 'center',
-                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
-                          backgroundColor: tempMeasureLineStrokeWidth === w ? tempMeasureLineColor : '#f0f0f0',
-                          minWidth: 36,
-                        }}
-                        onPress={() => {
-                          setTempMeasureLineStrokeWidth(w);
-                          if (selectedLineSegment) {
-                            setMeasureLineStyles(prev => ({
-                              ...prev,
-                              [selectedLineSegment.elementId]: {
-                                ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
-                                strokeWidth: w,
-                              }
-                            }));
-                          }
-                        }}
-                      >
-                        <View style={{
-                          width: Math.max(w * 2.5, 4), height: Math.max(w * 2.5, 4),
-                          borderRadius: 50, backgroundColor: tempMeasureLineStrokeWidth === w ? '#fff' : '#333',
-                        }} />
-                        <Text style={{ fontSize: 8, color: tempMeasureLineStrokeWidth === w ? '#fff' : '#666', fontWeight: '500' }}>{w}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-                <View>
-                  <Text style={{ fontSize: 10, color: '#666', marginBottom: 3 }}>{t('sketches.fontSize')}:</Text>
-                  <View style={{ flexDirection: 'row', gap: 5 }}>
-                    {[8, 11, 14, 18, 22].map(fs => (
-                      <TouchableOpacity
-                        key={`mlfs-${fs}`}
-                        style={{
-                          alignItems: 'center', justifyContent: 'center',
-                          paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
-                          backgroundColor: tempMeasureLineFontSize === fs ? tempMeasureLineColor : '#f0f0f0',
-                          minWidth: 36,
-                        }}
-                        onPress={() => {
-                          setTempMeasureLineFontSize(fs);
-                          if (selectedLineSegment) {
-                            setMeasureLineStyles(prev => ({
-                              ...prev,
-                              [selectedLineSegment.elementId]: {
-                                ...(prev[selectedLineSegment.elementId] || { color: '#1976d2', strokeWidth: 1.2, fontSize: 11 }),
-                                fontSize: fs,
-                              }
-                            }));
-                          }
-                        }}
-                      >
-                        <Text style={{ fontSize: Math.min(fs, 14), color: tempMeasureLineFontSize === fs ? '#fff' : '#333', fontWeight: '700' }}>A</Text>
-                        <Text style={{ fontSize: 8, color: tempMeasureLineFontSize === fs ? '#fff' : '#666', fontWeight: '500' }}>{fs}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-              </View>
-            )}
-          </View>
-          )}
-          
-          </MeasurePanelBody>
           {/* Buttons */}
           <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 10, paddingBottom: 10, paddingTop: 6 }}>
             <TouchableOpacity
@@ -8258,7 +8281,7 @@ export default function DrawSketchScreen() {
                 setSelectedLineSegment(null);
               }}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#666' }} numberOfLines={1}>{t('common.cancel')}</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#666' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: '#1976d2' }}

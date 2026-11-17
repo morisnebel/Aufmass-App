@@ -109,7 +109,7 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
               <TouchableOpacity
                 key={preset.id}
                 testID={`wall-opening-preset-${preset.id}`}
-                style={[styles.addButton, styles.flex]}
+                style={[styles.addButton, styles.presetButton]}
                 onPress={() => setSegment({ openings: [...openings, { ...preset.opening }] })}
               >
                 <Ionicons name="add" size={14} color="#5d4037" />
@@ -159,7 +159,8 @@ const styles = StyleSheet.create({
   removeButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   openingArea: { width: '100%', fontSize: 11, fontWeight: '600', color: '#6d4c41' },
   addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 40, borderRadius: 6, borderWidth: 1, borderColor: '#bcaaa4', backgroundColor: '#fff' },
-  presetRow: { flexDirection: 'row', gap: 6 },
+  presetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  presetButton: { flexGrow: 1, minWidth: 110, paddingHorizontal: 6 },
   presetSize: { fontSize: 10, color: '#6d4c41' },
   addButtonText: { fontSize: 12, fontWeight: '600', color: '#5d4037' },
   label: { fontSize: 10, fontWeight: '600', color: '#6d4c41' },

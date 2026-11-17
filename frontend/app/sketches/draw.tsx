@@ -1256,6 +1256,23 @@ export default function DrawSketchScreen() {
         
         {/* Tastatur-Bereich */}
         <View style={{ paddingHorizontal: 8, paddingTop: 6, paddingBottom: 8 }}>
+          {/* Text/Memo/Notizen: Numpad künftig direkt öffnen */}
+          {(showTextModal || showEditTextModal || showMemoModal || showEditMemoModal || showNotesModal) && (
+            <TouchableOpacity
+              testID="text-numpad-auto-toggle"
+              accessibilityRole="switch"
+              accessibilityState={{ checked: textNumpadAuto }}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 36, marginBottom: 6, paddingHorizontal: 6,
+                borderRadius: 8, borderWidth: 1,
+                backgroundColor: textNumpadAuto ? '#e3f2fd' : '#f5f5f5', borderColor: textNumpadAuto ? '#90caf9' : '#ddd',
+              }}
+              onPress={() => changeTextNumpadAuto(!textNumpadAuto)}
+            >
+              <Text style={{ flex: 1, fontSize: 10, fontWeight: '600', color: textNumpadAuto ? '#1976d2' : '#666' }} numberOfLines={2}>Immer direkt öffnen</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: textNumpadAuto ? '#1976d2' : '#999' }}>{textNumpadAuto ? 'AN' : 'AUS'}</Text>
+            </TouchableOpacity>
+          )}
           {/* Umschalt-Leiste: S/M/L + Zahlen/ABC */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <View style={{ flexDirection: 'row', gap: 4 }}>
@@ -3816,6 +3833,23 @@ export default function DrawSketchScreen() {
   const memoInputRef = useRef<TextInput>(null);
   const [editMemoFontSize, setEditMemoFontSize] = useState(10);
   const [showEditMemoModal, setShowEditMemoModal] = useState(false);
+
+  // Auf Wunsch: bei Text, Memo und Notizen direkt das eingebaute Numpad öffnen
+  const [textNumpadAuto, setTextNumpadAuto] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_text_numpad_auto').then(saved => setTextNumpadAuto(saved === '1'));
+  }, []);
+  const changeTextNumpadAuto = (enabled: boolean) => {
+    setTextNumpadAuto(enabled);
+    AsyncStorage.setItem('aufmassprofi_text_numpad_auto', enabled ? '1' : '0');
+  };
+  useEffect(() => {
+    if (!textNumpadAuto) return;
+    if (showTextModal || showEditTextModal) openModalNumpad(setTextInput, textInputRef);
+    else if (showMemoModal || showEditMemoModal) openModalNumpad(setMemoText, memoInputRef);
+    else if (showNotesModal) openModalNumpad(setNotes, notesInputRef);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showTextModal, showEditTextModal, showMemoModal, showEditMemoModal, showNotesModal]);
 
   // Polygon Edit Modal State
   const [showEditPolygonModal, setShowEditPolygonModal] = useState(false);

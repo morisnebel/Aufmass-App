@@ -42,6 +42,9 @@ import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
 import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared } from '../../src/sketch/polygonArea';
 import BufferedTextInput from '../../src/components/BufferedTextInput';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
+import { LaserSoundOptions } from '../../src/components/sketch/LaserSoundOptions';
+import { WallHeightSection } from '../../src/components/sketch/WallHeightSection';
+import { PolygonWalls, segmentCountOf } from '../../src/sketch/wallArea';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import { SketchTour } from '../../src/components/SketchTour';
 import { SketchDemoModal } from '../../src/components/SketchDemo';
@@ -478,6 +481,11 @@ export default function DrawSketchScreen() {
   
   // Polyline Label Offsets - Position relativ zum Zentrum (für Verschiebbarkeit)
   const [labelOffsets, setLabelOffsets] = useState<{ [elementId: string]: { x: number; y: number } }>({});
+  // Wandhöhen/Abzüge pro Polygon (für Wandflächen)
+  const [polygonWalls, setPolygonWalls] = useState<PolygonWalls>({});
+  // Nach dem Teilen/Löschen von Punkten passen die Linien-Nummern nicht mehr: Angaben pro Linie verwerfen
+  const clearWallSegments = (elementId: string) =>
+    setPolygonWalls(prev => (prev[elementId]?.segments ? { ...prev, [elementId]: { height: prev[elementId].height } } : prev));
   // State für aktives Label-Ziehen
   const [draggingLabelId, setDraggingLabelId] = useState<string | null>(null);
   const labelDragStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number }>({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
@@ -1511,6 +1519,7 @@ export default function DrawSketchScreen() {
         notes,
         labelOffsets,
         polygonAreaVisible,
+        polygonWalls,
       };
       // Große Bild-URIs separat speichern (wie beim normalen Speichern)
       const extractedImageOps: Promise<any>[] = [];
@@ -1670,6 +1679,7 @@ export default function DrawSketchScreen() {
       const resetToCleanState = () => {
         console.log('Resetting to clean state for new/different sketch');
         setLineSegmentMeasurements({});
+        setPolygonWalls({});
         setSelectedLineSegment(null);
         setElements([]);
         setHistory([[]]);
@@ -1803,6 +1813,7 @@ export default function DrawSketchScreen() {
           } else {
             setPolygonAreaVisible({});
           }
+          setPolygonWalls(metadata.polygonWalls || {});
         } else if (sketch.metadata) {
           // Fallback: metadata still in main array (shouldn't happen after migration)
           try {
@@ -1835,6 +1846,7 @@ export default function DrawSketchScreen() {
             if (parsedMeta.polygonAreaVisible) {
               setPolygonAreaVisible(parsedMeta.polygonAreaVisible);
             }
+            setPolygonWalls(parsedMeta.polygonWalls || {});
           } catch (e) {
             console.error('Error parsing fallback metadata:', e);
           }
@@ -2188,6 +2200,7 @@ export default function DrawSketchScreen() {
           notes,
           labelOffsets,
           polygonAreaVisible,
+          polygonWalls,
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
@@ -2651,6 +2664,7 @@ export default function DrawSketchScreen() {
     addToHistory([]);
     setSelectedElementId(null);
     setLineSegmentMeasurements({});
+    setPolygonWalls({});
     setSelectedLineSegment(null);
     // Alle Summenbox-Positionen zurücksetzen
     setTotalLfmBoxPositions({});
@@ -3083,6 +3097,7 @@ export default function DrawSketchScreen() {
       });
       addToHistory(newElements);
       
+      clearWallSegments(selectedElementId);
       // Bemaßungs-Indizes aktualisieren: Segment wird geteilt → Indizes nach dem Split verschieben
       setLineSegmentMeasurements(prev => {
         const elementMeasurements = prev[selectedElementId];
@@ -3184,6 +3199,7 @@ export default function DrawSketchScreen() {
       });
       addToHistory(newElements);
       
+      clearWallSegments(selectedElementId);
       // Bemaßungen aktualisieren: Gelöschte Segmente entfernen und Indizes neu zuordnen
       setLineSegmentMeasurements(prev => {
         const elementMeasurements = prev[selectedElementId];
@@ -5977,6 +5993,7 @@ export default function DrawSketchScreen() {
         notes, // Speichere die Notizen
         labelOffsets, // Speichere Polyline-Label-Positionen
         polygonAreaVisible, // Speichere Polygon-Flächen-Sichtbarkeit
+        polygonWalls, // Speichere Wandhöhen/Abzüge
       };
 
       console.log('Saving sketch with', elements.length, 'elements, bgChanged:', backgroundImageChangedRef.current);
@@ -7646,6 +7663,19 @@ export default function DrawSketchScreen() {
             </Pressable>
           </View>
           
+          {/* Fortschritt: Linie x von n */}
+          {selectedLineSegment && (() => {
+            const segmentCount = segmentCountOf(elements.find(e => e.id === selectedLineSegment.elementId));
+            if (segmentCount < 2) return null;
+            const measured = lineSegmentMeasurements[selectedLineSegment.elementId] || {};
+            const open = Array.from({ length: segmentCount }, (_, i) => i).filter(i => !measured[i]).length;
+            return (
+              <Text testID="line-measure-progress" style={{ fontSize: 12, fontWeight: '700', color: '#1976d2', paddingHorizontal: 10, marginBottom: 6 }}>
+                Linie {selectedLineSegment.segmentIndex + 1} von {segmentCount} · {open === 0 ? 'alle bemaßt' : `${open} offen`}
+              </Text>
+            );
+          })()}
+
           {/* Eingabe + Löschen */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, marginBottom: 6 }}>
             <BufferedTextInput replaceOnBurst
@@ -7744,6 +7774,24 @@ export default function DrawSketchScreen() {
               <Text style={{ fontSize: 11, fontWeight: '600', color: '#f44336' }} numberOfLines={1}>Zurück</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Ton-Auswahl und Lautstärke */}
+          {laserSound && (
+            <View style={{ marginHorizontal: 10, marginBottom: 6 }}>
+              <LaserSoundOptions />
+            </View>
+          )}
+
+          {/* Wandhöhe / Wandfläche (bei Bedarf aufklappen) */}
+          {selectedLineSegment && elements.find(e => e.id === selectedLineSegment.elementId)?.type === 'polyline' && (
+            <WallHeightSection
+              element={elements.find(e => e.id === selectedLineSegment.elementId)}
+              segmentIndex={selectedLineSegment.segmentIndex}
+              measures={lineSegmentMeasurements[selectedLineSegment.elementId]}
+              wall={polygonWalls[selectedLineSegment.elementId]}
+              onChange={(wall) => setPolygonWalls(prev => ({ ...prev, [selectedLineSegment.elementId]: wall }))}
+            />
+          )}
 
           {/* Flächen-Toggle für geschlossene Polygone */}
           {selectedLineSegment && (() => {
@@ -8228,6 +8276,11 @@ export default function DrawSketchScreen() {
                 <Text style={[styles.modalLabel, { flex: 1, marginBottom: 0 }]}>Ton bei Laser-Messwert</Text>
                 <Switch testID="arrow-laser-sound-switch" value={laserSound} onValueChange={changeLaserSound} />
               </View>
+              {laserSound && (
+                <View style={{ marginBottom: 12 }}>
+                  <LaserSoundOptions />
+                </View>
+              )}
               
               {/* Numpad Toggle */}
               <TouchableOpacity 

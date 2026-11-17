@@ -8,6 +8,7 @@ import { isPro, getProStatus } from './FeatureFlags';
 import { getStatusMeta } from '../src/constants/projectStatus';
 import { buildCoverPageHtml, CoverStyle } from './CoverPageTemplates';
 import { calculatePolygonAreaM2, formatAreaM2 } from '../src/sketch/polygonArea';
+import { calculateWallAreaM2 } from '../src/sketch/wallArea';
 
 // PDF-Farbpalette (auch für die Deckblatt-Akzentfarbe im PDF-Modal)
 export const PDF_COLOR_OPTIONS: { [key: string]: { color: string; textColor: string } } = {
@@ -569,7 +570,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
       ? [...sketches].sort((a: any, b: any) => sketchFolderOf(a).localeCompare(sketchFolderOf(b)))
       : sketches;
 
-    const sketchAreas: { title: string; areas: { label: string; area: number }[] }[] = [];
+    const sketchAreas: { title: string; areas: { label: string; area: number | null; wall: number | null }[] }[] = [];
     const sketchItems = await Promise.all(sortedSketches.map(async (sketch, index) => {
       // Read pdf_size and notes from sketch object or metadata
       let size = sketch.pdf_size || 'large';
@@ -611,8 +612,12 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
           const measuredPolylines = metadata.elements.filter((el: any) =>
             el.type === 'polyline' && segMeasures[el.id] && Object.keys(segMeasures[el.id]).length > 0);
           const areas = measuredPolylines
-            .map((el: any, i: number) => ({ label: el.name ? `S${i + 1} – ${el.name}` : `S${i + 1}`, area: calculatePolygonAreaM2(el, segMeasures) }))
-            .filter((a: any) => a.area !== null);
+            .map((el: any, i: number) => ({
+              label: el.name ? `S${i + 1} – ${el.name}` : `S${i + 1}`,
+              area: calculatePolygonAreaM2(el, segMeasures),
+              wall: calculateWallAreaM2(el, segMeasures[el.id], metadata.polygonWalls?.[el.id])?.total ?? null,
+            }))
+            .filter((a: any) => a.area !== null || a.wall !== null);
           if (areas.length > 0) sketchAreas[index] = { title: sketch.title || `Skizze ${index + 1}`, areas };
         }
       } catch (e) {
@@ -675,7 +680,11 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
     
     // Flächenübersicht: berechnete m² aller Skizzen gesammelt (für schnelle Angebote)
     const filledSketchAreas = sketchAreas.filter(Boolean);
-    const areaTotal = filledSketchAreas.reduce((sum, s) => sum + s.areas.reduce((a, b) => a + b.area, 0), 0);
+    const areaTotal = filledSketchAreas.reduce((sum, s) => sum + s.areas.reduce((a, b) => a + (b.area || 0), 0), 0);
+    const wallTotal = filledSketchAreas.reduce((sum, s) => sum + s.areas.reduce((a, b) => a + (b.wall || 0), 0), 0);
+    const hasWalls = filledSketchAreas.some(s => s.areas.some(a => a.wall !== null));
+    const areaCell = (value: number | null) =>
+      `<td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${value !== null ? formatAreaM2(Math.round(value * 100) / 100) : '–'}</td>`;
     const sketchAreaSummaryHtml = filledSketchAreas.length > 0 ? `
       <div class="sketch-area-summary" style="page-break-inside: avoid; break-inside: avoid; margin: 12px 0;">
         <h3 style="font-size: 12pt; margin: 0 0 6px 0; color: #333;">Flächenübersicht (Skizzen)</h3>
@@ -684,7 +693,8 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
             <tr style="background: #f0f4f8;">
               <th style="text-align: left; padding: 5px 8px; border: 1px solid #ddd;">Skizze</th>
               <th style="text-align: left; padding: 5px 8px; border: 1px solid #ddd;">Fläche</th>
-              <th style="text-align: right; padding: 5px 8px; border: 1px solid #ddd;">m²</th>
+              <th style="text-align: right; padding: 5px 8px; border: 1px solid #ddd;">${hasWalls ? 'Grundfläche' : 'm²'}</th>
+              ${hasWalls ? '<th style="text-align: right; padding: 5px 8px; border: 1px solid #ddd;">Wandfläche</th>' : ''}
             </tr>
           </thead>
           <tbody>
@@ -692,11 +702,13 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
               <tr>
                 <td style="padding: 5px 8px; border: 1px solid #ddd;">${String(s.title).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
                 <td style="padding: 5px 8px; border: 1px solid #ddd;">${String(a.label).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
-                <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatAreaM2(a.area)}</td>
+                ${areaCell(a.area)}
+                ${hasWalls ? areaCell(a.wall) : ''}
               </tr>`).join('')).join('')}
             <tr style="font-weight: 700; background: #e3f2fd;">
               <td colspan="2" style="padding: 5px 8px; border: 1px solid #ddd;">Gesamt</td>
-              <td style="padding: 5px 8px; border: 1px solid #ddd; text-align: right;">${formatAreaM2(Math.round(areaTotal * 100) / 100)}</td>
+              ${areaCell(areaTotal)}
+              ${hasWalls ? areaCell(wallTotal) : ''}
             </tr>
           </tbody>
         </table>

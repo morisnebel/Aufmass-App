@@ -1,0 +1,40 @@
+{
+  "summary": "Frontend-only re-run of the Leica DISTO fast-input + cursor-jump fix in the Bemaßungspfeil modal (sketches/draw, replaceOnBurst BufferedTextInput). All 18 fast-type value checks (2.91m, 3.62m, 12.45m, 2,90m, 2.91, 12.45 at delay=0/5/20) returned the exact expected value after a 600ms wait. The three-stage replace sequence '2,90m' -> '3.62m' -> '12.45m' produced exactly '2,90m', '3.62m', '12.45m' in the field (no concatenation). The iPad cursor-jump reproduction (type '2,', ArrowLeft, '90m') raw-rendered as '290m,' confirming the bug is simulatable, and after the 320ms repair the field showed '2,90m'; same simulation with existing content '2,90m' briefly showed '2,90m290m,' and was repaired to '2,90m' (replacement, not concatenation). After the repair the caret is at the end (typing 'x' slowly yields '2,90mx'). Slow human typing still appends (2.91 -> '2.91'; '2,50m' + slow '3,62' -> '2,50m3,62'); fast burst after an operator is appended ('2,50 + 3.62'). Confirm flow: fast-type '2.91m' then tap 'Add' 150ms later writes SVG arrow label '2.91m'; cursor-jump '2,90m' then tap 'Add' 150ms later writes label '2,90m'. In-modal numpad taps 2 , 5 0 m produce exactly '2,50m'; keyboard Backspace behaves normally ('abc' -> 'ab'). All pure-logic assertions in /app/tests/e2e/iter60_buffered_input_sequence.test.ts also still pass.\n\nONE CRITICAL FINDING: during the first repair in a page session, Expo's dev error overlay surfaces 'Uncaught Error: input.setSelection is not a function' originating from BufferedTextInput.tsx:117 (the setTimeout that tries to move the caret to the end). The field value is still correct because setText has already run before the throw; however the overlay blocks interaction on the web preview (and on react-native-web / older RN iOS native setSelection is not part of the public TextInput API). Impact on iPad native: unknown (setSelection may or may not exist on the Fabric host component) - the main agent should replace that call with inputRef.current?.setNativeProps({ selection: { start: next.length, end: next.length } }) or guard with typeof. Reproduction: open Bemaßungspfeil, type '2,' + ArrowLeft + '90m' (<300ms), wait 600ms -> dev overlay appears. The task explicitly said 'no console errors'; this red screen violates that. No other RN/Expo red screens, deprecated packages or SafeAreaView issues observed in this flow. Numpad 'C' (clear) key mentioned in the spec is not present in the arrow-modal numpad - only '\u232b' backspace exists (rendered as an Ionicon, not text) - this is a spec-vs-UI mismatch, not a regression.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "BufferedTextInput (finalize cursor restore)",
+        "issue": "Calling inputRef.current.setSelection(next.length, next.length) throws 'input.setSelection is not a function' on react-native-web (and is not a documented public TextInput ref API on RN iOS/Android). First repair in a session surfaces an Expo dev red screen that blocks taps on the modal. Reference: /app/frontend/src/components/BufferedTextInput.tsx:117",
+        "testID": "n/a (modal input has placeholder 'Maß eingeben ...')",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "TextInput ref API usage",
+        "issue": "input.setSelection(start, end) is not part of the public RN TextInput ref API and does not exist on react-native-web. Use inputRef.current.setNativeProps({ selection: { start, end } }) instead (or guard: typeof input.setSelection === 'function'). Reference: /app/frontend/src/components/BufferedTextInput.tsx:117"
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/tests/e2e/iter60_buffered_input_sequence.test.ts (all assertions pass via `cd /app/frontend && npx tsx ../tests/e2e/iter60_buffered_input_sequence.test.ts` -> prints 'OK')"
+  ],
+  "action_items": [
+    "In /app/frontend/src/components/BufferedTextInput.tsx replace `input.setSelection(next.length, next.length)` with `input.setNativeProps({ selection: { start: next.length, end: next.length } })` (or guard with typeof) to remove the 'input.setSelection is not a function' red screen on react-native-web and keep the caret-reset safe on native iPad.",
+    "Spec vs UI: the arrow-modal numpad has no 'C' (clear) key - only backspace (\u232b). If a clear key is required by the DISTO workflow add it; otherwise update the spec. (Non-blocking.)"
+  ],
+  "critical_code_review_comments": [
+    "BufferedTextInput.finalize uses input.setSelection which is not a cross-platform RN TextInput API; prefer setNativeProps({selection}) or the `selection` prop. See /app/frontend/src/components/BufferedTextInput.tsx:117.",
+    "draw.tsx is ~9720 lines; still violates the >700 lines guideline (carried over from iter 59, not caused by this fix)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "Value/label assertions: 32/32 PASS (18 fast-type, 3 replace, 2 cursor-jump raw+repair, 1 caret-at-end, 3 human/operator mixes, 2 Add->label, 1 numpad value, 1 keyboard backspace). Dev-overlay red screen: 1 FAIL (input.setSelection)."},
+  "seed_data_creation": "None. Used projectId=TEST_P1 query param; nothing persisted beyond the browser session.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Re-use the iteration-59/60 approach: navigate to /sketches/draw?projectId=TEST_X, accept disclaimer+tour-skip testIDs, click the SVG text 'M' (arrow/Maßlinie tool), mouse-drag on the canvas. Input selector: input[placeholder^=\"Maß eingeben\"]. The confirm button text is 'Add' (t('common.add')), not 'Hinzufügen', in the current locale. For the cursor-jump reproduction use page.keyboard.type('2,', delay=5); page.keyboard.press('ArrowLeft'); page.keyboard.type('90m', delay=5); read raw immediately, then wait 600ms for the BufferedTextInput repair (SEQUENCE_GAP_MS=300 + 20ms). After the main agent fixes BufferedTextInput.tsx:117, re-run to confirm no red screen appears on the first repair.",
+  "rca_of_issue": "1) Core bug (iPad '290m,' + concat on next transmission) is fixed: advanceSequence records chars in arrival order, expectedText rebuilds base+typed with before/after slicing, and when the burst is a measurement, replace=true and base is non-empty without a trailing operator, the base is replaced entirely. All 32 field/label assertions match the spec. 2) New side effect introduced in the rewrite: the cursor-reset setTimeout calls input.setSelection which is undefined on react-native-web (and not public API on native) and throws, producing an Expo dev red-screen overlay on the first repair of a session. Mitigation: switch to setNativeProps({selection}) or the `selection` prop."
+}

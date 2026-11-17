@@ -8489,6 +8489,7 @@ export default function DrawSketchScreen() {
                 value={arrowText}
                 onChangeText={setArrowText}
                 placeholder="Maß eingeben (z.B. 5,5m)"
+                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
                 autoFocus
                 showSoftInputOnFocus={!showModalNumpad}
                 onDeviceInput={(value) => {
@@ -8681,6 +8682,7 @@ export default function DrawSketchScreen() {
                 value={arrowText}
                 onChangeText={setArrowText}
                 placeholder="Maß eingeben (z.B. 5,5m)"
+                keyboardType={Platform.OS === 'ios' ? 'numbers-and-punctuation' : 'default'}
                 showSoftInputOnFocus={!showModalNumpad}
               />
               

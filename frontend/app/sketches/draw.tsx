@@ -902,6 +902,22 @@ export default function DrawSketchScreen() {
     clearNumpadTarget();
   }, [selectedLineSegment?.elementId, selectedLineSegment?.segmentIndex, showLineMeasurementNumpad]);
 
+  // Bearbeiten-Unterpunkt „Punkte verschieben“: nur Eckpunkte greifen (großzügige Trefferfläche),
+  // das Maß-Fenster öffnet sich dabei nicht
+  const [pointMoveOnly, setPointMoveOnly] = useState(false);
+  const findNearestPolylinePoint = (x: number, y: number): { element: DrawElement; pointIndex: number } | null => {
+    const tolerance = Math.max(18, 28 / Math.max(scale, 0.5));
+    let best: { element: DrawElement; pointIndex: number; distance: number } | null = null;
+    for (const el of elements) {
+      if (el.type !== 'polyline' || !el.data?.points) continue;
+      el.data.points.forEach((pt: { x: number; y: number }, pointIndex: number) => {
+        const distance = Math.hypot(pt.x - x, pt.y - y);
+        if (distance <= tolerance && (!best || distance < best.distance)) best = { element: el, pointIndex, distance };
+      });
+    }
+    return best;
+  };
+
   // Angetippte Linien-Nummer in der Skizze finden
   const findLineNumberAtPoint = (x: number, y: number): { element: DrawElement; segmentIndex: number } | null => {
     const numberScale = Math.max(scale, 0.5);
@@ -3483,7 +3499,7 @@ export default function DrawSketchScreen() {
         // Automatisch Maß-Eingabe öffnen für das bearbeitete Segment
         const editedPointIdx = editingPolylinePoint;
         const polyEl = elements.find(el => el.id === selectedElementId);
-        if (polyEl && polyEl.type === 'polyline' && polyEl.data?.points) {
+        if (!pointMoveOnly && polyEl && polyEl.type === 'polyline' && polyEl.data?.points) {
           const points = polyEl.data.points;
           // Das Segment VOR dem Punkt (Punkt i-1 → i) ist das natürlichste
           const segmentIdx = editedPointIdx > 0 ? editedPointIdx - 1 : 0;
@@ -3949,12 +3965,20 @@ export default function DrawSketchScreen() {
       return;
     }
     
+    // „Punkte verschieben“: nächstgelegenen Eckpunkt greifen, auch wenn das Polygon noch nicht ausgewählt ist
+    const pointMoveHit = pointMoveOnly ? findNearestPolylinePoint(locationX, locationY) : null;
+    const activeSelectedId = pointMoveHit ? pointMoveHit.element.id : selectedElementId;
+    if (pointMoveHit && pointMoveHit.element.id !== selectedElementId) {
+      setSelectedElementId(pointMoveHit.element.id);
+      setSelectedLineSegment(null);
+    }
+
     // Check if clicking on transformation handles first
-    if (selectedElementId) {
-      const selectedEl = elements.find(el => el.id === selectedElementId);
+    if (activeSelectedId) {
+      const selectedEl = elements.find(el => el.id === activeSelectedId);
       if (selectedEl) {
         // Check for polyline center handle (for moving entire polygon)
-        if (selectedEl.type === 'polyline' && selectedEl.data?.points && selectedEl.data.points.length >= 2) {
+        if (!pointMoveHit && selectedEl.type === 'polyline' && selectedEl.data?.points && selectedEl.data.points.length >= 2) {
           const points = selectedEl.data.points;
           const centerX = points.reduce((sum: number, pt: { x: number }) => sum + pt.x, 0) / points.length;
           const centerY = points.reduce((sum: number, pt: { y: number }) => sum + pt.y, 0) / points.length;
@@ -3980,7 +4004,7 @@ export default function DrawSketchScreen() {
             const distance = Math.sqrt(
               Math.pow(locationX - pt.x, 2) + Math.pow(locationY - pt.y, 2)
             );
-            if (distance <= pointRadius) {
+            if (pointMoveHit ? i === pointMoveHit.pointIndex : distance <= pointRadius) {
               // Eckpunkt gefunden - Bearbeitungsmodus starten
               setEditingPolylinePoint(i);
               setDragMode('move');
@@ -4070,13 +4094,14 @@ export default function DrawSketchScreen() {
     setEditingPolylinePoint(null);
     
     // Prüfe ob auf ein Polyline-Segment geklickt wurde (für Maß-Funktion)
-    const numberHit = findLineNumberAtPoint(locationX, locationY);
+    // Im Modus „Punkte verschieben“ öffnet sich das Maß-Fenster nicht
+    const numberHit = pointMoveOnly ? null : findLineNumberAtPoint(locationX, locationY);
     if (numberHit) {
       // Linien-Nummer angetippt: Wand-Bereich (Höhe/Öffnungen) dieser Linie direkt aufklappen
       setPanelOptionsOpen(true);
       setWallSectionOpen(true);
     }
-    const segmentHit = numberHit || findPolylineSegmentAtPoint(locationX, locationY);
+    const segmentHit = pointMoveOnly ? null : (numberHit || findPolylineSegmentAtPoint(locationX, locationY));
     if (segmentHit) {
       // Segment gefunden - Maß-Eingabe DIREKT öffnen (ohne "Maß hinzufügen" Button)
       setSelectedLineSegment({ 
@@ -6449,6 +6474,29 @@ export default function DrawSketchScreen() {
           <Text style={styles.toolButtonLabel}>{t('common.edit')}</Text>
         </View>
 
+        {/* Unterpunkt von Bearbeiten: nur Punkte verschieben (Maß-Fenster bleibt zu) */}
+        {drawMode === 'select' && (
+          <View style={styles.toolButtonWithLabel}>
+            <TouchableOpacity
+              testID="point-move-only-toggle"
+              accessibilityRole="switch"
+              accessibilityState={{ checked: pointMoveOnly }}
+              accessibilityLabel="Punkte verschieben"
+              style={[styles.toolButtonInner, pointMoveOnly && styles.toolButtonActive]}
+              onPress={() => {
+                setPointMoveOnly(!pointMoveOnly);
+                if (!pointMoveOnly) {
+                  setShowLineMeasurementNumpad(false);
+                  setSelectedLineSegment(null);
+                }
+              }}
+            >
+              <Ionicons name="locate" size={18} color={pointMoveOnly ? '#fff' : '#333'} />
+            </TouchableOpacity>
+            <Text style={styles.toolButtonLabel}>Punkte</Text>
+          </View>
+        )}
+
         {/* ========== MAßLINIEN (nach Zoom & Bearbeiten) ========== */}
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
@@ -7768,6 +7816,8 @@ export default function DrawSketchScreen() {
               onFocus={clearNumpadTarget}
               onDeviceInput={(value) => {
                 if (laserSound) playLaserFeedback();
+                // Laser erkannt: Bildschirm-Tastatur wird nicht gebraucht
+                if (panelKeyboardOpen) changePanelKeyboardOpen(false);
                 if (lineAutoAdd) addMeasurementToSelectedLine(value);
               }}
             />

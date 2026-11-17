@@ -19,6 +19,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect, useNavigation } from 'expo-router';
+import BufferedTextInput from '../../src/components/BufferedTextInput';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ProjectAppointment } from '../../src/components/projects/ProjectAppointment';
@@ -4266,7 +4267,7 @@ export default function ProjectDetailScreen() {
                 {t('projects.remarksSubtitle')}
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <TextInput
+                <BufferedTextInput
                   ref={remarksInputRef}
                   style={[styles.remarksInput, { flex: 1 }]}
                   placeholderTextColor="#999" placeholder={t('projects.remarksPlaceholder')}

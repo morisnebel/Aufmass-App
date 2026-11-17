@@ -801,3 +801,10 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Termin: Telefonbuch-Kontakt wählen (als Kunde speichern oder nur im Termin), Kunden-Adresse mit Fallback auf Objektadressen
 - Skizze: m² automatisch (Standard AN), Raumliste (Umfang/Fläche/Gesamt) im Skizzenbild/PDF
 - Neues Erklärvideo SketchDemo.tsx (Video + Bilder), in Hilfe und Skizzen-Kopfzeile
+
+## Bluetooth-Messwertübertragung (Leica DISTO) – Fix
+- Problem: Schnell per Bluetooth-Tastatur gesendete Werte (z.B. `2.91m`) kamen als `291m` an.
+- Vermutete Ursache (nicht am Gerät nachgestellt): Jedes Zeichen rendert den ganzen Screen neu; ein veralteter Wert wird ins native Feld zurückgeschrieben.
+- Lösung: `src/components/BufferedTextInput.tsx` (lokaler Text, Meldung an den Screen nach 80 ms Pause). Mit `replaceOnBurst` ersetzt ein am Stück übertragener Messwert den alten Inhalt (außer nach Rechenzeichen).
+- Eingesetzt in: `sketches/draw.tsx` (Linien-Maß, Bemaßungspfeil, Pfeil bearbeiten = ersetzen; Text/Memo/Notizen = anhängen), `checklists/[id].tsx` (Aufmaß-Eingabe, ersetzen), `projects/[id].tsx` (Bemerkungen, anhängen).
+- Test (iteration_59, Web): Bemaßungspfeil-Dialog bestanden. Offen: Prüfung am echten iPad mit DISTO; Pfeil bearbeiten, Linien-Maß, Text/Notizen, Checkliste, Bemerkungen nicht automatisiert geprüft.

@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend-only test of the Leica DISTO fast-input fix via new BufferedTextInput (replaceOnBurst). Core logic was validated end-to-end in the Bemaßungspfeil modal (sketches/draw.tsx, route /sketches/draw). 10/10 core input-value assertions passed: single fast bursts '2.91m','3.62m','12.45m' (and the unit-less variants) preserve the decimal point at keyboard delays 0/5/20 ms, consecutive bursts replace the previous value (never concatenate '2.91m3.62m'), slow human typing still appends ('2.91'), and an input ending in an operator keeps appending ('2,50 + ' then fast '3.62' -> '2,50 + 3.62'). After confirm, the arrow label on the SVG canvas renders exactly '2.91m'. In-modal numpad taps (2 , 5 0 m) also produce the correct value '2,50m'. No console errors or React Native red screens were observed. The following paths could not be driven through the web UI in automation and should be spot-checked manually or given testIDs for future runs: double-tap on an existing arrow to reach the 'Pfeil bearbeiten' modal, the line-measure floating panel, the Text/Notes/Memo modals, the checklist measurement input (needs a project-bound checklist), and the project remarks tab (project create flow requires a Kunde). Because all six BufferedTextInput occurrences in draw.tsx and the single occurrences in checklists/[id].tsx and projects/[id].tsx use the identical component, the validated behavior is expected to apply uniformly.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "sketches/draw toolbar", "issues": [
+        "Tool buttons (Measure Line / arrow, Line, Polygon, Text, Memo, Notes, Edit) have no testID, making them hard to drive in tests; had to locate the 'M' SVG text to reach the Bemaßungspfeil tool.",
+        "After confirming an arrow with 'Add', drawMode stays on 'arrow' instead of returning to 'select', so trying to double-tap the arrow label re-opens a new Bemaßungspfeil modal instead of 'Pfeil bearbeiten'. Not caused by the fix, but it blocks reaching the edit modal via tap-tap and should get a testID or a mode-return."
+      ]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Add testID props to the main sketch-editor tool buttons (arrow/Maßlinie, line, polyline, text, memo, notes, edit) and to the Bemaßungspfeil / Pfeil bearbeiten / Text / Notes modal inputs + Add/Save/Cancel buttons so the remaining flows can be automated.",
+    "Manually verify (or add testIDs then automate): double-tap existing arrow -> 'Pfeil bearbeiten' modal fast-type '12.45m' saves as '12.45m'; line-measure floating panel fast-type '2.91m' + Hinzufügen; Text/Notes modals append (not replace) a trailing fast-typed number to existing text; Checklist measurement input (via a project-bound checklist) fast-type '2.91' preserves value and live result still works; Project remarks tab fast-type including '2.91m' is exact and persists after leaving + returning.",
+    "After confirming an arrow in the Bemaßungspfeil modal, switch drawMode back to 'select' so the user can tap the new label to edit it without re-opening the create modal."
+  ],
+  "critical_code_review_comments": [
+    "BufferedTextInput's burst detector only tracks appends (next.startsWith(prev)); replacement edits made by the device (e.g. selecting all + typing) will fall into isAppend=false and not be treated as a burst. For the currently described DISTO flow this is fine, but worth keeping in mind.",
+    "MEASUREMENT_RE accepts only a single number+unit; a device that sends '2.91 m' with a space (or scientific notation) would not match and the value would be appended. Acceptable per the current spec but documented here for completeness.",
+    "draw.tsx is ~9700 lines; consider splitting (per <code_review_guidelines> >700 lines rule). Not required for this fix."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% on the automated Bemaßungspfeil/arrow-label/numpad flow (12/12 assertions). Remaining flows not reachable without testIDs."},
+  "seed_data_creation": "None. Used a throwaway projectId query param (TEST_P1) to open /sketches/draw; nothing was persisted beyond local AsyncStorage state in the browser session.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Reach the Bemaßungspfeil modal by: accept disclaimer (testIDs disclaimer-checkbox, disclaimer-accept), skip tour (tour-skip), navigate to /sketches/draw?projectId=TEST_X, click the SVG 'M' text's tappable ancestor (that's the Maßlinie/arrow tool), then mouse-drag on the canvas. Input selector: input[placeholder^=\"Maß eingeben\"]. All fast-type tests should use page.keyboard.type(txt, delay=5) and wait >=250ms (QUIET_MS=80 in BufferedTextInput) before reading the value. The arrow tool and modals still lack testIDs; adding them unblocks the remaining scenarios (Pfeil bearbeiten, Text, Notes, line-measure panel, checklist measurement, project remarks).",
+  "rca_of_issue": "Original bug: a fast Bluetooth-keyboard burst like '2.91m' sometimes rendered as '291m' because each native onChangeText fired a parent-state update, and a stale value was written back into the controlled TextInput while the next key was arriving, dropping the '.'. Fix (verified): BufferedTextInput keeps the text in local state, debounces the parent update by QUIET_MS=80ms and, when replaceOnBurst is set, replaces the previous value with the new measurement if the burst matches MEASUREMENT_RE and the base does not end with an operator. Validated reproduction with page.keyboard.type('2.91m', delay=5) through delay=20: the field value is exactly '2.91m' and the canvas label matches."
+}

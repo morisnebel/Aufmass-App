@@ -39,6 +39,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { deepCloneElement, simplifyPath, DrawElement, FontFamily, FONT_FAMILIES, DrawMode, TOOL_SIZES_KEY } from '../../src/sketch/sketchShared';
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
 import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared } from '../../src/sketch/polygonArea';
+import BufferedTextInput from '../../src/components/BufferedTextInput';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import { SketchTour } from '../../src/components/SketchTour';
 import { SketchDemoModal } from '../../src/components/SketchDemo';
@@ -7563,7 +7564,7 @@ export default function DrawSketchScreen() {
           
           {/* Eingabe + Löschen */}
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, marginBottom: 6 }}>
-            <TextInput
+            <BufferedTextInput replaceOnBurst
               ref={lineMeasurementInputRef}
               style={[styles.modalInput, { flex: 1, marginBottom: 0, fontSize: 15, paddingVertical: 8 }]}
               value={lineMeasurementExpression}
@@ -7921,7 +7922,7 @@ export default function DrawSketchScreen() {
           <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Text eingeben</Text>
-              <TextInput
+              <BufferedTextInput
                 ref={textInputRef}
                 style={styles.modalInput}
                 value={textInput}
@@ -8052,7 +8053,7 @@ export default function DrawSketchScreen() {
           <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Bemaßungspfeil</Text>
-              <TextInput
+              <BufferedTextInput replaceOnBurst
                 ref={arrowInputRef}
                 style={styles.modalInput}
                 value={arrowText}
@@ -8203,7 +8204,7 @@ export default function DrawSketchScreen() {
           <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Pfeil bearbeiten</Text>
-              <TextInput
+              <BufferedTextInput replaceOnBurst
                 ref={arrowInputRef}
                 style={styles.modalInput}
                 value={arrowText}
@@ -8362,7 +8363,7 @@ export default function DrawSketchScreen() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>{toolLabels.pointerName}-Pfeil</Text>
             <Text style={styles.modalSubtitle}>Optional: Notiz hinzufügen</Text>
-            <TextInput
+            <BufferedTextInput
               ref={pointerInputRef}
               style={styles.modalInput}
               value={pointerText}
@@ -8427,7 +8428,7 @@ export default function DrawSketchScreen() {
           <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>{toolLabels.pointerName}-Pfeil bearbeiten</Text>
-              <TextInput
+              <BufferedTextInput
                 ref={pointerInputRef}
                 style={styles.modalInput}
                 value={pointerText}
@@ -8568,7 +8569,7 @@ export default function DrawSketchScreen() {
                 <Ionicons name="keypad" size={22} color={showModalNumpad ? '#fff' : '#666'} />
               </TouchableOpacity>
             </View>
-            <TextInput
+            <BufferedTextInput
               ref={memoInputRef}
               style={styles.modalInput}
               value={memoText}
@@ -8625,7 +8626,7 @@ export default function DrawSketchScreen() {
                 <Ionicons name="keypad" size={22} color={showModalNumpad ? '#fff' : '#666'} />
               </TouchableOpacity>
             </View>
-            <TextInput
+            <BufferedTextInput
               ref={memoInputRef}
               style={styles.modalInput}
               value={memoText}
@@ -8858,7 +8859,7 @@ export default function DrawSketchScreen() {
           <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>{t('sketches.editText')}</Text>
-              <TextInput
+              <BufferedTextInput
                 ref={textInputRef}
                 style={styles.modalInput}
                 value={textInput}
@@ -9022,7 +9023,7 @@ export default function DrawSketchScreen() {
             <Text style={styles.modalTitle}>{t('sketches.sketchNotes')}</Text>
             <Text style={styles.modalSubtitle}>{t('sketches.sketchNotesSubtitle')}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <TextInput
+              <BufferedTextInput
                 ref={notesInputRef}
                 style={[styles.modalInput, styles.notesInput, { flex: 1 }]}
                 value={notes}

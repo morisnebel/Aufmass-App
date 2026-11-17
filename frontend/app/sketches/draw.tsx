@@ -1210,6 +1210,8 @@ export default function DrawSketchScreen() {
     setTimeout(() => activeNumpadRef?.current?.focus(), 10);
   };
   
+  const isArrowNumpadOnPhone = () => isPhoneDevice && showModalNumpad && (showArrowModal || showEditArrowModal);
+
   // Rendert das Numpad-Overlay innerhalb eines Modals - gleiches Design wie floating Maß-Panel
   const renderInModalNumpad = () => {
     if (!showModalNumpad) return null;
@@ -1233,7 +1235,8 @@ export default function DrawSketchScreen() {
           { 
             transform: modalNumpadPosition.getTranslateTransform(),
             width: panelWidth,
-            top: 80,
+            // iPhone, Bemaßungspfeil: Dialog oben, Numpad darunter (verdeckt das Maß-Feld nicht)
+            top: isArrowNumpadOnPhone() ? insets.top + 375 : 80,
           }
         ]}
       >
@@ -3585,6 +3588,8 @@ export default function DrawSketchScreen() {
       // Show arrow text input
       setPendingArrow({ x1: startPoint.x, y1: startPoint.y, x2: locationX, y2: locationY });
       setShowArrowModal(true);
+      // Gleich das eingebaute Numpad statt der System-Tastatur öffnen
+      openModalNumpad(setArrowText, arrowInputRef);
       setStartPoint(null);
       setTempElement(null);
     } else if (startPoint && drawMode === 'pointer') {
@@ -4188,6 +4193,7 @@ export default function DrawSketchScreen() {
           setEditArrowStrokeWidth(clickedElement.strokeWidth || 3);
           setDrawColor(clickedElement.color);
           setShowEditArrowModal(true);
+          openModalNumpad(setArrowText, arrowInputRef);
         } else if (clickedElement.type === 'pointer') {
           // Memo-Pfeil bearbeiten
           setPointerText(clickedElement.data.text || '');
@@ -8002,9 +8008,11 @@ export default function DrawSketchScreen() {
               scrollable={false}
               open={wallSectionOpen}
               onToggle={setWallSectionOpen}
-              useNumpad={panelKeyboardOpen}
+              useNumpad
               activeFieldId={numpadTargetId}
               onFieldFocus={(id, target) => {
+                // Wandfelder nutzen immer das Numpad des Fensters: bei Bedarf aufklappen
+                if (!panelKeyboardOpen) setPanelKeyboardOpen(true);
                 numpadTargetRef.current = target;
                 setNumpadTargetId(id);
               }}
@@ -8480,7 +8488,7 @@ export default function DrawSketchScreen() {
       {/* Arrow Modal */}
       <Modal visible={showArrowModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={[styles.modalScrollContent, isArrowNumpadOnPhone() && { justifyContent: 'flex-start', paddingTop: insets.top + 40 }]} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Bemaßungspfeil</Text>
               <BufferedTextInput replaceOnBurst
@@ -8673,7 +8681,7 @@ export default function DrawSketchScreen() {
       {/* Edit Arrow Modal */}
       <Modal visible={showEditArrowModal} transparent animationType="slide">
         <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView contentContainerStyle={styles.modalScrollContent} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={[styles.modalScrollContent, isArrowNumpadOnPhone() && { justifyContent: 'flex-start', paddingTop: insets.top + 40 }]} keyboardShouldPersistTaps="handled">
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>Pfeil bearbeiten</Text>
               <BufferedTextInput replaceOnBurst

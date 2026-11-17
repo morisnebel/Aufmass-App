@@ -934,8 +934,19 @@ export default function DrawSketchScreen() {
     return best;
   };
 
+  // Linien-Nummern der Polygone ein-/ausblenden (Skizze und gespeichertes Skizzenbild)
+  const [lineNumbersVisible, setLineNumbersVisible] = useState(true);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_line_numbers_visible').then(saved => setLineNumbersVisible(saved !== '0'));
+  }, []);
+  const changeLineNumbersVisible = (visible: boolean) => {
+    setLineNumbersVisible(visible);
+    AsyncStorage.setItem('aufmassprofi_line_numbers_visible', visible ? '1' : '0');
+  };
+
   // Angetippte Linien-Nummer in der Skizze finden
   const findLineNumberAtPoint = (x: number, y: number): { element: DrawElement; segmentIndex: number } | null => {
+    if (!lineNumbersVisible) return null;
     const numberScale = Math.max(scale, 0.5);
     const hitRadius = Math.max(10, 14 / numberScale);
     for (let i = elements.length - 1; i >= 0; i--) {
@@ -5438,7 +5449,7 @@ export default function DrawSketchScreen() {
             })()}
             
             {/* Linien-Nummern (passend zu „Linie x von n“ und zur Wandliste) */}
-            {(hasSelectedSegment || hasWallHeights(polygonWalls[element.id])) && (() => {
+            {lineNumbersVisible && (hasSelectedSegment || hasWallHeights(polygonWalls[element.id])) && (() => {
               const numberScale = Math.max(scale, 0.5);
               return segmentNumberPositions(points, !!closed, Math.max(8, 16 / numberScale)).map(n => (
                 <G key={`line-number-${element.id}-${n.line}`}>
@@ -6075,7 +6086,8 @@ export default function DrawSketchScreen() {
       elements, canvasHeight, screenWidth, legendPosition,
       lineSegmentMeasurements, measureLineStyles, polygonAreaVisible,
       getPolylineElementsWithMeasurements, calculatePolygonAreaM2,
-      formatAreaM2, calculateTotalLfmForElement, labelOffsets, polygonWalls,
+      formatAreaM2, calculateTotalLfmForElement, labelOffsets,
+      polygonWalls: lineNumbersVisible ? polygonWalls : {},
     });
 
   const saveSketch = async () => {
@@ -7765,7 +7777,10 @@ export default function DrawSketchScreen() {
         };
         const measurePanelWidth = (isPhoneDevice && measureKeyboardMode === 'letters')
           ? Math.round(screenWidth * 0.92)
-          : measureNumericWidth;
+          // iPhone: mit aufgeklapptem Wand-Bereich breiter, damit Öffnungsmaße lesbar sind
+          : (isPhoneDevice && panelOptionsOpen && wallSectionOpen)
+            ? Math.max(measureNumericWidth, Math.round(screenWidth * 0.78))
+            : measureNumericWidth;
         return (
         <Animated.View 
           style={[
@@ -7941,6 +7956,24 @@ export default function DrawSketchScreen() {
               <Text style={{ fontSize: 11, fontWeight: '600', color: '#f44336' }} numberOfLines={1}>Zurück</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Linien-Nummern ein-/ausblenden */}
+          <TouchableOpacity
+            testID="line-numbers-toggle"
+            accessibilityRole="switch"
+            accessibilityState={{ checked: lineNumbersVisible }}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44,
+              marginHorizontal: 10, marginBottom: 6, paddingHorizontal: 8, paddingVertical: 6,
+              backgroundColor: lineNumbersVisible ? '#e3f2fd' : '#f5f5f5',
+              borderRadius: 8, borderWidth: 1, borderColor: lineNumbersVisible ? '#90caf9' : '#ddd',
+            }}
+            onPress={() => changeLineNumbersVisible(!lineNumbersVisible)}
+          >
+            <Ionicons name={lineNumbersVisible ? 'eye' : 'eye-off'} size={14} color={lineNumbersVisible ? '#1976d2' : '#888'} />
+            <Text style={{ flex: 1, fontSize: 11, fontWeight: '600', color: lineNumbersVisible ? '#1976d2' : '#666' }} numberOfLines={1}>Linien-Nummern</Text>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: lineNumbersVisible ? '#1976d2' : '#999' }}>{lineNumbersVisible ? 'AN' : 'AUS'}</Text>
+          </TouchableOpacity>
 
           {/* Ton-Auswahl und Lautstärke */}
           {laserSound && (

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
 import { formatAreaM2 } from '../../sketch/polygonArea';
-import { PolygonWall, calculateWallAreaM2, wallSegmentAreaM2 } from '../../sketch/wallArea';
+import { PolygonWall, WallSegment, calculateWallAreaM2, openingAreaM2, segmentDeductionM2, wallSegmentAreaM2 } from '../../sketch/wallArea';
 
 // Aufklappbarer Bereich im Maß-Fenster: Wandhöhe (für alle Linien / diese Linie),
 // Abzug für Öffnungen und die daraus berechnete Wandfläche.
@@ -18,19 +18,23 @@ type Props = {
 
 export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange }: Props) => {
   const [open, setOpen] = useState(false);
-  const segment = wall?.segments?.[segmentIndex] || {};
+  const segment: WallSegment = wall?.segments?.[segmentIndex] || {};
+  const openings = segment.openings || [];
+  const deduction = segmentDeductionM2(segment);
   const lineArea = wallSegmentAreaM2(measures?.[segmentIndex], wall, segmentIndex);
   const sum = calculateWallAreaM2(element, measures, wall);
 
-  const setSegment = (patch: { height?: string; deduction?: string }) =>
+  const setSegment = (patch: WallSegment) =>
     onChange({ ...wall, segments: { ...wall?.segments, [segmentIndex]: { ...segment, ...patch } } });
 
-  const field = (testID: string, label: string, value: string, placeholder: string, onChangeText: (t: string) => void) => (
-    <View style={styles.field}>
-      <Text style={styles.label} numberOfLines={1}>{label}</Text>
+  const setOpening = (index: number, patch: { width?: string; height?: string }) =>
+    setSegment({ openings: openings.map((o, i) => (i === index ? { ...o, ...patch } : o)) });
+
+  const input = (testID: string, value: string, placeholder: string, onChangeText: (t: string) => void, flex = false) => (
       <BufferedTextInput
         testID={testID}
         replaceOnBurst
+        containerStyle={flex ? styles.flex : undefined}
         style={styles.input}
         value={value}
         onChangeText={onChangeText}
@@ -39,6 +43,12 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
         keyboardType="numbers-and-punctuation"
         returnKeyType="done"
       />
+  );
+
+  const field = (testID: string, label: string, value: string, placeholder: string, onChangeText: (t: string) => void) => (
+    <View style={styles.field}>
+      <Text style={styles.label} numberOfLines={1}>{label}</Text>
+      {input(testID, value, placeholder, onChangeText)}
     </View>
   );
 
@@ -52,10 +62,40 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#5d4037" />
       </TouchableOpacity>
       {open && (
-        <View style={styles.body}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
           {field('wall-height-all', 'Höhe alle Linien', wall?.height || '', 'z.B. 2,50m', (t) => onChange({ ...wall, height: t }))}
           {field('wall-height-line', 'Höhe diese Linie', segment.height || '', wall?.height || 'wie oben', (t) => setSegment({ height: t }))}
-          {field('wall-deduction-line', 'Abzug diese Linie (m²)', segment.deduction || '', 'z.B. 1,8', (t) => setSegment({ deduction: t }))}
+
+          {/* Öffnungen (Türen/Fenster) dieser Linie: Breite × Höhe */}
+          <Text style={styles.label}>Türen / Fenster diese Linie (Breite × Höhe)</Text>
+          {openings.map((opening, i) => (
+            <View key={i} style={styles.openingRow}>
+              {input(`wall-opening-width-${i}`, opening.width, 'Breite', (t) => setOpening(i, { width: t }), true)}
+              <Text style={styles.times}>×</Text>
+              {input(`wall-opening-height-${i}`, opening.height, 'Höhe', (t) => setOpening(i, { height: t }), true)}
+              <TouchableOpacity
+                testID={`wall-opening-remove-${i}`}
+                accessibilityLabel="Öffnung entfernen"
+                style={styles.removeButton}
+                onPress={() => setSegment({ openings: openings.filter((_, idx) => idx !== i) })}
+              >
+                <Ionicons name="close" size={18} color="#f44336" />
+              </TouchableOpacity>
+              <Text testID={`wall-opening-area-${i}`} style={styles.openingArea}>= {formatAreaM2(openingAreaM2(opening))}</Text>
+            </View>
+          ))}
+          <TouchableOpacity
+            testID="wall-opening-add"
+            style={styles.addButton}
+            onPress={() => setSegment({ openings: [...openings, { width: '', height: '' }] })}
+          >
+            <Ionicons name="add" size={16} color="#5d4037" />
+            <Text style={styles.addButtonText}>Tür / Fenster</Text>
+          </TouchableOpacity>
+          {field('wall-deduction-line', 'Weiterer Abzug diese Linie (m²)', segment.deduction || '', 'z.B. 1,8', (t) => setSegment({ deduction: t }))}
+          {deduction > 0 && (
+            <Text testID="wall-deduction-total" style={styles.result}>Abzug gesamt: {formatAreaM2(deduction)}</Text>
+          )}
           <Text testID="wall-line-area" style={styles.result}>
             Diese Linie: {lineArea !== null ? formatAreaM2(lineArea) : '– (Maß und Höhe nötig)'}
           </Text>
@@ -64,7 +104,7 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
               Alle Wände: {formatAreaM2(sum.total)} ({sum.walls} von {sum.segments})
             </Text>
           )}
-        </View>
+        </ScrollView>
       )}
     </View>
   );
@@ -75,7 +115,15 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: 10, paddingVertical: 6 },
   headerText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#5d4037' },
   body: { paddingHorizontal: 10, paddingBottom: 8, gap: 6 },
+  scroll: { maxHeight: 300 },
+  flex: { flex: 1 },
   field: { gap: 2 },
+  openingRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4 },
+  times: { fontSize: 14, fontWeight: '700', color: '#6d4c41' },
+  removeButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  openingArea: { width: '100%', fontSize: 11, fontWeight: '600', color: '#6d4c41' },
+  addButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 40, borderRadius: 6, borderWidth: 1, borderColor: '#bcaaa4', backgroundColor: '#fff' },
+  addButtonText: { fontSize: 12, fontWeight: '600', color: '#5d4037' },
   label: { fontSize: 10, fontWeight: '600', color: '#6d4c41' },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d7ccc8', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 8, fontSize: 14, color: '#333', minHeight: 40 },
   result: { fontSize: 12, fontWeight: '700', color: '#4e342e' },

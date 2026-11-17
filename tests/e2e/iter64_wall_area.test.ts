@@ -21,3 +21,29 @@ assert.deepStrictEqual(calculateWallAreaM2(open, measures, { height: '250cm' }),
 assert.strictEqual(calculateWallAreaM2(closed, measures, undefined), null);
 assert.strictEqual(calculateWallAreaM2(closed, {}, { height: '2,5' }), null);
 console.log('OK');
+
+// iter65: Öffnungen (Breite × Höhe) und Wandliste
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const w = require('../../frontend/src/sketch/wallArea');
+assert.strictEqual(w.openingAreaM2({ width: '0,90m', height: '2,10' }), 1.89);
+assert.strictEqual(w.openingAreaM2({ width: '90cm', height: '' }), 0);
+const seg = { openings: [{ width: '0,90', height: '2,10' }, { width: '1,2m', height: '1,4m' }], deduction: '0,5' };
+assert.strictEqual(w.segmentDeductionM2(seg), 4.07); // 1,89 + 1,68 + 0,5
+const wall2 = { height: '2,50m', segments: { 1: seg } };
+assert.strictEqual(wallSegmentAreaM2('3.62m', wall2, 1), 4.98); // 9,05 − 4,07
+const rows = w.wallRows(closed, measures, wall2);
+assert.strictEqual(rows.length, 4);
+assert.deepStrictEqual({ ...rows[1], openings: rows[1].openings.length }, { line: 2, length: 3.62, height: 2.5, deduction: 4.07, openings: 2, area: 4.98 });
+assert.strictEqual(w.wallRows(closed, measures, undefined).length, 0);
+console.log('OK iter65');
+
+// iter65: Wandliste-HTML
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { buildWallListHtml } = require('../../frontend/src/sketch/wallListHtml');
+assert.strictEqual(buildWallListHtml([]), '');
+const html: string = buildWallListHtml([{ title: 'Skizze 1 – S1 – Bad <a>', rows }]).replace(/\s+/g, ' ');
+for (const part of ['Wandliste (Skizzen)', 'Skizze 1 – S1 – Bad &lt;a&gt;', 'Linie 1', 'Linie 4', '2,91 m', '3,62 m', '2,50 m', '4,07 m²',
+  '0,90 × 2,10 = 1,89', '1,2m × 1,4m = 1,68', '4,98 m²', '7,28 m²', '9,05 m²', 'Summe', '28,59 m²']) {
+  assert.ok(html.includes(part), `fehlt im HTML: ${part}`);
+}
+console.log('OK html');

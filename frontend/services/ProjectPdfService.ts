@@ -8,7 +8,8 @@ import { isPro, getProStatus } from './FeatureFlags';
 import { getStatusMeta } from '../src/constants/projectStatus';
 import { buildCoverPageHtml, CoverStyle } from './CoverPageTemplates';
 import { calculatePolygonAreaM2, formatAreaM2 } from '../src/sketch/polygonArea';
-import { calculateWallAreaM2 } from '../src/sketch/wallArea';
+import { calculateWallAreaM2, wallRows } from '../src/sketch/wallArea';
+import { buildWallListHtml } from '../src/sketch/wallListHtml';
 
 // PDF-Farbpalette (auch für die Deckblatt-Akzentfarbe im PDF-Modal)
 export const PDF_COLOR_OPTIONS: { [key: string]: { color: string; textColor: string } } = {
@@ -570,6 +571,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
       ? [...sketches].sort((a: any, b: any) => sketchFolderOf(a).localeCompare(sketchFolderOf(b)))
       : sketches;
 
+    const wallLists: { title: string; rows: ReturnType<typeof wallRows> }[] = [];
     const sketchAreas: { title: string; areas: { label: string; area: number | null; wall: number | null }[] }[] = [];
     const sketchItems = await Promise.all(sortedSketches.map(async (sketch, index) => {
       // Read pdf_size and notes from sketch object or metadata
@@ -619,6 +621,13 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
             }))
             .filter((a: any) => a.area !== null || a.wall !== null);
           if (areas.length > 0) sketchAreas[index] = { title: sketch.title || `Skizze ${index + 1}`, areas };
+          // Wandliste: jede berechnete Wand einzeln
+          measuredPolylines.forEach((el: any, i: number) => {
+            const rows = wallRows(el, segMeasures[el.id], metadata.polygonWalls?.[el.id]);
+            if (rows.length > 0) {
+              wallLists.push({ title: `${sketch.title || `Skizze ${index + 1}`} – ${el.name ? `S${i + 1} – ${el.name}` : `S${i + 1}`}`, rows });
+            }
+          });
         }
       } catch (e) {
         console.log('Error parsing sketch metadata:', e);
@@ -715,12 +724,15 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
       </div>
     ` : '';
 
+    const wallListHtml = buildWallListHtml(wallLists);
+
     // Alle Sketches im Container zusammen - Überschrift ist im ersten Item eingebettet
     const sketchesHtml = sketches.length > 0 ? `
       <div class="${sketchesContainerClass}">
         ${sketchItems.join('')}
       </div>
       ${sketchAreaSummaryHtml}
+      ${wallListHtml}
     ` : '';
     
     // ===== IMAGEMETER SECTION FOR PDF =====

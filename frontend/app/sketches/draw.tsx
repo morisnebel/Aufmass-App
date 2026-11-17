@@ -815,6 +815,15 @@ export default function DrawSketchScreen() {
     });
   }, []);
   
+  // Bemaßungspfeil-Dialog: Zusatz-Einstellungen einklappbar
+  const [arrowOptionsOpen, setArrowOptionsOpen] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_arrow_options_open').then(saved => setArrowOptionsOpen(saved === '1'));
+  }, []);
+  const changeArrowOptionsOpen = (open: boolean) => {
+    setArrowOptionsOpen(open);
+    AsyncStorage.setItem('aufmassprofi_arrow_options_open', open ? '1' : '0');
+  };
   // Bemaßungspfeil nach einer Laser-Übertragung sofort übernehmen (auf Wunsch)
   const [arrowAutoAdd, setArrowAutoAdd] = useState(false);
   useEffect(() => {
@@ -8491,21 +8500,6 @@ export default function DrawSketchScreen() {
                 }}
               />
 
-              {/* Laser-Messwert ohne Bestätigen übernehmen */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
-                <Text style={[styles.modalLabel, { flex: 1, marginBottom: 0 }]}>Laser-Messwert sofort übernehmen</Text>
-                <Switch testID="arrow-auto-add-switch" value={arrowAutoAdd} onValueChange={changeArrowAutoAdd} />
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
-                <Text style={[styles.modalLabel, { flex: 1, marginBottom: 0 }]}>Ton bei Laser-Messwert</Text>
-                <Switch testID="arrow-laser-sound-switch" value={laserSound} onValueChange={changeLaserSound} />
-              </View>
-              {laserSound && (
-                <View style={{ marginBottom: 12 }}>
-                  <LaserSoundOptions />
-                </View>
-              )}
-              
               {/* Numpad Toggle */}
               <TouchableOpacity 
                 style={[styles.numpadToggleBtn, showModalNumpad && styles.numpadToggleBtnActive]}
@@ -8525,6 +8519,38 @@ export default function DrawSketchScreen() {
                   <Ionicons name="bluetooth" size={12} color="#4caf50" />
                 </View>
               </TouchableOpacity>
+              
+              {/* Weitere Einstellungen einklappbar: Dialog bleibt klein */}
+              <TouchableOpacity
+                testID="arrow-options-toggle"
+                accessibilityState={{ expanded: arrowOptionsOpen }}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44,
+                  marginBottom: 12, borderRadius: 8, borderWidth: 1,
+                  backgroundColor: arrowOptionsOpen ? '#e3f2fd' : '#f5f5f5', borderColor: arrowOptionsOpen ? '#90caf9' : '#ddd',
+                }}
+                onPress={() => changeArrowOptionsOpen(!arrowOptionsOpen)}
+              >
+                <Ionicons name="options" size={16} color={arrowOptionsOpen ? '#1976d2' : '#666'} />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: arrowOptionsOpen ? '#1976d2' : '#666' }}>Mehr Einstellungen</Text>
+                <Ionicons name={arrowOptionsOpen ? 'chevron-up' : 'chevron-down'} size={16} color={arrowOptionsOpen ? '#1976d2' : '#666'} />
+              </TouchableOpacity>
+              {arrowOptionsOpen && (
+              <>
+              {/* Laser-Messwert ohne Bestätigen übernehmen */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+                <Text style={[styles.modalLabel, { flex: 1, marginBottom: 0 }]}>Laser-Messwert sofort übernehmen</Text>
+                <Switch testID="arrow-auto-add-switch" value={arrowAutoAdd} onValueChange={changeArrowAutoAdd} />
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 12 }}>
+                <Text style={[styles.modalLabel, { flex: 1, marginBottom: 0 }]}>Ton bei Laser-Messwert</Text>
+                <Switch testID="arrow-laser-sound-switch" value={laserSound} onValueChange={changeLaserSound} />
+              </View>
+              {laserSound && (
+                <View style={{ marginBottom: 12 }}>
+                  <LaserSoundOptions />
+                </View>
+              )}
               
               <View style={styles.arrowHeadsContainer}>
                 <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
@@ -8587,6 +8613,8 @@ export default function DrawSketchScreen() {
                   </TouchableOpacity>
                 </View>
               </View>
+              </>
+              )}
               
               <View style={styles.modalButtons}>
                 <TouchableOpacity
@@ -8676,6 +8704,23 @@ export default function DrawSketchScreen() {
                 </View>
               </TouchableOpacity>
               
+              {/* Weitere Einstellungen einklappbar: Dialog bleibt klein */}
+              <TouchableOpacity
+                testID="edit-arrow-options-toggle"
+                accessibilityState={{ expanded: arrowOptionsOpen }}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44,
+                  marginBottom: 12, borderRadius: 8, borderWidth: 1,
+                  backgroundColor: arrowOptionsOpen ? '#e3f2fd' : '#f5f5f5', borderColor: arrowOptionsOpen ? '#90caf9' : '#ddd',
+                }}
+                onPress={() => changeArrowOptionsOpen(!arrowOptionsOpen)}
+              >
+                <Ionicons name="options" size={16} color={arrowOptionsOpen ? '#1976d2' : '#666'} />
+                <Text style={{ fontSize: 13, fontWeight: '600', color: arrowOptionsOpen ? '#1976d2' : '#666' }}>Mehr Einstellungen</Text>
+                <Ionicons name={arrowOptionsOpen ? 'chevron-up' : 'chevron-down'} size={16} color={arrowOptionsOpen ? '#1976d2' : '#666'} />
+              </TouchableOpacity>
+              {arrowOptionsOpen && (
+              <>
               <View style={styles.arrowHeadsContainer}>
                 <Text style={styles.modalLabel}>Pfeilspitzen:</Text>
                 <View style={styles.arrowHeadsButtons}>
@@ -8754,6 +8799,9 @@ export default function DrawSketchScreen() {
                   ))}
                 </View>
               </View>
+              </>
+              )}
+              
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.cancelButton]}

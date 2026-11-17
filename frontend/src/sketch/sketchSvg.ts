@@ -17,6 +17,7 @@ export interface PreviewSvgContext {
   calculateTotalLfmForElement: (el: any) => number;
   labelOffsets?: { [id: string]: { x: number; y: number } };
   polygonWalls?: PolygonWalls;
+  lineNumbersVisible?: boolean;
 }
 
 export function buildPreviewSvg(ctx: PreviewSvgContext): string {
@@ -24,8 +25,11 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
     elements, canvasHeight, screenWidth, legendPosition,
     lineSegmentMeasurements, measureLineStyles, polygonAreaVisible,
     getPolylineElementsWithMeasurements, calculatePolygonAreaM2,
-    formatAreaM2, calculateTotalLfmForElement, labelOffsets = {}, polygonWalls = {},
+    formatAreaM2, calculateTotalLfmForElement, labelOffsets = {}, polygonWalls = {}, lineNumbersVisible = true,
   } = ctx;
+  // Ohne Wandhöhen sind es Flächen, keine Räume: Liste heißt dann „Flächenliste“
+  const sketchHasWalls = elements.some((el: any) => hasWallHeights(polygonWalls[el.id]));
+  const roomWord = sketchHasWalls ? 'Raum' : 'Fläche';
     // NEW ARCHITECTURE: Use viewBox for scaling instead of transforming coordinates
     // This preserves original element sizes (especially text) and lets the browser handle scaling
     
@@ -212,7 +216,7 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
       .map((el: any, i: number) => ({ el, nr: `S${i + 1}` }))
       .filter(({ el }: any) => el.data?.closed && calculateTotalLfmForElement(el.id) > 0)
       .map(({ el, nr }: any) => ({
-        nr, name: el.name || 'Raum', color: (measureLineStyles[el.id] || { color: '#1976d2' }).color,
+        nr, name: el.name || roomWord, color: (measureLineStyles[el.id] || { color: '#1976d2' }).color,
         perimeter: calculateTotalLfmForElement(el.id),
         area: polygonAreaVisible[el.id] !== false ? calculatePolygonAreaM2(el) : null,
       }));
@@ -452,7 +456,7 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
         });
         
         // Linien-Nummern (passend zur Wandliste), wenn Wandhöhen eingegeben sind
-        if (hasWallHeights(polygonWalls[el.id])) {
+        if (lineNumbersVisible && hasWallHeights(polygonWalls[el.id])) {
           segmentNumberPositions(points, !!isClosed, 16).forEach(n => {
             svgElements += `<circle cx="${n.x}" cy="${n.y}" r="9" fill="#fff" stroke="#5d4037" stroke-width="1.2"/>`;
             svgElements += `<text x="${n.x}" y="${n.y + 3.5}" fill="#5d4037" font-size="10" font-weight="bold" text-anchor="middle">${n.line}</text>`;
@@ -536,9 +540,9 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
       const colPerim = x + 330;
       const colArea = x + roomTableW - 14;
       svgElements += `<rect x="${x}" y="${y}" width="${roomTableW}" height="${roomTableH}" fill="white" stroke="#cbd5e1" stroke-width="1.5" rx="8" ry="8"/>`;
-      svgElements += `<text x="${x + 14}" y="${y + 28}" fill="#0f172a" font-size="18" font-weight="bold">Raumliste</text>`;
+      svgElements += `<text x="${x + 14}" y="${y + 28}" fill="#0f172a" font-size="18" font-weight="bold">${sketchHasWalls ? 'Raumliste' : 'Flächenliste'}</text>`;
       const headY = y + 58;
-      svgElements += `<text x="${x + 14}" y="${headY}" fill="#64748b" font-size="13" font-weight="bold">Raum</text>`;
+      svgElements += `<text x="${x + 14}" y="${headY}" fill="#64748b" font-size="13" font-weight="bold">${roomWord}</text>`;
       svgElements += `<text x="${colPerim}" y="${headY}" fill="#64748b" font-size="13" font-weight="bold" text-anchor="end">Umfang</text>`;
       svgElements += `<text x="${colArea}" y="${headY}" fill="#64748b" font-size="13" font-weight="bold" text-anchor="end">Fläche</text>`;
       svgElements += `<line x1="${x + 10}" y1="${headY + 8}" x2="${x + roomTableW - 10}" y2="${headY + 8}" stroke="#e2e8f0" stroke-width="1"/>`;

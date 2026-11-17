@@ -6087,7 +6087,7 @@ export default function DrawSketchScreen() {
       lineSegmentMeasurements, measureLineStyles, polygonAreaVisible,
       getPolylineElementsWithMeasurements, calculatePolygonAreaM2,
       formatAreaM2, calculateTotalLfmForElement, labelOffsets,
-      polygonWalls: lineNumbersVisible ? polygonWalls : {},
+      polygonWalls, lineNumbersVisible,
     });
 
   const saveSketch = async () => {

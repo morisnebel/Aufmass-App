@@ -13,7 +13,7 @@ const SCENES = [
   { title: 'Seiten bemaßen', text: 'Eine Seite antippen und die echte Länge eintippen. Das Maß steht an der Seite, die Zeichnung bleibt gleich.' },
   { title: 'Fläche erscheint automatisch', text: 'Sind alle Seiten bemaßt, stehen die m² direkt im Raum und in der Übersicht.' },
   { title: 'Raum benennen', text: 'In der Übersicht auf die Zeile tippen und einen Namen wie „Wohnzimmer“ eingeben.' },
-  { title: 'Speichern & PDF', text: 'Mit dem Haken oben rechts speichern. Im PDF steht eine Raumliste mit Umfang und Fläche.' },
+  { title: 'Speichern & PDF', text: 'Mit dem Haken oben rechts speichern. Im PDF steht eine Flächenliste mit Umfang und Fläche.' },
 ];
 const TOTAL = SCENE * SCENES.length;
 const clamp = (v: number) => Math.max(0, Math.min(1, v));
@@ -159,7 +159,7 @@ export function DemoScene({ idx, p }: { idx: number; p: number }) {
         {saved && (
           <G opacity={ease((p - 0.4) * 3)}>
             <Rect x={20} y={150} width={260} height={46} rx={6} fill="#fff" stroke="#94a3b8" strokeWidth={1} />
-            <SvgText x={30} y={166} fontSize={10} fontWeight="bold" fill="#0f172a">Raumliste</SvgText>
+            <SvgText x={30} y={166} fontSize={10} fontWeight="bold" fill="#0f172a">Flächenliste</SvgText>
             <SvgText x={30} y={185} fontSize={10} fill="#0f172a">S1 Wohnzimmer</SvgText>
             <SvgText x={200} y={185} fontSize={10} fill="#0f172a" textAnchor="end">14,00 m</SvgText>
             <SvgText x={270} y={185} fontSize={10} fontWeight="bold" fill="#0f172a" textAnchor="end">11,25 m²</SvgText>

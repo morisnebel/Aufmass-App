@@ -935,6 +935,8 @@ export default function DrawSketchScreen() {
     const index = existing.length;
     updateOpenings(elementId, segmentIndex, openings => [...openings, opening]);
     setOpeningInsert(null);
+    // „Punkte“ aus: sonst greift die Berührung Ecken statt der Öffnung und sie lässt sich nicht verschieben
+    setPointMoveOnly(false);
     openOpeningEditor(elementId, segmentIndex, index);
     // Nach dem Schließen der Auswahl erneut wählen (das Schließen kann den Fokus zurück ins Maß-Feld legen)
     setTimeout(() => setPendingAreaField(`wall-opening-width-${index}`), 350);

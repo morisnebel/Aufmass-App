@@ -15,7 +15,7 @@ const STEPS: { scene: Scene; buttons: SketchButtonKey[]; title: string; text: st
   { scene: 'straighten', buttons: ['more', 'autoStraighten', 'straighten'], title: 'Skizze rückt sich von selbst gerade', text: 'Sobald der Raum eindeutig bestimmt ist, springt die Zeichnung automatisch auf die berechnete Form – auch bei jeder späteren Maßänderung. Die angetippte Linie bleibt an ihrem Platz. Vor der letzten Angabe passiert nichts, weil die Form noch nicht feststeht.', hint: 'Auf Fotos und Plänen bleibt die Zeichnung stehen. Unter „Mehr“ lässt sich die Automatik ausschalten; „Skizze geraderücken“ und „Alle Räume geraderücken“ gibt es weiter für den Handbetrieb. Rückgängig nimmt es zurück.' },
   { scene: 'height', buttons: ['more', 'wall'], title: 'Wandhöhe eintragen', text: 'Im Maß-Fenster „Mehr“ → „Wandhöhe“ aufklappen. „Höhe alle Linien“ gilt für den ganzen Raum, „Höhe diese Linie“ nur für die gewählte Wand.', hint: 'Mit Wandhöhe bekommen die Linien Nummern – sie passen zur Wandliste im PDF.' },
   { scene: 'insert', buttons: ['longPress', 'addOpening'], title: 'Tür oder Fenster einfügen', text: 'Eine Linie etwa eine halbe Sekunde gedrückt halten und Tür, Fenster oder Sonstiges wählen. Die Öffnung sitzt an der gedrückten Stelle. Alternativ im Wand-Bereich „+ Tür“ / „+ Fenster“.', hint: 'Breite × Höhe wird als Abzug von der Wandfläche gerechnet.' },
-  { scene: 'move', buttons: ['drag', 'tap'], title: 'Öffnung verschieben und ändern', text: 'Die Markierung auf der Linie ziehen – sie stößt an Ecken und Nachbarn an, die Maßkette zeigt die Abstände zu beiden Ecken. Kurz antippen öffnet Breite, Höhe, Art und Abstand.', hint: 'T = Tür (braun), F = Fenster (blau), S = Sonstiges (grau).' },
+  { scene: 'move', buttons: [], title: 'Tür oder Fenster verschieben und ändern', text: 'Die Tür oder das Fenster auf der Linie antippen, den Finger darauf halten und verschieben – es stößt an Ecken und Nachbarn an, die Maßkette zeigt die Abstände zu beiden Ecken. Das Maß-Fenster darf dabei offen bleiben. Kurz antippen öffnet Breite, Höhe, Art und Abstand.', hint: '„Punkte“ muss zum Verschieben aus sein – beim Einfügen schaltet die App es selbst aus. T = Tür (braun), F = Fenster (blau), S = Sonstiges (grau).' },
   { scene: 'check', buttons: ['wall', 'copyOpening', 'tap'], title: 'Kopieren und Warnungen', text: '„Auf andere Linie kopieren“ und danach die Ziel-Linie antippen – gleiche Maße, neue Wand. Passt ein eingetippter Abstand nicht, wird er rot markiert.', hint: 'Rot mit ⚠: Die Öffnung ragt über die Linie hinaus oder überlappt eine andere.' },
   { scene: 'pdf', buttons: ['save'], title: 'Ergebnis im PDF', text: 'Mit dem Haken speichern. Im Projekt-PDF steht die Wandliste: je Wand Länge, Höhe, Abzüge mit Art und Abstand zur Ecke sowie die Netto-Fläche.' },
 ];
@@ -151,7 +151,7 @@ function Illustration({ scene }: { scene: Scene }) {
           {label(100, 196, '2,00', '#e65100', 10)}
           {label(225, 196, '1,00', '#e65100', 10)}
           {finger(175, 160)}
-          {label(175, 128, '◀  ziehen  ▶', ORANGE, 10)}
+          {label(175, 128, '◀  verschieben  ▶', ORANGE, 10)}
         </G>
       )}
       {scene === 'check' && (

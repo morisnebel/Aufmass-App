@@ -881,3 +881,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - RoomCoach jetzt 8 Schritte (Diagonale + Geraderuecken zusammengelegt), RoomTutorial Seiten 4+5 und manual.ts (Kapitel raeume) angepasst.
 - Selbst live geprueft: Winkel 90 -> springt auf Rechteck; Uebung Schritt 5->6 nach Diagonale 5; Undo ohne Rueck-Sprung.
   NICHT geprueft: Automatik AUS, Foto-Ausnahme, Laden alter Skizze, Raum mit >4 Ecken, Handy-Groesse.
+- Coach Schritt 8 + Tutorial-Seite 'move' + manual: kein 'Mass-Fenster schliessen', kein 'Ziehen'-Chip; insertOpening schaltet pointMoveOnly aus.

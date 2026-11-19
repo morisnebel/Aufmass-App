@@ -26,7 +26,7 @@ const STEPS: Step[] = [
   { title: 'Diagonale eingeben – Skizze rückt gerade', buttons: ['diagonals', 'angles', 'straighten'], text: 'Vier Seiten allein legen den Raum nicht fest – er könnte auch schief sein. Die App hat deshalb eine Diagonale angelegt und ihr Feld gewählt: Tippe ihre Länge ein (bei 4 × 3 m: 5). Die Skizze springt dann von selbst auf die richtige Form. Alternativ „Winkel angeben“ und 90 für eine rechte Ecke. Automatik aus? Dann „Skizze geraderücken“ tippen.', done: s => s.determined && s.straight },
   { title: 'Wandhöhe eintragen', buttons: ['more', 'wall'], text: 'Unter „Mehr“ den Bereich „Wandhöhe“ aufklappen, „Höhe alle Linien“ antippen und z. B. 2,5 eintippen.', done: s => s.hasHeight },
   { title: 'Tür oder Fenster einfügen', buttons: ['longPress'], text: 'Halte eine Linie des Raums etwa eine halbe Sekunde gedrückt und wähle Tür oder Fenster.', done: s => s.openingCount > 0 },
-  { title: 'Öffnung verschieben', buttons: ['closePanel', 'drag'], text: 'Schließe das Maß-Fenster und ziehe die Markierung der Öffnung auf ihrer Linie an eine andere Stelle. Die Maßkette zeigt die Abstände.', done: (s, start) => s.openingCount > 0 && s.openingKey !== start.openingKey },
+  { title: 'Tür oder Fenster verschieben', buttons: [], text: 'Tippe die Tür oder das Fenster auf der Linie an, halte den Finger darauf und schiebe es an eine andere Stelle. Das Maß-Fenster darf offen bleiben. Die Maßkette zeigt die Abstände zu beiden Ecken. „Punkte“ muss dabei aus sein – die App schaltet es beim Einfügen selbst aus.', done: (s, start) => s.openingCount > 0 && s.openingKey !== start.openingKey },
 ];
 
 // compact: Maß-Fenster ist auf einem kleinen Bildschirm offen – Karte klappt zur schmalen Leiste ein

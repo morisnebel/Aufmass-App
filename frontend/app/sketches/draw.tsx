@@ -39,7 +39,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Speichereffiziente Deep-Clone-Funktion (verhindert OOM bei großen base64-Strings)
 import { deepCloneElement, simplifyPath, DrawElement, FontFamily, FONT_FAMILIES, DrawMode, TOOL_SIZES_KEY } from '../../src/sketch/sketchShared';
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
-import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, PolygonAreaShapes, PolygonAreaOptions, areaShapeKey } from '../../src/sketch/polygonArea';
+import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, PolygonAreaShapes, PolygonAreaOptions, areaShapeKey, getDiagonal, diagonalTargets } from '../../src/sketch/polygonArea';
 import { AreaOptionsSection, AREA_DIAGONAL_FIELD } from '../../src/components/sketch/AreaOptionsSection';
 import { LaserLog } from '../../src/components/sketch/LaserLog';
 import BufferedTextInput from '../../src/components/BufferedTextInput';
@@ -508,8 +508,11 @@ export default function DrawSketchScreen() {
   // Wandhöhen/Abzüge pro Polygon (für Wandflächen)
   const [polygonWalls, setPolygonWalls] = useState<PolygonWalls>({});
   // Nach dem Teilen/Löschen von Punkten passen die Linien-Nummern nicht mehr: Angaben pro Linie verwerfen
-  const clearWallSegments = (elementId: string) =>
+  const clearWallSegments = (elementId: string) => {
     setPolygonWalls(prev => (prev[elementId]?.segments ? { ...prev, [elementId]: { height: prev[elementId].height } } : prev));
+    // Diagonalen gehören zu bestimmten Ecken und passen danach ebenfalls nicht mehr
+    setPolygonAreaOptions(prev => (prev[elementId] ? { ...prev, [elementId]: { rightAngles: prev[elementId].rightAngles } } : prev));
+  };
   // State für aktives Label-Ziehen
   const [draggingLabelId, setDraggingLabelId] = useState<string | null>(null);
   const labelDragStartRef = useRef<{ x: number; y: number; offsetX: number; offsetY: number }>({ x: 0, y: 0, offsetX: 0, offsetY: 0 });
@@ -928,14 +931,14 @@ export default function DrawSketchScreen() {
   };
   const [measureKeyboardHeight, setMeasureKeyboardHeight] = useState(0);
   const numpadTargetLabel = (id: string) => {
-    if (id === AREA_DIAGONAL_FIELD) return 'Diagonale';
+    if (id.startsWith(AREA_DIAGONAL_FIELD)) return `Diagonale ${parseInt(id.slice(AREA_DIAGONAL_FIELD.length + 1), 10) - 1}`;
     const opening = id.match(/^wall-opening-(width|height)-(\d+)$/);
     if (opening) return `Öffnung ${parseInt(opening[2], 10) + 1} ${opening[1] === 'width' ? 'Breite' : 'Höhe'}`;
     return ({ 'wall-height-all': 'Höhe alle Linien', 'wall-height-line': 'Höhe diese Linie', 'wall-deduction-line': 'Weiterer Abzug' } as { [key: string]: string })[id] || 'Eingabe';
   };
   const numpadTargetValue = (id: string): string => {
     if (!selectedLineSegment) return '';
-    if (id === AREA_DIAGONAL_FIELD) return polygonAreaOptions[selectedLineSegment.elementId]?.diagonal || '';
+    if (id.startsWith(AREA_DIAGONAL_FIELD)) return getDiagonal(polygonAreaOptions[selectedLineSegment.elementId], parseInt(id.slice(AREA_DIAGONAL_FIELD.length + 1), 10));
     const wall = polygonWalls[selectedLineSegment.elementId];
     const segment = wall?.segments?.[selectedLineSegment.segmentIndex];
     const opening = id.match(/^wall-opening-(width|height)-(\d+)$/);
@@ -5533,10 +5536,10 @@ export default function DrawSketchScreen() {
               );
             })()}
             
-            {/* Gemessene Diagonale (Viereck) gestrichelt anzeigen */}
-            {closed && points.length === 4 && !!polygonAreaOptions[element.id]?.diagonal?.trim() && (
-              <Line x1={points[0].x} y1={points[0].y} x2={points[2].x} y2={points[2].y} stroke="#2e7d32" strokeWidth={1.2} strokeDasharray="6,4" />
-            )}
+            {/* Gemessene Diagonalen gestrichelt anzeigen */}
+            {closed && diagonalTargets(points.length).filter(k => getDiagonal(polygonAreaOptions[element.id], k).trim()).map(k => (
+              <Line key={`diagonal-${element.id}-${k}`} x1={points[0].x} y1={points[0].y} x2={points[k].x} y2={points[k].y} stroke="#2e7d32" strokeWidth={1.2} strokeDasharray="6,4" />
+            ))}
 
             {/* Linien-Nummern (passend zu „Linie x von n“ und zur Wandliste) */}
             {lineNumbersVisible && (hasSelectedSegment || hasWallHeights(polygonWalls[element.id])) && (() => {

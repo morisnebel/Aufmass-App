@@ -76,3 +76,27 @@ assert.strictEqual(pa.quadDiagonalAreaM2(m4.a, '4m'), 11.12); // 2 × Heron(4,3,
 assert.strictEqual(pa.quadDiagonalAreaM2(m4.a, '9m'), null); // passt nicht → ignoriert
 assert.strictEqual(pa.calculatePolygonAreaM2(closed, m4, undefined, { diagonal: '9m' }), 12);
 console.log('OK options');
+
+// iter78: Diagonalen bei mehr als vier Ecken
+// Fünfeck (Meter-Koordinaten): (0,0) (4,0) (5,2) (3,4) (0,3) → Fläche 15,5
+const P5 = [[0, 0], [4, 0], [5, 2], [3, 4], [0, 3]];
+const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]).toFixed(4) + 'm';
+const m5: any = {}; P5.forEach((p, i) => { m5[i] = dist(p, P5[(i + 1) % 5]); });
+const o5 = { diagonals: { 2: dist(P5[0], P5[2]), 3: dist(P5[0], P5[3]) } };
+assert.strictEqual(pa.polygonDiagonalAreaM2(m5, o5, 5), 15.5);
+assert.strictEqual(pa.polygonDiagonalAreaM2(m5, { diagonals: { 2: o5.diagonals[2] } }, 5), null); // eine fehlt
+// völlig verzogen gezeichnet, Ergebnis trotzdem exakt
+const el5 = { id: 'p', type: 'polyline', data: { closed: true, points: [{ x: 0, y: 0 }, { x: 90, y: 20 }, { x: 140, y: 60 }, { x: 60, y: 130 }, { x: -20, y: 70 }] } };
+assert.strictEqual(pa.calculatePolygonAreaM2(el5, { p: m5 }, undefined, o5), 15.5);
+// L-Form (einspringende Ecke): (0,0) (4,0) (4,2) (2,2) (2,3) (0,3) → 10; von Ecke 0 aus
+const L6 = [[0, 0], [4, 0], [4, 2], [2, 2], [2, 3], [0, 3]];
+const m6: any = {}; L6.forEach((p, i) => { m6[i] = dist(p, L6[(i + 1) % 6]); });
+const o6 = { diagonals: { 2: dist(L6[0], L6[2]), 3: dist(L6[0], L6[3]), 4: dist(L6[0], L6[4]) } };
+const elL = { id: 'q', type: 'polyline', data: { closed: true, points: L6.map(p => ({ x: p[0] * 30, y: p[1] * 30 })) } };
+assert.strictEqual(pa.calculatePolygonAreaM2(elL, { q: m6 }, undefined, o6), 10);
+// einspringende Ecke, bei der ein Dreieck abgezogen wird: (0,0) (4,0) (1,1) (0,4) → 4
+const D4 = [[0, 0], [4, 0], [1, 1], [0, 4]];
+const m4d: any = {}; D4.forEach((p, i) => { m4d[i] = dist(p, D4[(i + 1) % 4]); });
+const elD = { id: 'd', type: 'polyline', data: { closed: true, points: D4.map(p => ({ x: p[0] * 30, y: p[1] * 30 })) } };
+assert.strictEqual(pa.calculatePolygonAreaM2(elD, { d: m4d }, undefined, { diagonal: dist(D4[0], D4[2]) }), 4);
+console.log('OK diagonals');

@@ -2,10 +2,10 @@ import React, { useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
-import { PolygonAreaOption, formatAreaM2, quadDiagonalAreaM2 } from '../../sketch/polygonArea';
+import { PolygonAreaOption, diagonalTargets, formatAreaM2, getDiagonal, polygonDiagonalAreaM2 } from '../../sketch/polygonArea';
 import { NumpadTarget } from './WallHeightSection';
 
-// Genauere Flächenberechnung für ein Polygon: alle Ecken rechtwinklig oder (beim Viereck) Diagonale
+// Genauere Flächenberechnung für ein Polygon: alle Ecken rechtwinklig oder gemessene Diagonalen
 
 type Props = {
   element: any;
@@ -25,9 +25,15 @@ export const AreaOptionsSection = ({ element, measures, option, onChange, active
   if (!element?.data?.closed || pointCount < 4) return null;
 
   const rightAngles = !!option?.rightAngles;
-  const diagonal = option?.diagonal || '';
-  const diagonalArea = pointCount === 4 ? quadDiagonalAreaM2(measures, diagonal) : null;
+  const targets = diagonalTargets(pointCount);
+  const entered = targets.filter(k => getDiagonal(option, k).trim() !== '').length;
+  const diagonalArea = polygonDiagonalAreaM2(measures, option, pointCount, element.data.points);
   const allMeasured = Array.from({ length: pointCount }, (_, i) => measures?.[i]).every(Boolean);
+  const setDiagonal = (current: PolygonAreaOption | undefined, k: number, text: string): PolygonAreaOption => ({
+    ...current,
+    diagonal: k === 2 ? undefined : current?.diagonal,
+    diagonals: { ...current?.diagonals, [k]: text },
+  });
 
   return (
     <View style={styles.box}>
@@ -43,33 +49,39 @@ export const AreaOptionsSection = ({ element, measures, option, onChange, active
         <Text style={[styles.state, rightAngles && styles.textOn]}>{rightAngles ? 'AN' : 'AUS'}</Text>
       </TouchableOpacity>
 
-      {pointCount === 4 && (
-        <View style={styles.field}>
-          <Text style={styles.label}>Diagonale (Ecke Linie 4/1 ↔ Ecke Linie 2/3)</Text>
-          <BufferedTextInput
-            testID={AREA_DIAGONAL_FIELD}
-            replaceOnBurst
-            style={[styles.input, activeFieldId === AREA_DIAGONAL_FIELD && styles.inputActive]}
-            value={diagonal}
-            onChangeText={(text) => onChange({ ...option, diagonal: text })}
-            placeholder="z.B. 4,65m"
-            placeholderTextColor="#aaa"
-            showSoftInputOnFocus={false}
-            onFocus={() => onFieldFocus(AREA_DIAGONAL_FIELD, {
-              get: () => latest.current.option?.diagonal || '',
-              set: (next) => latest.current.onChange({ ...latest.current.option, diagonal: next }),
-            })}
-          />
-          {diagonal.trim() !== '' && (
-            <Text testID="area-diagonal-result" style={[styles.hint, diagonalArea === null && styles.warn]}>
-              {diagonalArea !== null
-                ? `Fläche über Diagonale: ${formatAreaM2(diagonalArea)}${rightAngles ? ' (hat Vorrang vor „rechtwinklig“)' : ''}`
-                : allMeasured
-                  ? 'Diagonale passt nicht zu den Seitenmaßen – wird nicht verwendet'
-                  : 'Erst alle vier Seiten bemaßen'}
-            </Text>
-          )}
-        </View>
+      {/* Diagonalen von der Ecke zwischen letzter Linie und Linie 1 zu jeder nicht benachbarten Ecke */}
+      {targets.map(k => {
+        const id = `${AREA_DIAGONAL_FIELD}-${k}`;
+        return (
+          <View key={k} style={styles.field}>
+            <Text style={styles.label}>Diagonale {targets.length > 1 ? `${k - 1} ` : ''}(Ecke Linie {pointCount}/1 ↔ Ecke Linie {k}/{k + 1})</Text>
+            <BufferedTextInput
+              testID={id}
+              replaceOnBurst
+              style={[styles.input, activeFieldId === id && styles.inputActive]}
+              value={getDiagonal(option, k)}
+              onChangeText={(text) => onChange(setDiagonal(option, k, text))}
+              placeholder="z.B. 4,65m"
+              placeholderTextColor="#aaa"
+              showSoftInputOnFocus={false}
+              onFocus={() => onFieldFocus(id, {
+                get: () => getDiagonal(latest.current.option, k),
+                set: (next) => latest.current.onChange(setDiagonal(latest.current.option, k, next)),
+              })}
+            />
+          </View>
+        );
+      })}
+      {entered > 0 && (
+        <Text testID="area-diagonal-result" style={[styles.hint, diagonalArea === null && styles.warn]}>
+          {diagonalArea !== null
+            ? `Fläche über ${targets.length > 1 ? 'Diagonalen' : 'Diagonale'}: ${formatAreaM2(diagonalArea)}${rightAngles ? ' (hat Vorrang vor „rechtwinklig“)' : ''}`
+            : !allMeasured
+              ? 'Erst alle Seiten bemaßen'
+              : entered < targets.length
+                ? `Noch ${targets.length - entered} von ${targets.length} Diagonalen fehlen – bis dahin wird ohne Diagonalen gerechnet`
+                : 'Diagonalen passen nicht zu den Seitenmaßen – werden nicht verwendet'}
+        </Text>
       )}
     </View>
   );

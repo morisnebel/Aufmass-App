@@ -22,7 +22,7 @@ export const areaShapeKey = (pointCount: number, measures: { [seg: number]: stri
   `${pointCount}|${Array.from({ length: pointCount }, (_, i) => measures?.[i] || '').join('|')}`;
 
 // Zusatzangaben für eine genauere Fläche
-export type PolygonAreaOption = { rightAngles?: boolean; diagonal?: string };
+export type PolygonAreaOption = { rightAngles?: boolean; diagonal?: string; diagonals?: { [vertexIndex: number]: string } };
 export type PolygonAreaOptions = { [elementId: string]: PolygonAreaOption };
 
 const heron = (a: number, b: number, c: number): number | null => {
@@ -31,16 +31,46 @@ const heron = (a: number, b: number, c: number): number | null => {
   return under > 0 ? Math.sqrt(under) : null;
 };
 
-// Viereck über eine gemessene Diagonale (Ecke Linie 4/1 ↔ Ecke Linie 2/3): zwei Dreiecke, exakt ohne Winkel.
-// null, wenn Maße fehlen oder die Diagonale nicht zu den Seiten passt.
-export const quadDiagonalAreaM2 = (measures: { [seg: number]: string } | undefined, diagonal: string | undefined): number | null => {
-  const d = parseMeasurementToMeters(diagonal || '');
-  const l = [0, 1, 2, 3].map(i => parseMeasurementToMeters(measures?.[i] || ''));
-  if (!(d > 0) || l.some(v => !(v > 0))) return null;
-  const first = heron(l[0], l[1], d);
-  const second = heron(l[2], l[3], d);
-  return first !== null && second !== null ? Math.round((first + second) * 100) / 100 : null;
+// Diagonale von Ecke 0 (zwischen letzter Linie und Linie 1) zur Ecke k (zwischen Linie k und k+1)
+export const getDiagonal = (option: PolygonAreaOption | undefined, k: number): string =>
+  option?.diagonals?.[k] ?? (k === 2 ? option?.diagonal : undefined) ?? '';
+
+export const diagonalTargets = (pointCount: number): number[] =>
+  Array.from({ length: Math.max(0, pointCount - 3) }, (_, i) => i + 2);
+
+// Fläche über Diagonalen: Das Polygon wird von Ecke 0 aus in Dreiecke zerlegt, jedes ist durch
+// drei Längen exakt bestimmt (Heron). Die Zeichnung liefert nur noch, ob ein Dreieck dazuzählt
+// oder abgezogen wird (einspringende Ecken). null, wenn Maße/Diagonalen fehlen oder nicht passen.
+export const polygonDiagonalAreaM2 = (
+  measures: { [seg: number]: string } | undefined,
+  option: PolygonAreaOption | undefined,
+  pointCount: number,
+  points?: { x: number; y: number }[]
+): number | null => {
+  if (pointCount < 4) return null;
+  const sides = Array.from({ length: pointCount }, (_, i) => parseMeasurementToMeters(measures?.[i] || ''));
+  const diagonals = diagonalTargets(pointCount).map(k => parseMeasurementToMeters(getDiagonal(option, k)));
+  if (sides.some(v => !(v > 0)) || diagonals.some(v => !(v > 0))) return null;
+  // Abstand von Ecke 0 zu Ecke i: Seite 0, Diagonalen, letzte Seite
+  const fromStart = [0, sides[0], ...diagonals, sides[pointCount - 1]];
+  const cross = (i: number) => points && points.length === pointCount
+    ? (points[i].x - points[0].x) * (points[i + 1].y - points[0].y) - (points[i + 1].x - points[0].x) * (points[i].y - points[0].y)
+    : 1;
+  let total = 0;
+  let orientation = 0;
+  const parts: { area: number; cross: number }[] = [];
+  for (let i = 1; i < pointCount - 1; i++) {
+    const area = heron(fromStart[i], sides[i], fromStart[i + 1]);
+    if (area === null) return null;
+    parts.push({ area, cross: cross(i) });
+    orientation += cross(i);
+  }
+  parts.forEach(part => { total += part.cross * orientation < 0 ? -part.area : part.area; });
+  return total > 0 ? Math.round(total * 100) / 100 : null;
 };
+
+export const quadDiagonalAreaM2 = (measures: { [seg: number]: string } | undefined, diagonal: string | undefined): number | null =>
+  polygonDiagonalAreaM2(measures, { diagonals: { 2: diagonal || '' } }, 4);
 
 export const calculatePolygonAreaM2 = (
   element: any,
@@ -57,9 +87,9 @@ export const calculatePolygonAreaM2 = (
 
   const n = points.length; // n Punkte = n Segmente (inkl. Schluss-Segment n-1)
 
-  // Viereck mit gemessener Diagonale: exakt, unabhängig von der Zeichnung
-  if (n === 4 && option?.diagonal) {
-    const diagonalArea = quadDiagonalAreaM2(measures, option.diagonal);
+  // Gemessene Diagonalen: exakt, unabhängig von den gezeichneten Winkeln
+  if (n >= 4 && option && diagonalTargets(n).some(k => getDiagonal(option, k).trim())) {
+    const diagonalArea = polygonDiagonalAreaM2(measures, option, n, points);
     if (diagonalArea !== null) return diagonalArea;
   }
 

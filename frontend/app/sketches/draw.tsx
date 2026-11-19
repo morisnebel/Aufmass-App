@@ -15,11 +15,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Speichereffiziente Deep-Clone-Funktion (verhindert OOM bei großen base64-Strings)
 import { DrawElement, FontFamily, DrawMode, TOOL_SIZES_KEY } from '../../src/sketch/sketchShared';
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
-import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, computePolygon, straightenedPolygonPoints, PolygonAreaShapes, PolygonAreaOptions, areaShapeKey, listDiagonals } from '../../src/sketch/polygonArea';
+import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, computePolygon, straightenedPolygonPoints, shiftIntoBounds, PolygonAreaShapes, PolygonAreaOptions, areaShapeKey, listDiagonals } from '../../src/sketch/polygonArea';
 import { AREA_FIELD_PREFIX, withPairs } from '../../src/components/sketch/AreaOptionsSection';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { NumpadTarget } from '../../src/components/sketch/WallHeightSection';
-import { PolygonWalls } from '../../src/sketch/wallArea';
+import { PolygonWalls, openingMarkers } from '../../src/sketch/wallArea';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import { SketchTour } from '../../src/components/SketchTour';
 import { SketchDemoModal } from '../../src/components/SketchDemo';
@@ -741,8 +741,10 @@ export default function DrawSketchScreen() {
   }, [selectedLineSegment?.elementId, selectedLineSegment?.segmentIndex, showLineMeasurementNumpad]);
   // „Skizze geraderücken“: Eckpunkte des Polygons auf die berechnete Form setzen (rückgängig machbar)
   const straightenPolygon = (elementId: string, points: { x: number; y: number }[]) => {
+    // Ragt der Raum danach über den Rand, rutscht er zurück in die Zeichenfläche
+    const inside = shiftIntoBounds(points, screenWidth, canvasHeight);
     const newElements = elements.map(el => el.id === elementId && el.data?.points?.length === points.length
-      ? { ...el, data: { ...el.data, points } }
+      ? { ...el, data: { ...el.data, points: inside } }
       : el);
     setElements(newElements);
     addToHistory(newElements);
@@ -756,7 +758,7 @@ export default function DrawSketchScreen() {
         selectedLineSegment?.elementId === el.id ? selectedLineSegment.segmentIndex : undefined);
       if (!points) return el;
       count++;
-      return { ...el, data: { ...el.data, points } };
+      return { ...el, data: { ...el.data, points: shiftIntoBounds(points, screenWidth, canvasHeight) } };
     });
     if (count === 0) {
       showAlert('Geraderücken', 'Kein Raum zu ändern: Räume müssen eindeutig bestimmt sein (alle Seiten und genug Winkel oder Diagonalen) und von der Zeichnung abweichen.');
@@ -812,6 +814,48 @@ export default function DrawSketchScreen() {
 
   // Diagonale durch Antippen zweier Ecken wählen
   const [diagonalPick, setDiagonalPick] = useState<{ elementId: string; first: number | null } | null>(null);
+  // Tür/Fenster-Markierung in der Skizze angetippt: Linie wählen, Wand-Bereich aufklappen, Breite-Feld auswählen
+  const replaceOnNextKeyRef = useRef<string | null>(null);
+  const handleOpeningTap = (x: number, y: number): boolean => {
+    if (pointMoveOnly) return false;
+    const tolerance = Math.max(12, 16 / Math.max(scale, 0.5));
+    for (const el of elements) {
+      if (el.type !== 'polyline' || !el.data?.points || !polygonWalls[el.id]?.segments) continue;
+      for (const marker of openingMarkers(el.data.points, !!el.data.closed, lineSegmentMeasurements[el.id], polygonWalls[el.id])) {
+        const dx = marker.x2 - marker.x1;
+        const dy = marker.y2 - marker.y1;
+        const t = Math.max(0, Math.min(1, ((x - marker.x1) * dx + (y - marker.y1) * dy) / (dx * dx + dy * dy || 1)));
+        const onLine = Math.hypot(x - (marker.x1 + dx * t), y - (marker.y1 + dy * t)) <= tolerance;
+        const onLabel = Math.abs(x - marker.labelX) <= 32 && Math.abs(y - marker.labelY) <= 10;
+        if (!onLine && !onLabel) continue;
+        setSelectedElementId(el.id);
+        setSelectedLineSegment({ elementId: el.id, segmentIndex: marker.segmentIndex });
+        const existingStyle = measureLineStyles[el.id];
+        setTempMeasureLineColor(existingStyle?.color || '#1976d2');
+        setTempMeasureLineStrokeWidth(existingStyle?.strokeWidth || 1.2);
+        setTempMeasureLineFontSize(existingStyle?.fontSize || 11);
+        setLineMeasurementExpression('');
+        setShowLineMeasurementNumpad(true);
+        changePanelOptionsOpen(true);
+        setWallSectionOpen(true);
+        setPendingAreaField(`wall-opening-width-${marker.openingIndex}`);
+        replaceOnNextKeyRef.current = `wall-opening-width-${marker.openingIndex}`;
+        return true;
+      }
+    }
+    return false;
+  };
+  // Maß-Fenster offen und „Winkel angeben“ an: Ecke des Raums antippen wählt das passende Winkel-Feld
+  // (nicht im „Punkte“-Modus – dort werden Ecken verschoben)
+  const handleAngleCornerTap = (x: number, y: number): boolean => {
+    if (!showLineMeasurementNumpad || !selectedLineSegment || pointMoveOnly) return false;
+    if (!polygonAreaOptions[selectedLineSegment.elementId]?.useAngles) return false;
+    const hit = findNearestPolylinePoint(x, y);
+    if (!hit || hit.element.id !== selectedLineSegment.elementId || !hit.element.data?.closed) return false;
+    if (!panelOptionsOpen) changePanelOptionsOpen(true);
+    setPendingAreaField(`${AREA_FIELD_PREFIX}angle-${hit.pointIndex}`);
+    return true;
+  };
   const handleDiagonalPick = (x: number, y: number) => {
     if (!diagonalPick) return;
     const hit = findNearestPolylinePoint(x, y);
@@ -960,12 +1004,15 @@ export default function DrawSketchScreen() {
   
   // Handler für Linien-Maß Numpad
   const handleLineMeasurementNumpadPress = (key: string) => {
+    // Feld wurde über die Skizze ausgewählt (Tür/Fenster angetippt): erste Ziffer ersetzt den alten Wert
+    const replace = !!replaceOnNextKeyRef.current && replaceOnNextKeyRef.current === numpadTargetId && !!numpadTargetRef.current;
+    replaceOnNextKeyRef.current = null;
     if (key === '⌫') {
       typeIntoPanelField(prev => prev.slice(0, -1));
     } else if (key === 'C') {
       typeIntoPanelField(() => '');
     } else {
-      typeIntoPanelField(prev => prev + key);
+      typeIntoPanelField(prev => (replace ? key : prev + key));
     }
     if (!numpadTargetRef.current) setTimeout(() => lineMeasurementInputRef.current?.focus(), 10);
   };
@@ -1836,7 +1883,7 @@ export default function DrawSketchScreen() {
 
   // Selection & Transform handlers
   const handleSelectTouchStart = (locationX: number, locationY: number) => handleSelectTouchStartImpl({
-    diagonalPick, handleDiagonalPick, findPolylineLabelAtPoint, labelOffsets, setDraggingLabelId,
+    diagonalPick, handleDiagonalPick, handleAngleCornerTap, handleOpeningTap, findPolylineLabelAtPoint, labelOffsets, setDraggingLabelId,
     labelDragStartRef, pointMoveOnly, findNearestPolylinePoint, selectedElementId,
     setSelectedElementId, setSelectedLineSegment, elements, setEditingPolylinePoint, setDragMode,
     setDragStart, setOriginalElement, setMagnifierTargetPosition, setMagnifierPosition, canvasLayout,

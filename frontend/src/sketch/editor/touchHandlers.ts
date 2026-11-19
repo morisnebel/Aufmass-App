@@ -1043,6 +1043,8 @@ export function snapPointToAngleImpl(ctx: SnapPointToAngleImplCtx, newX: number,
 export type HandleSelectTouchStartImplCtx = {
   diagonalPick: { elementId: string; first: number | null; } | null;
   handleDiagonalPick: (x: number, y: number) => void;
+  handleAngleCornerTap: (x: number, y: number) => boolean;
+  handleOpeningTap: (x: number, y: number) => boolean;
   findPolylineLabelAtPoint: (x: number, y: number) => { elementId: string; centerX: number; centerY: number; } | null;
   labelOffsets: { [elementId: string]: { x: number; y: number; }; };
   setDraggingLabelId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -1114,7 +1116,7 @@ export type HandleSelectTouchStartImplCtx = {
 
 export function handleSelectTouchStartImpl(ctx: HandleSelectTouchStartImplCtx, locationX: number, locationY: number) {
   const {
-    diagonalPick, handleDiagonalPick, findPolylineLabelAtPoint, labelOffsets, setDraggingLabelId,
+    diagonalPick, handleDiagonalPick, handleAngleCornerTap, handleOpeningTap, findPolylineLabelAtPoint, labelOffsets, setDraggingLabelId,
     labelDragStartRef, pointMoveOnly, findNearestPolylinePoint, selectedElementId,
     setSelectedElementId, setSelectedLineSegment, elements, setEditingPolylinePoint, setDragMode,
     setDragStart, setOriginalElement, setMagnifierTargetPosition, setMagnifierPosition, canvasLayout,
@@ -1136,6 +1138,8 @@ export function handleSelectTouchStartImpl(ctx: HandleSelectTouchStartImplCtx, l
     handleDiagonalPick(locationX, locationY);
     return;
   }
+  if (handleAngleCornerTap(locationX, locationY)) return;
+  if (handleOpeningTap(locationX, locationY)) return;
   // Zuerst prüfen: Klick auf ein Polyline-Label zum Verschieben?
   const labelHit = findPolylineLabelAtPoint(locationX, locationY);
   if (labelHit) {

@@ -202,7 +202,16 @@ const computePolygonUncached = (
     if (under <= 0) return null; // Seiten ergeben kein gültiges Dreieck
     const heronArea = Math.sqrt(under);
     if (!isFinite(heronArea) || heronArea <= 0) return null;
-    return { area: Math.round(heronArea * 100) / 100, maxError: 0, extras: 0, determined: true, vertices: [], angles: [], rejected: [] };
+    // Ecken des Dreiecks aus den drei Seiten (Lage/Drehsinn wie gezeichnet) – für berechnete Winkel und Geraderücken
+    const cornerAngle = Math.acos(Math.max(-1, Math.min(1, (a * a + c * c - b * b) / (2 * a * c))));
+    const drawnCross = (points[1].x - points[0].x) * (points[2].y - points[0].y) - (points[1].y - points[0].y) * (points[2].x - points[0].x);
+    const direction = rawAngles[0] + (drawnCross >= 0 ? cornerAngle : -cornerAngle);
+    const triangle = [
+      { x: 0, y: 0 },
+      { x: a * Math.cos(rawAngles[0]), y: a * Math.sin(rawAngles[0]) },
+      { x: c * Math.cos(direction), y: c * Math.sin(direction) },
+    ];
+    return { area: Math.round(heronArea * 100) / 100, maxError: 0, extras: 0, determined: true, vertices: triangle, angles: drawnInteriorAngles(triangle), rejected: [] };
   }
 
   // 1b) Winkel-Einrastung: Drehwinkel zwischen ALLEN aufeinanderfolgenden Kanten
@@ -370,6 +379,22 @@ const computePolygonUncached = (
     determined: extras >= n - 3 || forceRight,
     angles: drawnInteriorAngles(vertices),
   };
+};
+
+// Punkte zurück in die Zeichenfläche schieben (nur verschieben, nicht drehen oder skalieren).
+// Ist die Form größer als die Fläche, wird sie mittig gesetzt.
+export const shiftIntoBounds = (points: { x: number; y: number }[], width: number, height: number, margin = 30): { x: number; y: number }[] => {
+  const shift = (values: number[], size: number) => {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    if (max - min > size - 2 * margin) return size / 2 - (min + max) / 2;
+    if (min < margin) return margin - min;
+    if (max > size - margin) return size - margin - max;
+    return 0;
+  };
+  const dx = shift(points.map(p => p.x), width);
+  const dy = shift(points.map(p => p.y), height);
+  return dx === 0 && dy === 0 ? points : points.map(p => ({ x: p.x + dx, y: p.y + dy }));
 };
 
 // Alte Diagonalen-Angaben (von Ecke 0 aus) in Eckenpaare überführen, damit der Löser sie verarbeitet

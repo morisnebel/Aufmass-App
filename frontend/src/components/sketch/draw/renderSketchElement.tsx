@@ -1,7 +1,7 @@
 import React from 'react';
 import { DrawElement } from '../../../sketch/sketchShared';
 import { PolygonAreaOptions, listDiagonals, drawnInteriorAngles, computePolygon, angleExtraId, pairExtraId } from '../../../sketch/polygonArea';
-import { PolygonWalls, hasWallHeights, segmentNumberPositions } from '../../../sketch/wallArea';
+import { PolygonWalls, hasWallHeights, segmentNumberPositions, openingMarkers, OPENING_COLORS } from '../../../sketch/wallArea';
 import { Path, Line, Circle, Rect, Image as SvgImage, Text as SvgText, G, Defs, Marker, Polygon } from 'react-native-svg';
 
 
@@ -571,6 +571,26 @@ export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawEl
               );
             });
           })()}
+
+          {/* Türen/Fenster (Abzüge) als Markierung auf der Linie – antippen öffnet die Maße */}
+          {openingMarkers(points, !!closed, lineSegmentMeasurements[element.id], polygonWalls[element.id]).map(marker => {
+            const color = OPENING_COLORS[marker.kind];
+            const active = selectedLineSegment?.elementId === element.id && selectedLineSegment.segmentIndex === marker.segmentIndex
+              && (numpadTargetId === `wall-opening-width-${marker.openingIndex}` || numpadTargetId === `wall-opening-height-${marker.openingIndex}`);
+            const tick = (x: number, y: number) => (
+              <Line x1={x - marker.nx * 6} y1={y - marker.ny * 6} x2={x + marker.nx * 6} y2={y + marker.ny * 6} stroke={color} strokeWidth={2} />
+            );
+            return (
+              <G key={`opening-${element.id}-${marker.segmentIndex}-${marker.openingIndex}`} testID={`opening-marker-${marker.segmentIndex}-${marker.openingIndex}`}>
+                {active && <Line x1={marker.x1} y1={marker.y1} x2={marker.x2} y2={marker.y2} stroke="#ff6d00" strokeWidth={13} strokeLinecap="round" opacity={0.45} />}
+                <Line x1={marker.x1} y1={marker.y1} x2={marker.x2} y2={marker.y2} stroke="#fff" strokeWidth={7} />
+                <Line x1={marker.x1} y1={marker.y1} x2={marker.x2} y2={marker.y2} stroke={color} strokeWidth={marker.kind === 'door' ? 2 : 4} strokeDasharray={marker.kind === 'door' ? '4,3' : undefined} />
+                {tick(marker.x1, marker.y1)}
+                {tick(marker.x2, marker.y2)}
+                <SvgText x={marker.labelX} y={marker.labelY + 3} fill={active ? '#e65100' : color} fontSize={active ? 11 : 9} fontWeight="bold" textAnchor="middle">{marker.label}</SvgText>
+              </G>
+            );
+          })}
 
           {/* Linien-Nummern (passend zu „Linie x von n“ und zur Wandliste) */}
           {lineNumbersVisible && (hasSelectedSegment || hasWallHeights(polygonWalls[element.id])) && (() => {

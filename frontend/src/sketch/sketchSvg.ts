@@ -1,5 +1,5 @@
 import { PolygonAreaOptions, listDiagonals, computePolygon, pairExtraId } from './polygonArea';
-import { PolygonWalls, hasWallHeights, segmentNumberPositions } from './wallArea';
+import { PolygonWalls, hasWallHeights, segmentNumberPositions, openingMarkers, OPENING_COLORS } from './wallArea';
 // SVG-Vorschau-Erzeugung für Skizzen (ausgelagert aus app/sketches/draw.tsx)
 // Baut aus den Zeichen-Elementen ein eigenständiges SVG (als data:-URI) für PDF/Vorschau.
 import { DrawElement } from './sketchShared';
@@ -470,6 +470,17 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
             svgElements += `<text x="${mx}" y="${my + 3}" fill="#2e7d32" font-size="10" font-weight="bold" text-anchor="middle">${label}</text>`;
           });
         }
+
+        // Türen/Fenster (Abzüge) als Markierung auf der Linie
+        openingMarkers(points, !!isClosed, lineSegmentMeasurements[el.id], polygonWalls[el.id]).forEach(marker => {
+          const color = OPENING_COLORS[marker.kind];
+          svgElements += `<line x1="${marker.x1}" y1="${marker.y1}" x2="${marker.x2}" y2="${marker.y2}" stroke="#fff" stroke-width="7"/>`;
+          svgElements += `<line x1="${marker.x1}" y1="${marker.y1}" x2="${marker.x2}" y2="${marker.y2}" stroke="${color}" stroke-width="${marker.kind === 'door' ? 2 : 4}"${marker.kind === 'door' ? ' stroke-dasharray="4,3"' : ''}/>`;
+          [[marker.x1, marker.y1], [marker.x2, marker.y2]].forEach(([x, y]) => {
+            svgElements += `<line x1="${x - marker.nx * 6}" y1="${y - marker.ny * 6}" x2="${x + marker.nx * 6}" y2="${y + marker.ny * 6}" stroke="${color}" stroke-width="2"/>`;
+          });
+          svgElements += `<text x="${marker.labelX}" y="${marker.labelY + 3}" fill="${color}" font-size="9" font-weight="bold" text-anchor="middle">${marker.label}</text>`;
+        });
 
         // Linien-Nummern (passend zur Wandliste), wenn Wandhöhen eingegeben sind
         if (lineNumbersVisible && hasWallHeights(polygonWalls[el.id])) {

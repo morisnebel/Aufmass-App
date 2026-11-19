@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
@@ -23,13 +23,31 @@ type Props = {
   useNumpad: boolean;
   activeFieldId: string | null;
   onFieldFocus: (id: string, target: NumpadTarget) => void;
+  // Feld, das von außen ausgewählt werden soll (z. B. Tür/Fenster in der Skizze angetippt)
+  focusFieldId?: string | null;
+  onFocusHandled?: () => void;
+  onScrollTo?: (y: number) => void;
 };
 
 export type NumpadTarget = { get: () => string; set: (value: string) => void; label?: string };
 
-export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange, scrollable = true, open, onToggle, useNumpad, activeFieldId, onFieldFocus }: Props) => {
+export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange, scrollable = true, open, onToggle, useNumpad, activeFieldId, onFieldFocus, focusFieldId, onFocusHandled, onScrollTo }: Props) => {
   // Aktuelle Werte/Handler je Feld, damit das Numpad immer auf dem neuesten Stand schreibt
   const fields = useRef<{ [id: string]: { value: string; onChangeText: (t: string) => void } }>({});
+  const boxY = useRef(0);
+  const rowY = useRef<{ [index: number]: number }>({});
+  useEffect(() => {
+    if (!focusFieldId || !open || !fields.current[focusFieldId]) return;
+    const id = focusFieldId;
+    onFieldFocus(id, {
+      get: () => fields.current[id]?.value ?? '',
+      set: (next) => fields.current[id]?.onChangeText(next),
+    });
+    onFocusHandled?.();
+    // Zeile der Öffnung sichtbar machen (Layout steht nach dem Aufklappen kurz später fest)
+    const index = parseInt(id.split('-').pop() || '0', 10);
+    setTimeout(() => onScrollTo?.(boxY.current + 44 + (rowY.current[index] || 0)), 150);
+  });
   const segment: WallSegment = wall?.segments?.[segmentIndex] || {};
   const openings = segment.openings || [];
   const deduction = segmentDeductionM2(segment);
@@ -73,7 +91,7 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
   );
 
   return (
-    <View style={styles.box}>
+    <View style={styles.box} onLayout={(e) => { boxY.current = e.nativeEvent.layout.y; }}>
       <TouchableOpacity testID="wall-section-toggle" style={styles.header} onPress={() => onToggle(!open)}>
         <Ionicons name="resize" size={14} color="#5d4037" />
         <Text style={styles.headerText} numberOfLines={2}>
@@ -89,7 +107,7 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
           {/* Öffnungen (Türen/Fenster) dieser Linie: Breite × Höhe */}
           <Text style={styles.label}>Türen / Fenster diese Linie (Breite × Höhe)</Text>
           {openings.map((opening, i) => (
-            <View key={i} style={styles.openingRow}>
+            <View key={i} style={styles.openingRow} onLayout={(e) => { rowY.current[i] = e.nativeEvent.layout.y; }}>
               {input(`wall-opening-width-${i}`, opening.width, 'Breite', (t) => setOpening(i, { width: t }), true)}
               <Text style={styles.times}>×</Text>
               {input(`wall-opening-height-${i}`, opening.height, 'Höhe', (t) => setOpening(i, { height: t }), true)}

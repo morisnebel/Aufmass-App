@@ -163,6 +163,9 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
           onToggle={setWallSectionOpen}
           useNumpad
           activeFieldId={numpadTargetId}
+          focusFieldId={pendingAreaField}
+          onFocusHandled={() => setPendingAreaField(null)}
+          onScrollTo={scrollMeasurePanelTo}
           onFieldFocus={(id, target) => {
             // Wandfelder nutzen immer das Numpad des Fensters: bei Bedarf aufklappen
             if (!panelKeyboardOpen) setPanelKeyboardOpen(true);

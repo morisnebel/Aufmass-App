@@ -78,7 +78,7 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   });
   const points: { x: number; y: number }[] = element?.data?.points || [];
   const n = points.length;
-  if (!element?.data?.closed || n < 4) return null;
+  if (!element?.data?.closed || n < 3) return null;
 
   const rightAngles = !!option?.rightAngles;
   const useAngles = !!option?.useAngles;
@@ -92,7 +92,7 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   const sign = result?.determined ? '=' : '≈';
   const isRejected = (extraId: string) => !!result?.rejected.includes(extraId);
 
-  const field = (id: string, label: string, value: string, placeholder: string, set: (current: PolygonAreaOption | undefined, text: string) => PolygonAreaOption, computed?: string, rejected?: boolean) => {
+  const field = (id: string, label: string, value: string, placeholder: string, set: (current: PolygonAreaOption | undefined, text: string) => PolygonAreaOption, computed?: string, rejected?: boolean, trackLayout?: boolean) => {
     values.current[id] = value;
     targets.current[id] = {
       get: () => values.current[id] ?? '',
@@ -100,7 +100,7 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
       label,
     };
     return (
-    <View key={id} style={styles.field}>
+    <View key={id} style={styles.field} onLayout={trackLayout ? (e) => { rowY.current[id] = e.nativeEvent.layout.y; tryScroll(); } : undefined}>
       <Text style={styles.label} numberOfLines={2}>{label}</Text>
       <BufferedTextInput
         testID={id}
@@ -145,6 +145,9 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   let warn = true;
   if (!result) {
     status = 'Erst alle Seiten bemaßen – dann werden Winkel und Diagonalen berechnet.';
+  } else if (n === 3) {
+    status = `Dreieck ist durch die drei Seiten eindeutig bestimmt – Fläche ${formatAreaM2(result.area)}. Winkel: ${result.angles.map(formatDegrees).join(' / ')}`;
+    warn = false;
   } else if (result.rejected.length > 0) {
     status = `${result.rejected.length === 1 ? 'Eine Angabe passt' : `${result.rejected.length} Angaben passen`} nicht zu den übrigen Maßen und ${result.rejected.length === 1 ? 'wird' : 'werden'} nicht verwendet (rot markiert). Fläche: ${formatAreaM2(result.area)}`;
   } else if (rightAngles && result.rightAnglesRejected !== undefined) {
@@ -181,16 +184,16 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
           <Text style={styles.pickText} numberOfLines={2}>Alle Räume geraderücken</Text>
         </TouchableOpacity>
       )}
-      {toggle('area-right-angles-toggle', 'Alle Ecken rechtwinklig', rightAngles, () => onChange({ ...option, rightAngles: !rightAngles }), 'square-outline')}
+      {n >= 4 && toggle('area-right-angles-toggle', 'Alle Ecken rechtwinklig', rightAngles, () => onChange({ ...option, rightAngles: !rightAngles }), 'square-outline')}
 
-      {toggle('area-angles-toggle', 'Winkel angeben', useAngles, () => onChange({ ...option, useAngles: !useAngles }), 'analytics')}
-      {useAngles && points.map((_, k) =>
+      {n >= 4 && toggle('area-angles-toggle', 'Winkel angeben', useAngles, () => onChange({ ...option, useAngles: !useAngles }), 'analytics')}
+      {n >= 4 && useAngles && points.map((_, k) =>
         field(`area-angle-${k}`, `Winkel Ecke ${cornerName(k, n)} (°)`, option?.angles?.[k] || '', 'Winkel in °',
           (current, text) => withOrder({ ...current, angles: { ...current?.angles, [k]: text } }, angleExtraId(k), text),
-          hasShape ? formatDegrees(result!.angles[k]) : undefined, isRejected(angleExtraId(k))))}
+          hasShape ? formatDegrees(result!.angles[k]) : undefined, isRejected(angleExtraId(k)), true))}
 
-      {toggle('area-diagonals-toggle', 'Diagonalen angeben', useDiagonals, () => onChange({ ...withPairs(option, n, () => {}), useDiagonals: !useDiagonals }), 'git-compare')}
-      {useDiagonals && (
+      {n >= 4 && toggle('area-diagonals-toggle', 'Diagonalen angeben', useDiagonals, () => onChange({ ...withPairs(option, n, () => {}), useDiagonals: !useDiagonals }), 'git-compare')}
+      {n >= 4 && useDiagonals && (
         <>
           {diagonals.map(d => (
             <View

@@ -25,7 +25,7 @@ type Props = {
   onFieldFocus: (id: string, target: NumpadTarget) => void;
 };
 
-export type NumpadTarget = { get: () => string; set: (value: string) => void };
+export type NumpadTarget = { get: () => string; set: (value: string) => void; label?: string };
 
 export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange, scrollable = true, open, onToggle, useNumpad, activeFieldId, onFieldFocus }: Props) => {
   // Aktuelle Werte/Handler je Feld, damit das Numpad immer auf dem neuesten Stand schreibt

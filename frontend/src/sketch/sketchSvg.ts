@@ -1,3 +1,4 @@
+import { PolygonAreaOptions, listDiagonals } from './polygonArea';
 import { PolygonWalls, hasWallHeights, segmentNumberPositions } from './wallArea';
 // SVG-Vorschau-Erzeugung für Skizzen (ausgelagert aus app/sketches/draw.tsx)
 // Baut aus den Zeichen-Elementen ein eigenständiges SVG (als data:-URI) für PDF/Vorschau.
@@ -18,6 +19,7 @@ export interface PreviewSvgContext {
   labelOffsets?: { [id: string]: { x: number; y: number } };
   polygonWalls?: PolygonWalls;
   lineNumbersVisible?: boolean;
+  polygonAreaOptions?: PolygonAreaOptions;
 }
 
 export function buildPreviewSvg(ctx: PreviewSvgContext): string {
@@ -25,7 +27,7 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
     elements, canvasHeight, screenWidth, legendPosition,
     lineSegmentMeasurements, measureLineStyles, polygonAreaVisible,
     getPolylineElementsWithMeasurements, calculatePolygonAreaM2,
-    formatAreaM2, calculateTotalLfmForElement, labelOffsets = {}, polygonWalls = {}, lineNumbersVisible = true,
+    formatAreaM2, calculateTotalLfmForElement, labelOffsets = {}, polygonWalls = {}, lineNumbersVisible = true, polygonAreaOptions = {},
   } = ctx;
   // Ohne Wandhöhen sind es Flächen, keine Räume: Liste heißt dann „Flächenliste“
   const sketchHasWalls = elements.some((el: any) => hasWallHeights(polygonWalls[el.id]));
@@ -455,6 +457,18 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
           svgElements += `<text x="${midX + offsetX}" y="${midY + offsetY + 3}" fill="${expStyle.color}" font-size="${expStyle.fontSize}" font-weight="bold" text-anchor="middle">${measurementText}</text>`;
         });
         
+        // Gemessene Diagonalen gestrichelt mit Maß
+        if (isClosed && polygonAreaOptions[el.id]?.useDiagonals !== false) {
+          listDiagonals(polygonAreaOptions[el.id], points.length).filter(d => d.value.trim()).forEach(d => {
+            const a = points[d.i]; const b = points[d.j];
+            const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
+            const label = String(d.value).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            svgElements += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="#2e7d32" stroke-width="1.2" stroke-dasharray="6,4"/>`;
+            svgElements += `<rect x="${mx - 22}" y="${my - 8}" width="44" height="14" rx="3" fill="#fff" opacity="0.85"/>`;
+            svgElements += `<text x="${mx}" y="${my + 3}" fill="#2e7d32" font-size="10" font-weight="bold" text-anchor="middle">${label}</text>`;
+          });
+        }
+
         // Linien-Nummern (passend zur Wandliste), wenn Wandhöhen eingegeben sind
         if (lineNumbersVisible && hasWallHeights(polygonWalls[el.id])) {
           segmentNumberPositions(points, !!isClosed, 16).forEach(n => {

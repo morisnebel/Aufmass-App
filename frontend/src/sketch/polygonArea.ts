@@ -18,11 +18,53 @@ export const parseMeasurementToMeters = (measurement: string): number => {
 // als zuletzt ein Maß geändert wurde – Punkte verschieben ändert die Fläche dadurch nicht.
 export type PolygonAreaShapes = { [elementId: string]: { points: { x: number; y: number }[]; key: string } };
 
+// Die Form wird übernommen, sobald alle Seiten bemaßt sind; spätere Maßänderungen behalten die Winkel
 export const areaShapeKey = (pointCount: number, measures: { [seg: number]: string } | undefined): string =>
-  `${pointCount}|${Array.from({ length: pointCount }, (_, i) => measures?.[i] || '').join('|')}`;
+  `${pointCount}|${Array.from({ length: pointCount }, (_, i) => measures?.[i]).every(Boolean) ? 'm' : 'u'}`;
 
 // Zusatzangaben für eine genauere Fläche
-export type PolygonAreaOption = { rightAngles?: boolean; diagonal?: string; diagonals?: { [vertexIndex: number]: string } };
+export type PolygonAreaOption = {
+  rightAngles?: boolean;
+  diagonal?: string; // alt: Viereck, Ecke 0 ↔ Ecke 2
+  diagonals?: { [vertexIndex: number]: string }; // alt: von Ecke 0 aus
+  useAngles?: boolean;
+  angles?: { [vertexIndex: number]: string }; // Innenwinkel in Grad an Ecke k (zwischen Linie k und k+1)
+  useDiagonals?: boolean;
+  pairs?: { [key: string]: string }; // Diagonale zwischen zwei frei gewählten Ecken, Schlüssel "i-j"
+};
+
+// Alle Diagonalen eines Polygons (neues und altes Format) als Eckenpaare
+export const listDiagonals = (option: PolygonAreaOption | undefined, pointCount: number): { i: number; j: number; value: string }[] => {
+  const result = Object.entries(option?.pairs || {}).map(([key, value]) => {
+    const [i, j] = key.split('-').map(Number);
+    return { i, j, value };
+  }).filter(d => d.i < pointCount && d.j < pointCount);
+  diagonalTargets(pointCount).forEach(k => {
+    const value = getDiagonal(option, k);
+    if (value && !result.some(d => d.i === 0 && d.j === k)) result.push({ i: 0, j: k, value });
+  });
+  return result;
+};
+
+// Gezeichnete Innenwinkel (Grad) je Ecke
+export const drawnInteriorAngles = (points: { x: number; y: number }[]): number[] => {
+  const n = points.length;
+  let orientation = 0;
+  for (let i = 0; i < n; i++) orientation += points[i].x * points[(i + 1) % n].y - points[(i + 1) % n].x * points[i].y;
+  return points.map((p, k) => {
+    const a = points[(k - 1 + n) % n];
+    const b = points[(k + 1) % n];
+    let turn = Math.atan2(b.y - p.y, b.x - p.x) - Math.atan2(p.y - a.y, p.x - a.x);
+    while (turn > Math.PI) turn -= 2 * Math.PI;
+    while (turn <= -Math.PI) turn += 2 * Math.PI;
+    return 180 - (turn * 180 / Math.PI) * (orientation >= 0 ? 1 : -1);
+  });
+};
+
+const parseDegrees = (value: string | undefined): number => {
+  const parsed = parseFloat((value || '').replace(',', '.'));
+  return isFinite(parsed) && parsed > 0 && parsed < 360 ? parsed : 0;
+};
 export type PolygonAreaOptions = { [elementId: string]: PolygonAreaOption };
 
 const heron = (a: number, b: number, c: number): number | null => {
@@ -72,12 +114,12 @@ export const polygonDiagonalAreaM2 = (
 export const quadDiagonalAreaM2 = (measures: { [seg: number]: string } | undefined, diagonal: string | undefined): number | null =>
   polygonDiagonalAreaM2(measures, { diagonals: { 2: diagonal || '' } }, 4);
 
-export const calculatePolygonAreaM2 = (
+export const computePolygon = (
   element: any,
   lineSegmentMeasurements: { [id: string]: { [seg: number]: string } },
   shapePoints?: { x: number; y: number }[],
   option?: PolygonAreaOption
-): number | null => {
+): { area: number; maxError: number; extras: number } | null => {
   if (element.type !== 'polyline' || !element.data?.closed) return null;
   const points: { x: number; y: number }[] =
     shapePoints && shapePoints.length === element.data.points?.length ? shapePoints : element.data.points;
@@ -88,9 +130,11 @@ export const calculatePolygonAreaM2 = (
   const n = points.length; // n Punkte = n Segmente (inkl. Schluss-Segment n-1)
 
   // Gemessene Diagonalen: exakt, unabhängig von den gezeichneten Winkeln
-  if (n >= 4 && option && diagonalTargets(n).some(k => getDiagonal(option, k).trim())) {
+  const hasNewExtras = !!option && ((option.useAngles && Object.values(option.angles || {}).some(v => parseDegrees(v) > 0)) ||
+    (option.useDiagonals && Object.values(option.pairs || {}).some(v => parseMeasurementToMeters(v || '') > 0)));
+  if (!hasNewExtras && n >= 4 && option && diagonalTargets(n).some(k => getDiagonal(option, k).trim())) {
     const diagonalArea = polygonDiagonalAreaM2(measures, option, n, points);
-    if (diagonalArea !== null) return diagonalArea;
+    if (diagonalArea !== null) return { area: diagonalArea, maxError: 0, extras: n - 3 };
   }
 
   // 1) Alle Segmente müssen ein numerisches Maß haben
@@ -117,7 +161,7 @@ export const calculatePolygonAreaM2 = (
     if (under <= 0) return null; // Seiten ergeben kein gültiges Dreieck
     const heronArea = Math.sqrt(under);
     if (!isFinite(heronArea) || heronArea <= 0) return null;
-    return Math.round(heronArea * 100) / 100;
+    return { area: Math.round(heronArea * 100) / 100, maxError: 0, extras: 0 };
   }
 
   // 1b) Winkel-Einrastung: Drehwinkel zwischen ALLEN aufeinanderfolgenden Kanten
@@ -152,7 +196,7 @@ export const calculatePolygonAreaM2 = (
   const residual = target - turnSum;
   // Zeichnung lässt sich nicht rechtwinklig schließen: normale Berechnung verwenden
   if (forceRight && Math.abs(residual) > 1e-6) {
-    return calculatePolygonAreaM2(element, lineSegmentMeasurements, shapePoints, { ...option, rightAngles: false });
+    return computePolygon(element, lineSegmentMeasurements, shapePoints, { ...option, rightAngles: false });
   }
   if (Math.abs(residual) > 1e-9) {
     const freeIdx: number[] = [];
@@ -192,6 +236,47 @@ export const calculatePolygonAreaM2 = (
     });
   }
 
+  // 3b) Zusätzliche Winkel/Diagonalen: als Abstände zwischen zwei Ecken einarbeiten.
+  // Die Ecken werden so lange verschoben, bis Seiten, Diagonalen und Winkel stimmen
+  // (ein Winkel an Ecke k legt den Abstand der beiden Nachbarecken fest).
+  let maxError = 0;
+  let extras = 0;
+  if (hasNewExtras && option) {
+    const constraints: { i: number; j: number; d: number }[] = lengths.map((d, i) => ({ i, j: (i + 1) % n, d }));
+    if (option.useDiagonals) {
+      Object.entries(option.pairs || {}).forEach(([key, value]) => {
+        const [i, j] = key.split('-').map(Number);
+        const d = parseMeasurementToMeters(value || '');
+        if (d > 0 && i < n && j < n && i !== j) { constraints.push({ i, j, d }); extras++; }
+      });
+    }
+    if (option.useAngles) {
+      Object.entries(option.angles || {}).forEach(([key, value]) => {
+        const k = Number(key);
+        const deg = parseDegrees(value);
+        if (!(deg > 0) || k >= n) return;
+        const a = lengths[(k - 1 + n) % n];
+        const b = lengths[k];
+        const d = Math.sqrt(Math.max(0, a * a + b * b - 2 * a * b * Math.cos((deg * Math.PI) / 180)));
+        if (d > 0) { constraints.push({ i: (k - 1 + n) % n, j: (k + 1) % n, d }); extras++; }
+      });
+    }
+    for (let iteration = 0; iteration < 5000; iteration++) {
+      maxError = 0;
+      for (const c of constraints) {
+        const dx = vertices[c.j].x - vertices[c.i].x;
+        const dy = vertices[c.j].y - vertices[c.i].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 1e-12) continue;
+        maxError = Math.max(maxError, Math.abs(dist - c.d));
+        const corr = ((dist - c.d) / dist) * 0.5;
+        vertices[c.i].x += dx * corr; vertices[c.i].y += dy * corr;
+        vertices[c.j].x -= dx * corr; vertices[c.j].y -= dy * corr;
+      }
+      if (maxError < 1e-9) break;
+    }
+  }
+
   // 4) Shoelace-Formel auf den rekonstruierten Ecken (in Metern)
   let areaM2 = 0;
   for (let i = 0; i < vertices.length; i++) {
@@ -201,7 +286,14 @@ export const calculatePolygonAreaM2 = (
   areaM2 = Math.abs(areaM2) / 2;
 
   if (!isFinite(areaM2) || areaM2 <= 0) return null;
-  return Math.round(areaM2 * 100) / 100;
+  return { area: Math.round(areaM2 * 100) / 100, maxError, extras };
 };
+
+export const calculatePolygonAreaM2 = (
+  element: any,
+  lineSegmentMeasurements: { [id: string]: { [seg: number]: string } },
+  shapePoints?: { x: number; y: number }[],
+  option?: PolygonAreaOption
+): number | null => computePolygon(element, lineSegmentMeasurements, shapePoints, option)?.area ?? null;
 
 export const formatAreaM2 = (area: number): string => `${area.toFixed(2).replace('.', ',')} m²`;

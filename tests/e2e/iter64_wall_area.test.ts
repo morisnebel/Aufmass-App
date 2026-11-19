@@ -57,7 +57,8 @@ assert.strictEqual(pa.calculatePolygonAreaM2(closed, m4), 12);
 assert.notStrictEqual(pa.calculatePolygonAreaM2(moved, m4), 12); // ohne Einfrieren ändert sich die Fläche
 assert.strictEqual(pa.calculatePolygonAreaM2(moved, m4, pts), 12); // mit eingefrorener Form nicht
 assert.strictEqual(pa.calculatePolygonAreaM2(moved, { a: { ...m4.a, 0: '5m', 2: '5m' } }, pts), 15);
-assert.notStrictEqual(pa.areaShapeKey(4, m4.a), pa.areaShapeKey(4, { ...m4.a, 0: '5m' }));
+assert.strictEqual(pa.areaShapeKey(4, m4.a), pa.areaShapeKey(4, { ...m4.a, 0: '5m' }));
+assert.notStrictEqual(pa.areaShapeKey(4, m4.a), pa.areaShapeKey(4, { 0: '4m' }));
 console.log('OK shape');
 
 // iter77: rechtwinklig + Diagonale
@@ -100,3 +101,21 @@ const m4d: any = {}; D4.forEach((p, i) => { m4d[i] = dist(p, D4[(i + 1) % 4]); }
 const elD = { id: 'd', type: 'polyline', data: { closed: true, points: D4.map(p => ({ x: p[0] * 30, y: p[1] * 30 })) } };
 assert.strictEqual(pa.calculatePolygonAreaM2(elD, { d: m4d }, undefined, { diagonal: dist(D4[0], D4[2]) }), 4);
 console.log('OK diagonals');
+
+// iter79: frei gewählte Diagonalen und Winkel (Ausgleich über Abstände)
+const o5b = { useDiagonals: true, pairs: { '1-3': dist(P5[1], P5[3]), '1-4': dist(P5[1], P5[4]) } };
+assert.strictEqual(pa.calculatePolygonAreaM2(el5, { p: m5 }, undefined, o5b), 15.5);
+assert.strictEqual(pa.computePolygon(el5, { p: m5 }, undefined, o5b).extras, 2);
+// Viereck 4x3 schief gezeichnet, ein Winkel 90° macht es zum Rechteck
+assert.strictEqual(pa.calculatePolygonAreaM2(skew, m4, undefined, { useAngles: true, angles: { 0: '90' } }), 12);
+assert.strictEqual(pa.calculatePolygonAreaM2(skew, m4, undefined, { useAngles: false, angles: { 0: '90' } }), pa.calculatePolygonAreaM2(skew, m4));
+// Parallelogramm 60°: 4*3*sin60 = 10,39
+assert.strictEqual(pa.calculatePolygonAreaM2(skew, m4, undefined, { useAngles: true, angles: { 1: '60' } }), 10.39);
+// L-Form schief gezeichnet, drei Winkel (90, 90, 270)
+const skewL = { id: 'q', type: 'polyline', data: { closed: true, points: [{ x: 0, y: 0 }, { x: 118, y: 10 }, { x: 125, y: 66 }, { x: 62, y: 55 }, { x: 55, y: 95 }, { x: -8, y: 88 }] } };
+assert.strictEqual(pa.calculatePolygonAreaM2(skewL, { q: m6 }, undefined, { useAngles: true, angles: { 1: '90', 2: '90', 3: '270' } }), 10);
+// widersprüchliche Diagonale → Abweichung wird gemeldet
+assert.ok(pa.computePolygon(closed, m4, undefined, { useDiagonals: true, pairs: { '0-2': '8m' } }).maxError > 0.05);
+const ang = pa.drawnInteriorAngles(L6.map(p => ({ x: p[0], y: p[1] }))).map(Math.round);
+assert.deepStrictEqual(ang, [90, 90, 90, 270, 90, 90]);
+console.log('OK solver');

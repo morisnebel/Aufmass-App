@@ -863,3 +863,11 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Toolbar-Sprache: KEIN Bug. i18n (i18n/index.ts) folgt der Geraetesprache (de/en), kein Sprachumschalter in der App.
   Englische Labels im Test kamen vom englischen Testbrowser. Neuere Teile (Tutorial, Abzuege) sind fest deutsch -> auf englischen
   Geraeten gemischt. Entscheidung User offen: immer Deutsch erzwingen ODER neue Teile uebersetzen. Kein Code geaendert.
+- iteration_71 (nach testIDs: sketch-canvas, tool-*, line-measure-input/commit, line-measure-label-<i>, sketch-element-count):
+  LIVE-PASS 10/18: Tutorial-Autostart (10 Seiten, kein Wiederholen), Uebung-Start (Modal + /help), Coach Schritte 1-6, Tuer per Long-Press.
+  Main agent live: Oeffnung ziehen horizontal+vertikal, Ueberlappungsschutz (Fenster stoppt an Tuer 1,45), Masskette beim Ziehen.
+  Fix: canvasContainer userSelect:'none' (Web: Textauswahl brach Zieh-Geste ab; nativ ohne Wirkung).
+  NICHT live: Coach Schritte 7-9 + skip/exit, T4 (Uebung verwirft/Restore), Handy 390x844, Typwechsel/Kopieren/Loeschen, Speichern+Wiederoeffnen, Geraderuecken-Effekt.
+  Rezept + alle testIDs: /app/tests/e2e/iter71_recipe.md. Offene Kleinigkeiten: '-0,5' / 'abc' im Abstandsfeld ohne Hinweis (wird als 0 gelesen).
+- Sprache: Umschalter DE/EN existiert in Einstellungen (saveLanguage). User will Zweisprachigkeit behalten -> neue Teile
+  (RoomTutorial, RoomCoach, WallHeightSection, OpeningInsertMenu, tip()-Texte, manual.ts) sind noch fest deutsch = offene Uebersetzung.

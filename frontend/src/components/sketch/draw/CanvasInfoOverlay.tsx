@@ -51,7 +51,7 @@ export function CanvasInfoOverlay(props: CanvasInfoOverlayProps) {
         onMoveShouldSetResponder={() => false}
         onResponderTerminationRequest={() => false}
       >
-        <Text style={styles.infoText}>Elemente: {elements.length}</Text>
+        <Text testID="sketch-element-count" style={styles.infoText}>Elemente: {elements.length}</Text>
         {selectedElementId && <Text style={styles.infoText}>Ausgewählt</Text>}
         {/* "Winkel anpassen" Button wenn ein Winkel-Element ausgewählt ist */}
         {selectedElementId && isAngleGroupElement(selectedElementId) && (

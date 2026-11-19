@@ -687,7 +687,7 @@ export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawEl
             const boxHeight = scaledFontSize * 1.3;
             
             return (
-              <G key={`measure-${element.id}-${segIdx}`}>
+              <G key={`measure-${element.id}-${segIdx}`} testID={`line-measure-label-${segIdx}`}>
                 {/* Maßlinie parallel zur Original-Linie */}
                 <Line
                   x1={p1.x + offsetX}

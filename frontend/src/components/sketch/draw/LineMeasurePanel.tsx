@@ -195,6 +195,7 @@ export function LineMeasurePanel(props: LineMeasurePanelProps) {
               ref={lineMeasurementInputRef}
               containerStyle={{ flex: 1 }}
               style={[styles.modalInput, { marginBottom: 0, fontSize: 15, paddingVertical: 8 }]}
+              testID="line-measure-input"
               value={lineMeasurementExpression}
               onChangeText={setLineMeasurementExpression}
               placeholder={
@@ -302,6 +303,7 @@ export function LineMeasurePanel(props: LineMeasurePanelProps) {
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#666' }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
+              testID="line-measure-commit"
               style={{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: '#1976d2' }}
               onPress={() => {
                 if (lineMeasurementExpression.trim()) {

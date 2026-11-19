@@ -216,7 +216,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
                 borderColor: zoomMode ? '#4caf50' : '#f44336',
               }
             ]}
-            {...tip('Zoom')}
+            {...tip('Zoom')} testID="tool-zoom"
             onPress={() => {
               const newZoomMode = !zoomMode;
               setZoomMode(newZoomMode);
@@ -246,7 +246,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[styles.toolButtonInner, drawMode === 'select' && styles.toolButtonActive, glow('edit', drawMode === 'select')]}
-            {...tip('Bearbeiten (Hand)')}
+            {...tip('Bearbeiten (Hand)')} testID="tool-edit"
             ref={coachRefs.edit}
             onPress={() => selectDrawMode('select')}
           >
@@ -286,7 +286,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Maßlinie Button */}
             <TouchableOpacity
               style={[styles.toolButtonInnerWide, drawMode === 'arrow' && styles.toolButtonActive]}
-              {...tip('M (Maßpfeil)')}
+              {...tip('M (Maßpfeil)')} testID="tool-measure-line"
               onPress={() => selectDrawMode('arrow')}
             >
               <Svg width={46} height={22} viewBox="0 0 56 28">
@@ -324,7 +324,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Polygon Maße Button */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'polyline' && styles.toolButtonActive, glow('polygon', drawMode === 'polyline')]}
-              {...tip('Polygon')}
+              {...tip('Polygon')} testID="tool-polygon"
               ref={coachRefs.polygon}
               onPress={() => {
                 selectDrawMode('polyline');
@@ -345,6 +345,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
                       borderColor: angleSnapEnabled ? '#1565c0' : '#ddd',
                     }
                   ]}
+                  testID="tool-angle-snap"
                   onPress={() => setAngleSnapEnabled(!angleSnapEnabled)}
                 >
                   <Text style={{ fontSize: 10, fontWeight: '700', color: angleSnapEnabled ? '#fff' : '#666' }}>
@@ -361,6 +362,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
                         borderColor: gridSnapEnabled ? '#388e3c' : '#ddd',
                       }
                     ]}
+                    testID="tool-grid-snap"
                     onPress={() => setGridSnapEnabled(!gridSnapEnabled)}
                   >
                     <Ionicons name="grid-outline" size={16} color={gridSnapEnabled ? '#fff' : '#666'} />
@@ -371,7 +373,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Punkt hinzufügen Button */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'addPoint' && styles.toolButtonActive]}
-              {...tip('+Pt')}
+              {...tip('+Pt')} testID="tool-add-point"
               onPress={() => selectDrawMode('addPoint')}
             >
               <Ionicons name="add-circle-outline" size={22} color={drawMode === 'addPoint' ? '#fff' : '#4caf50'} />
@@ -379,7 +381,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Punkt entfernen Button */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'removePoint' && styles.toolButtonActive]}
-              {...tip('-Pt')}
+              {...tip('-Pt')} testID="tool-remove-point"
               onPress={() => selectDrawMode('removePoint')}
             >
               <Ionicons name="remove-circle-outline" size={22} color={drawMode === 'removePoint' ? '#fff' : '#f44336'} />
@@ -397,7 +399,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[styles.toolButtonInner, !selectedElementId && styles.toolButtonDisabled]}
-            {...tip('Element löschen')}
+            {...tip('Element löschen')} testID="tool-delete-element"
             onPress={() => {
               if (selectedElementId) {
                 setShowDeleteConfirm(true);
@@ -495,7 +497,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[styles.toolButtonInner, drawMode === 'pen' && styles.toolButtonActive]}
-            {...tip('Stift')}
+            {...tip('Stift')} testID="tool-pen"
             onPress={() => selectDrawMode('pen')}
           >
             <Ionicons name="create" size={18} color={drawMode === 'pen' ? '#fff' : '#333'} />
@@ -510,7 +512,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             <View style={{ zIndex: 9999 }}>
               <TouchableOpacity
                 style={[styles.toolButtonInner, drawMode === 'line' && styles.toolButtonActive]}
-                {...tip('Linie')}
+                {...tip('Linie')} testID="tool-line"
                 onPress={() => {
                   if (drawMode === 'line') {
                     // Bereits aktiv → Modal toggle
@@ -539,14 +541,14 @@ export function SketchToolbar(props: SketchToolbarProps) {
             </View>
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'circle' && styles.toolButtonActive]}
-              {...tip('Kreis')}
+              {...tip('Kreis')} testID="tool-circle"
               onPress={() => { selectDrawMode('circle'); setShowLineTypePicker(false); }}
             >
               <Ionicons name="ellipse-outline" size={18} color={drawMode === 'circle' ? '#fff' : '#333'} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'rect' && styles.toolButtonActive]}
-              {...tip('Rechteck')}
+              {...tip('Rechteck')} testID="tool-rect"
               onPress={() => { selectDrawMode('rect'); setShowLineTypePicker(false); }}
             >
               <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />

@@ -288,6 +288,8 @@ export const styles = StyleSheet.create({
   canvasContainer: {
     flex: 1,
     backgroundColor: '#ffffff',
+    // Web: Ziehen darf keine Beschriftungen markieren (Textauswahl bricht die Geste ab)
+    userSelect: 'none',
   },
   svg: {
     backgroundColor: '#fff',

@@ -2280,6 +2280,7 @@ export default function DrawSketchScreen() {
         } : undefined}>
         <View
           ref={canvasRef}
+          testID="sketch-canvas"
           style={[styles.canvasContainer, { width: screenWidth, height: canvasHeight, minHeight: canvasHeight }]}
           onStartShouldSetResponder={() => Platform.OS === 'android' ? true : !zoomMode}
           onMoveShouldSetResponder={() => Platform.OS === 'android' ? true : !zoomMode}

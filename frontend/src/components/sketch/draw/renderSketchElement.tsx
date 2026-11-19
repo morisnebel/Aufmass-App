@@ -1,6 +1,6 @@
 import React from 'react';
 import { DrawElement } from '../../../sketch/sketchShared';
-import { PolygonAreaOptions, listDiagonals, drawnInteriorAngles } from '../../../sketch/polygonArea';
+import { PolygonAreaOptions, listDiagonals, drawnInteriorAngles, computePolygon, angleExtraId, pairExtraId } from '../../../sketch/polygonArea';
 import { PolygonWalls, hasWallHeights, segmentNumberPositions } from '../../../sketch/wallArea';
 import { Path, Line, Circle, Rect, Image as SvgImage, Text as SvgText, G, Defs, Marker, Polygon } from 'react-native-svg';
 
@@ -494,33 +494,39 @@ export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawEl
           })()}
           
           {/* Gemessene Diagonalen gestrichelt anzeigen */}
-          {closed && polygonAreaOptions[element.id]?.useDiagonals !== false && listDiagonals(polygonAreaOptions[element.id], points.length).map(d => (
+          {closed && polygonAreaOptions[element.id]?.useDiagonals !== false && listDiagonals(polygonAreaOptions[element.id], points.length).map(d => {
+            // Abgelehnte (widersprüchliche) Diagonale rot, noch nicht gemessene mit „?“
+            const diagonalRejected = !!computePolygon(element, lineSegmentMeasurements, undefined, polygonAreaOptions[element.id])?.rejected.includes(pairExtraId(d.i, d.j));
+            const diagonalColor = diagonalRejected ? '#d32f2f' : '#2e7d32';
+            return (
             <G key={`diagonal-${element.id}-${d.i}-${d.j}`}>
-              <Line x1={points[d.i].x} y1={points[d.i].y} x2={points[d.j].x} y2={points[d.j].y} stroke="#2e7d32" strokeWidth={1.2} strokeDasharray="6,4" />
-              {!!d.value.trim() && (
-                <SvgText x={(points[d.i].x + points[d.j].x) / 2} y={(points[d.i].y + points[d.j].y) / 2 - 3} fill="#2e7d32" fontSize={10} fontWeight="bold" textAnchor="middle">{d.value}</SvgText>
-              )}
+              <Line x1={points[d.i].x} y1={points[d.i].y} x2={points[d.j].x} y2={points[d.j].y} stroke={diagonalColor} strokeWidth={1.2} strokeDasharray="6,4" />
+              <SvgText x={(points[d.i].x + points[d.j].x) / 2} y={(points[d.i].y + points[d.j].y) / 2 - 3} fill={diagonalColor} fontSize={10} fontWeight="bold" textAnchor="middle">{d.value.trim() || '?'}</SvgText>
             </G>
-          ))}
+            );
+          })}
           {/* Erste gewählte Ecke einer neuen Diagonale */}
           {diagonalPick?.elementId === element.id && diagonalPick.first !== null && points[diagonalPick.first] && (
             <Circle cx={points[diagonalPick.first].x} cy={points[diagonalPick.first].y} r={12} fill="none" stroke="#2e7d32" strokeWidth={3} />
           )}
-          {/* Winkel je Ecke: eingegeben (grün) oder gezeichnet (grau), folgt dem Verschieben der Punkte */}
+          {/* Winkel je Ecke: immer der berechnete Wert – grün = Eingabe verwendet, rot = Eingabe abgelehnt, grau = berechnet */}
           {closed && polygonAreaOptions[element.id]?.useAngles && (() => {
             const cx = points.reduce((sum: number, p: any) => sum + p.x, 0) / points.length;
             const cy = points.reduce((sum: number, p: any) => sum + p.y, 0) / points.length;
-            return drawnInteriorAngles(points).map((angle, k) => {
+            const solved = computePolygon(element, lineSegmentMeasurements, undefined, polygonAreaOptions[element.id]);
+            const shown = solved && solved.angles.length === points.length ? solved.angles : drawnInteriorAngles(points);
+            return shown.map((angle, k) => {
               const entered = polygonAreaOptions[element.id]?.angles?.[k]?.trim();
+              const angleRejected = !!solved?.rejected.includes(angleExtraId(k));
               const len = Math.hypot(cx - points[k].x, cy - points[k].y) || 1;
               return (
                 <SvgText
                   key={`angle-${element.id}-${k}`}
                   x={points[k].x + ((cx - points[k].x) / len) * 26}
                   y={points[k].y + ((cy - points[k].y) / len) * 26 + 4}
-                  fill={entered ? '#2e7d32' : '#777'} fontSize={11} fontWeight="bold" textAnchor="middle"
+                  fill={angleRejected ? '#d32f2f' : entered ? '#2e7d32' : '#777'} fontSize={11} fontWeight="bold" textAnchor="middle"
                 >
-                  {entered ? `${entered}°` : `${Math.round(angle)}°`}
+                  {`${(Math.round(angle * 10) / 10).toString().replace('.', ',')}°`}
                 </SvgText>
               );
             });

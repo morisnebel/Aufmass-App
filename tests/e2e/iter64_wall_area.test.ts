@@ -115,7 +115,8 @@ assert.strictEqual(pa.calculatePolygonAreaM2(skew, m4, undefined, { useAngles: t
 const skewL = { id: 'q', type: 'polyline', data: { closed: true, points: [{ x: 0, y: 0 }, { x: 118, y: 10 }, { x: 125, y: 66 }, { x: 62, y: 55 }, { x: 55, y: 95 }, { x: -8, y: 88 }] } };
 assert.strictEqual(pa.calculatePolygonAreaM2(skewL, { q: m6 }, undefined, { useAngles: true, angles: { 1: '90', 2: '90', 3: '270' } }), 10);
 // widersprüchliche Diagonale → Abweichung wird gemeldet
-assert.ok(pa.computePolygon(closed, m4, undefined, { useDiagonals: true, pairs: { '0-2': '8m' } }).maxError > 0.05);
+// Widersprüchliche Diagonale wird abgelehnt (nicht verwendet)
+assert.ok(pa.computePolygon(closed, m4, undefined, { useDiagonals: true, pairs: { '0-2': '8m' } }).rejected.includes('pair-0-2'));
 const ang = pa.drawnInteriorAngles(L6.map(p => ({ x: p[0], y: p[1] }))).map(Math.round);
 assert.deepStrictEqual(ang, [90, 90, 90, 270, 90, 90]);
 console.log('OK solver');

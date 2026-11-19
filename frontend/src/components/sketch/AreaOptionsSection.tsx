@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
-import { PolygonAreaOption, computePolygon, drawnInteriorAngles, formatAreaM2, listDiagonals } from '../../sketch/polygonArea';
+import { PolygonAreaOption, computePolygon, formatAreaM2, listDiagonals, angleExtraId, pairExtraId, vertexDistance } from '../../sketch/polygonArea';
 import { NumpadTarget } from './WallHeightSection';
 
 // Genauere Flächenberechnung für ein Polygon (alles optional):
@@ -19,7 +19,19 @@ type Props = {
   // Auswahl einer Diagonale durch Antippen zweier Ecken in der Skizze
   pickState: 'off' | 'first' | 'second';
   onPickDiagonal: (active: boolean) => void;
+  // Feld, das von außen ausgewählt werden soll (z. B. automatisch angelegte Diagonale)
+  focusFieldId?: string | null;
+  onFocusHandled?: () => void;
 };
+
+// Reihenfolge der Eingaben merken: frühere Angaben haben bei Widersprüchen Vorrang
+const withOrder = (option: PolygonAreaOption, extraId: string, text: string): PolygonAreaOption => {
+  const order = (option.order || []).filter(id => id !== extraId || text.trim());
+  return { ...option, order: text.trim() && !order.includes(extraId) ? [...order, extraId] : order };
+};
+
+const formatDegrees = (value: number) => `${(Math.round(value * 10) / 10).toString().replace('.', ',')}°`;
+const formatMeters = (value: number) => `${value.toFixed(2).replace('.', ',')} m`;
 
 export const AREA_FIELD_PREFIX = 'area-';
 
@@ -34,10 +46,16 @@ export const withPairs = (option: PolygonAreaOption | undefined, pointCount: num
 // Ecke k liegt zwischen Linie k und Linie k+1 (Ecke 0: zwischen letzter Linie und Linie 1)
 const cornerName = (k: number, n: number) => `Linie ${k === 0 ? n : k}/${k + 1}`;
 
-export const AreaOptionsSection = ({ element, measures, shapePoints, option, onChange, activeFieldId, onFieldFocus, pickState, onPickDiagonal }: Props) => {
+export const AreaOptionsSection = ({ element, measures, shapePoints, option, onChange, activeFieldId, onFieldFocus, pickState, onPickDiagonal, focusFieldId, onFocusHandled }: Props) => {
   const latest = useRef({ option, onChange });
   latest.current = { option, onChange };
   const values = useRef<{ [id: string]: string }>({});
+  const targets = useRef<{ [id: string]: NumpadTarget }>({});
+  useEffect(() => {
+    if (!focusFieldId || !targets.current[focusFieldId]) return;
+    onFieldFocus(focusFieldId, targets.current[focusFieldId]);
+    onFocusHandled?.();
+  });
   const points: { x: number; y: number }[] = element?.data?.points || [];
   const n = points.length;
   if (!element?.data?.closed || n < 4) return null;
@@ -46,12 +64,21 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   const useAngles = !!option?.useAngles;
   const diagonals = listDiagonals(option, n);
   const useDiagonals = !!option?.useDiagonals || diagonals.length > 0;
-  const drawn = drawnInteriorAngles(points);
-  const result = computePolygon(element, { [element.id]: measures || {} }, useAngles ? undefined : shapePoints, option);
+  // Alte Diagonalen-Form für die Anzeige wie die neue rechnen (liefert berechnete Werte)
+  const calcOption = option && !option.pairs && diagonals.length > 0 ? withPairs(option, n, () => {}) : option;
+  const result = computePolygon(element, { [element.id]: measures || {} }, useAngles ? undefined : shapePoints, calcOption);
   const needed = n - 3;
+  const hasShape = !!result && result.vertices.length === n;
+  const sign = result?.determined ? '=' : '≈';
+  const isRejected = (extraId: string) => !!result?.rejected.includes(extraId);
 
-  const field = (id: string, label: string, value: string, placeholder: string, set: (current: PolygonAreaOption | undefined, text: string) => PolygonAreaOption) => {
+  const field = (id: string, label: string, value: string, placeholder: string, set: (current: PolygonAreaOption | undefined, text: string) => PolygonAreaOption, computed?: string, rejected?: boolean) => {
     values.current[id] = value;
+    targets.current[id] = {
+      get: () => values.current[id] ?? '',
+      set: (next) => latest.current.onChange(set(latest.current.option, next)),
+      label,
+    };
     return (
     <View key={id} style={styles.field}>
       <Text style={styles.label} numberOfLines={2}>{label}</Text>
@@ -59,18 +86,19 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
         testID={id}
         replaceOnBurst
         containerStyle={styles.flex}
-        style={[styles.input, activeFieldId === id && styles.inputActive]}
+        style={[styles.input, rejected && styles.inputRejected, activeFieldId === id && styles.inputActive]}
         value={value}
         onChangeText={(text) => onChange(set(option, text))}
         placeholder={placeholder}
         placeholderTextColor="#aaa"
         showSoftInputOnFocus={false}
-        onFocus={() => onFieldFocus(id, {
-          get: () => values.current[id] ?? '',
-          set: (next) => latest.current.onChange(set(latest.current.option, next)),
-          label,
-        })}
+        onFocus={() => onFieldFocus(id, targets.current[id])}
       />
+      {!!computed && (
+        <Text testID={`${id}-computed`} style={[styles.computed, rejected && styles.computedRejected]} numberOfLines={2}>
+          {rejected ? `passt nicht – nicht verwendet · rechnerisch ${computed}` : `${sign} ${computed}`}
+        </Text>
+      )}
     </View>
     );
   };
@@ -91,16 +119,20 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
 
   let status = 'Fläche aus den gezeichneten Winkeln – Abweichung vom genauen Maß möglich. Für genaue Werte Winkel oder Diagonalen angeben.';
   let warn = true;
-  if (result && result.maxError > 0.01) {
-    status = `Maße passen nicht zusammen (Abweichung bis ${(result.maxError * 100).toFixed(0)} cm) – bitte prüfen`;
-  } else if (result && result.extras >= needed) {
-    status = `Fläche über Winkel/Diagonalen bestimmt: ${formatAreaM2(result.area)}`;
+  if (!result) {
+    status = 'Erst alle Seiten bemaßen – dann werden Winkel und Diagonalen berechnet.';
+  } else if (result.rejected.length > 0) {
+    status = `${result.rejected.length === 1 ? 'Eine Angabe passt' : `${result.rejected.length} Angaben passen`} nicht zu den übrigen Maßen und ${result.rejected.length === 1 ? 'wird' : 'werden'} nicht verwendet (rot markiert). Fläche: ${formatAreaM2(result.area)}`;
+  } else if (rightAngles && result.rightAnglesRejected !== undefined) {
+    status = `„Rechtwinklig“ passt nicht zu den Seitenmaßen${isFinite(result.rightAnglesRejected) ? ` (Abweichung ${(result.rightAnglesRejected * 100).toFixed(0)} cm)` : ''} und wird nicht verwendet. Bitte Maße prüfen oder Winkel/Diagonale angeben.`;
+  } else if (result.extras >= needed) {
+    status = `Form eindeutig bestimmt – Fläche ${formatAreaM2(result.area)}. Alle übrigen Winkel und Diagonalen sind berechnet.`;
     warn = false;
-  } else if (result && result.extras > 0) {
-    status = `Noch ${needed - result.extras} Winkel oder Diagonale(n) für eine genaue Fläche – bis dahin Näherung.`;
   } else if (rightAngles) {
     status = 'Alle Ecken werden als rechtwinklig gerechnet.';
     warn = false;
+  } else if (result.extras > 0) {
+    status = `Noch ${needed - result.extras} Winkel oder Diagonale(n) für eine genaue Fläche – Werte mit ≈ sind bis dahin Näherung aus der Zeichnung.`;
   }
 
   return (
@@ -110,8 +142,9 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
 
       {toggle('area-angles-toggle', 'Winkel angeben', useAngles, () => onChange({ ...option, useAngles: !useAngles }), 'analytics')}
       {useAngles && points.map((_, k) =>
-        field(`area-angle-${k}`, `Winkel Ecke ${cornerName(k, n)} (°)`, option?.angles?.[k] || '', `gezeichnet ${Math.round(drawn[k])}°`,
-          (current, text) => ({ ...current, angles: { ...current?.angles, [k]: text } })))}
+        field(`area-angle-${k}`, `Winkel Ecke ${cornerName(k, n)} (°)`, option?.angles?.[k] || '', 'Winkel in °',
+          (current, text) => withOrder({ ...current, angles: { ...current?.angles, [k]: text } }, angleExtraId(k), text),
+          hasShape ? formatDegrees(result!.angles[k]) : undefined, isRejected(angleExtraId(k))))}
 
       {toggle('area-diagonals-toggle', 'Diagonalen angeben', useDiagonals, () => onChange({ ...withPairs(option, n, () => {}), useDiagonals: !useDiagonals }), 'git-compare')}
       {useDiagonals && (
@@ -119,7 +152,8 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
           {diagonals.map(d => (
             <View key={`${d.i}-${d.j}`} style={styles.row}>
               {field(`area-diag-${d.i}-${d.j}`, `Ecke ${cornerName(d.i, n)} ↔ Ecke ${cornerName(d.j, n)}`, d.value, 'z.B. 4,65m',
-                (current, text) => withPairs(current, n, pairs => { pairs[`${d.i}-${d.j}`] = text; }))}
+                (current, text) => withOrder(withPairs(current, n, pairs => { pairs[`${d.i}-${d.j}`] = text; }), pairExtraId(d.i, d.j), text),
+                hasShape ? formatMeters(vertexDistance(result!.vertices, d.i, d.j)) : undefined, isRejected(pairExtraId(d.i, d.j)))}
               <TouchableOpacity
                 testID={`area-diag-remove-${d.i}-${d.j}`}
                 accessibilityLabel="Diagonale entfernen"
@@ -152,13 +186,16 @@ const styles = StyleSheet.create({
   toggleText: { flex: 1, fontSize: 11, fontWeight: '600', color: '#666' },
   textOn: { color: '#2e7d32' },
   state: { fontSize: 10, fontWeight: '700', color: '#999' },
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 4 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 4 },
   flex: { flex: 1 },
   field: { flex: 1, gap: 2 },
   label: { fontSize: 10, fontWeight: '600', color: '#555' },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ccc', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 8, fontSize: 14, color: '#333', minHeight: 40 },
   inputActive: { borderColor: '#1976d2', borderWidth: 2 },
-  remove: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  inputRejected: { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
+  computed: { fontSize: 11, fontWeight: '700', color: '#2e7d32' },
+  computedRejected: { color: '#d32f2f' },
+  remove: { width: 40, height: 40, marginTop: 14, alignItems: 'center', justifyContent: 'center' },
   pick: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 44, paddingHorizontal: 8, borderRadius: 8, borderWidth: 1, borderColor: '#a5d6a7', backgroundColor: '#fff' },
   pickActive: { backgroundColor: '#2e7d32', borderColor: '#2e7d32' },
   pickText: { flexShrink: 1, fontSize: 12, fontWeight: '600', color: '#2e7d32' },

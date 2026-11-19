@@ -1,4 +1,4 @@
-import { PolygonAreaOptions, listDiagonals } from './polygonArea';
+import { PolygonAreaOptions, listDiagonals, computePolygon, pairExtraId } from './polygonArea';
 import { PolygonWalls, hasWallHeights, segmentNumberPositions } from './wallArea';
 // SVG-Vorschau-Erzeugung für Skizzen (ausgelagert aus app/sketches/draw.tsx)
 // Baut aus den Zeichen-Elementen ein eigenständiges SVG (als data:-URI) für PDF/Vorschau.
@@ -459,7 +459,9 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
         
         // Gemessene Diagonalen gestrichelt mit Maß
         if (isClosed && polygonAreaOptions[el.id]?.useDiagonals !== false) {
-          listDiagonals(polygonAreaOptions[el.id], points.length).filter(d => d.value.trim()).forEach(d => {
+          // Abgelehnte (widersprüchliche) Diagonalen erscheinen nicht im Skizzenbild
+          const rejectedExtras = computePolygon(el, lineSegmentMeasurements, undefined, polygonAreaOptions[el.id])?.rejected || [];
+          listDiagonals(polygonAreaOptions[el.id], points.length).filter(d => d.value.trim() && !rejectedExtras.includes(pairExtraId(d.i, d.j))).forEach(d => {
             const a = points[d.i]; const b = points[d.j];
             const mx = (a.x + b.x) / 2; const my = (a.y + b.y) / 2;
             const label = String(d.value).replace(/&/g, '&amp;').replace(/</g, '&lt;');

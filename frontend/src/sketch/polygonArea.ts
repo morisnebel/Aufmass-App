@@ -31,7 +31,31 @@ export type PolygonAreaOption = {
   angles?: { [vertexIndex: number]: string }; // Innenwinkel in Grad an Ecke k (zwischen Linie k und k+1)
   useDiagonals?: boolean;
   pairs?: { [key: string]: string }; // Diagonale zwischen zwei frei gewählten Ecken, Schlüssel "i-j"
+  order?: string[]; // Reihenfolge der Eingaben ("angle-k" / "pair-i-j"): frühere Angaben haben Vorrang
 };
+
+// Kennungen der Zusatzangaben (für Reihenfolge und abgelehnte Angaben)
+export const angleExtraId = (k: number) => `angle-${k}`;
+export const pairExtraId = (i: number, j: number) => `pair-${i}-${j}`;
+
+// Toleranzen, ab denen eine Angabe als Widerspruch zu den übrigen Maßen gilt
+export const DISTANCE_TOLERANCE_M = 0.02;
+export const ANGLE_TOLERANCE_DEG = 1;
+export const RIGHT_ANGLE_CLOSE_TOLERANCE_M = 0.03;
+
+export type PolygonResult = {
+  area: number;
+  maxError: number;
+  extras: number; // verwendete Winkel/Diagonalen
+  determined: boolean; // Form ist durch die Angaben eindeutig festgelegt
+  vertices: { x: number; y: number }[]; // berechnete Ecken in Metern
+  angles: number[]; // berechnete Innenwinkel in Grad je Ecke
+  rejected: string[]; // Angaben, die nicht zu den übrigen Maßen passen und nicht verwendet werden
+  rightAnglesRejected?: number; // Schließfehler in Metern, wenn „rechtwinklig“ nicht zu den Seiten passt
+};
+
+export const vertexDistance = (vertices: { x: number; y: number }[], i: number, j: number): number =>
+  vertices[i] && vertices[j] ? Math.hypot(vertices[j].x - vertices[i].x, vertices[j].y - vertices[i].y) : 0;
 
 // Alle Diagonalen eines Polygons (neues und altes Format) als Eckenpaare
 export const listDiagonals = (option: PolygonAreaOption | undefined, pointCount: number): { i: number; j: number; value: string }[] => {
@@ -114,12 +138,29 @@ export const polygonDiagonalAreaM2 = (
 export const quadDiagonalAreaM2 = (measures: { [seg: number]: string } | undefined, diagonal: string | undefined): number | null =>
   polygonDiagonalAreaM2(measures, { diagonals: { 2: diagonal || '' } }, 4);
 
+const resultCache = new Map<string, PolygonResult | null>();
+
 export const computePolygon = (
   element: any,
   lineSegmentMeasurements: { [id: string]: { [seg: number]: string } },
   shapePoints?: { x: number; y: number }[],
   option?: PolygonAreaOption
-): { area: number; maxError: number; extras: number } | null => {
+): PolygonResult | null => {
+  if (element.type !== 'polyline' || !element.data?.closed) return null;
+  const cacheKey = JSON.stringify([element.data.points, lineSegmentMeasurements[element.id], shapePoints, option]);
+  if (resultCache.has(cacheKey)) return resultCache.get(cacheKey)!;
+  const result = computePolygonUncached(element, lineSegmentMeasurements, shapePoints, option);
+  if (resultCache.size > 300) resultCache.clear();
+  resultCache.set(cacheKey, result);
+  return result;
+};
+
+const computePolygonUncached = (
+  element: any,
+  lineSegmentMeasurements: { [id: string]: { [seg: number]: string } },
+  shapePoints?: { x: number; y: number }[],
+  option?: PolygonAreaOption
+): PolygonResult | null => {
   if (element.type !== 'polyline' || !element.data?.closed) return null;
   const points: { x: number; y: number }[] =
     shapePoints && shapePoints.length === element.data.points?.length ? shapePoints : element.data.points;
@@ -134,7 +175,7 @@ export const computePolygon = (
     (option.useDiagonals && Object.values(option.pairs || {}).some(v => parseMeasurementToMeters(v || '') > 0)));
   if (!hasNewExtras && n >= 4 && option && diagonalTargets(n).some(k => getDiagonal(option, k).trim())) {
     const diagonalArea = polygonDiagonalAreaM2(measures, option, n, points);
-    if (diagonalArea !== null) return { area: diagonalArea, maxError: 0, extras: n - 3 };
+    if (diagonalArea !== null) return { area: diagonalArea, maxError: 0, extras: n - 3, determined: true, vertices: [], angles: [], rejected: [] };
   }
 
   // 1) Alle Segmente müssen ein numerisches Maß haben
@@ -161,7 +202,7 @@ export const computePolygon = (
     if (under <= 0) return null; // Seiten ergeben kein gültiges Dreieck
     const heronArea = Math.sqrt(under);
     if (!isFinite(heronArea) || heronArea <= 0) return null;
-    return { area: Math.round(heronArea * 100) / 100, maxError: 0, extras: 0 };
+    return { area: Math.round(heronArea * 100) / 100, maxError: 0, extras: 0, determined: true, vertices: [], angles: [], rejected: [] };
   }
 
   // 1b) Winkel-Einrastung: Drehwinkel zwischen ALLEN aufeinanderfolgenden Kanten
@@ -196,7 +237,8 @@ export const computePolygon = (
   const residual = target - turnSum;
   // Zeichnung lässt sich nicht rechtwinklig schließen: normale Berechnung verwenden
   if (forceRight && Math.abs(residual) > 1e-6) {
-    return computePolygon(element, lineSegmentMeasurements, shapePoints, { ...option, rightAngles: false });
+    const fallback = computePolygonUncached(element, lineSegmentMeasurements, shapePoints, { ...option, rightAngles: false });
+    return fallback && { ...fallback, rightAnglesRejected: Infinity };
   }
   if (Math.abs(residual) > 1e-9) {
     const freeIdx: number[] = [];
@@ -225,6 +267,11 @@ export const computePolygon = (
   const totalLength = lengths.reduce((a, b) => a + b, 0);
   const closeErrX = edges.reduce((a, e) => a + e.x, 0);
   const closeErrY = edges.reduce((a, e) => a + e.y, 0);
+  // „Rechtwinklig“ passt nicht zu den Seitenmaßen: Angabe ablehnen und normal rechnen
+  if (forceRight && Math.hypot(closeErrX, closeErrY) > RIGHT_ANGLE_CLOSE_TOLERANCE_M) {
+    const fallback = computePolygonUncached(element, lineSegmentMeasurements, shapePoints, { ...option, rightAngles: false });
+    return fallback && { ...fallback, rightAnglesRejected: Math.hypot(closeErrX, closeErrY) };
+  }
 
   const vertices: { x: number; y: number }[] = [{ x: 0, y: 0 }];
   for (let i = 0; i < n - 1; i++) {
@@ -236,46 +283,78 @@ export const computePolygon = (
     });
   }
 
-  // 3b) Zusätzliche Winkel/Diagonalen: als Abstände zwischen zwei Ecken einarbeiten.
-  // Die Ecken werden so lange verschoben, bis Seiten, Diagonalen und Winkel stimmen
-  // (ein Winkel an Ecke k legt den Abstand der beiden Nachbarecken fest).
-  let maxError = 0;
-  let extras = 0;
-  if (hasNewExtras && option) {
-    const constraints: { i: number; j: number; d: number }[] = lengths.map((d, i) => ({ i, j: (i + 1) % n, d }));
-    if (option.useDiagonals) {
-      Object.entries(option.pairs || {}).forEach(([key, value]) => {
-        const [i, j] = key.split('-').map(Number);
-        const d = parseMeasurementToMeters(value || '');
-        if (d > 0 && i < n && j < n && i !== j) { constraints.push({ i, j, d }); extras++; }
-      });
-    }
-    if (option.useAngles) {
-      Object.entries(option.angles || {}).forEach(([key, value]) => {
-        const k = Number(key);
-        const deg = parseDegrees(value);
-        if (!(deg > 0) || k >= n) return;
-        const a = lengths[(k - 1 + n) % n];
-        const b = lengths[k];
-        const d = Math.sqrt(Math.max(0, a * a + b * b - 2 * a * b * Math.cos((deg * Math.PI) / 180)));
-        if (d > 0) { constraints.push({ i: (k - 1 + n) % n, j: (k + 1) % n, d }); extras++; }
-      });
-    }
+  // 3b) Zusätzliche Winkel/Diagonalen: als Abstände zwischen zwei Ecken einarbeiten
+  // (ein Winkel an Ecke k legt den Abstand der beiden Nachbarecken fest). Die Angaben werden
+  // in Eingabe-Reihenfolge geprüft: Was nicht zu Seiten und früheren Angaben passt, wird abgelehnt.
+  type Constraint = { i: number; j: number; d: number };
+  type Extra = Constraint & { id: string; angle?: { k: number; deg: number } };
+  const sideConstraints: Constraint[] = lengths.map((d, i) => ({ i, j: (i + 1) % n, d }));
+  const solve = (start: { x: number; y: number }[], constraints: Constraint[]) => {
+    const v = start.map(p => ({ ...p }));
+    let error = 0;
     for (let iteration = 0; iteration < 5000; iteration++) {
-      maxError = 0;
+      error = 0;
       for (const c of constraints) {
-        const dx = vertices[c.j].x - vertices[c.i].x;
-        const dy = vertices[c.j].y - vertices[c.i].y;
+        const dx = v[c.j].x - v[c.i].x;
+        const dy = v[c.j].y - v[c.i].y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < 1e-12) continue;
-        maxError = Math.max(maxError, Math.abs(dist - c.d));
+        error = Math.max(error, Math.abs(dist - c.d));
         const corr = ((dist - c.d) / dist) * 0.5;
-        vertices[c.i].x += dx * corr; vertices[c.i].y += dy * corr;
-        vertices[c.j].x -= dx * corr; vertices[c.j].y -= dy * corr;
+        v[c.i].x += dx * corr; v[c.i].y += dy * corr;
+        v[c.j].x -= dx * corr; v[c.j].y -= dy * corr;
       }
-      if (maxError < 1e-9) break;
+      if (error < 1e-9) break;
+    }
+    return { v, error };
+  };
+  const fits = (v: { x: number; y: number }[], e: Extra) => e.angle
+    ? Math.abs(drawnInteriorAngles(v)[e.angle.k] - e.angle.deg) <= ANGLE_TOLERANCE_DEG
+    : Math.abs(vertexDistance(v, e.i, e.j) - e.d) <= DISTANCE_TOLERANCE_M;
+
+  const extraList: Extra[] = [];
+  if (option?.useDiagonals) {
+    Object.entries(option.pairs || {}).forEach(([key, value]) => {
+      const [i, j] = key.split('-').map(Number);
+      const d = parseMeasurementToMeters(value || '');
+      if (d > 0 && i < n && j < n && i !== j) extraList.push({ id: pairExtraId(i, j), i, j, d });
+    });
+  }
+  if (option?.useAngles) {
+    Object.entries(option.angles || {}).forEach(([key, value]) => {
+      const k = Number(key);
+      const deg = parseDegrees(value);
+      if (!(deg > 0) || k >= n) return;
+      const a = lengths[(k - 1 + n) % n];
+      const b = lengths[k];
+      const d = Math.sqrt(Math.max(0, a * a + b * b - 2 * a * b * Math.cos((deg * Math.PI) / 180)));
+      if (d > 0) extraList.push({ id: angleExtraId(k), i: (k - 1 + n) % n, j: (k + 1) % n, d, angle: { k, deg } });
+    });
+  }
+  const orderOf = (id: string) => { const at = (option?.order || []).indexOf(id); return at < 0 ? -1 : at; };
+  extraList.sort((a, b) => orderOf(a.id) - orderOf(b.id));
+
+  let solved = vertices;
+  let maxError = 0;
+  const accepted: Extra[] = [];
+  const rejected: string[] = [];
+  for (const extra of extraList) {
+    if (accepted.length >= n - 3) {
+      // Form steht schon fest: weitere Angaben sind nur Kontrollmaße
+      if (fits(solved, extra)) accepted.push(extra); else rejected.push(extra.id);
+      continue;
+    }
+    const trial = solve(solved, [...sideConstraints, ...accepted, extra]);
+    if (trial.error <= DISTANCE_TOLERANCE_M && fits(trial.v, extra)) {
+      solved = trial.v;
+      maxError = trial.error;
+      accepted.push(extra);
+    } else {
+      rejected.push(extra.id);
     }
   }
+  const extras = accepted.length;
+  vertices.splice(0, vertices.length, ...solved);
 
   // 4) Shoelace-Formel auf den rekonstruierten Ecken (in Metern)
   let areaM2 = 0;
@@ -286,7 +365,11 @@ export const computePolygon = (
   areaM2 = Math.abs(areaM2) / 2;
 
   if (!isFinite(areaM2) || areaM2 <= 0) return null;
-  return { area: Math.round(areaM2 * 100) / 100, maxError, extras };
+  return {
+    area: Math.round(areaM2 * 100) / 100, maxError, extras, rejected, vertices,
+    determined: extras >= n - 3 || forceRight,
+    angles: drawnInteriorAngles(vertices),
+  };
 };
 
 export const calculatePolygonAreaM2 = (

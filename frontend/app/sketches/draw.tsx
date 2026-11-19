@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Speichereffiziente Deep-Clone-Funktion (verhindert OOM bei großen base64-Strings)
 import { DrawElement, FontFamily, DrawMode, TOOL_SIZES_KEY } from '../../src/sketch/sketchShared';
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
-import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, PolygonAreaShapes, PolygonAreaOptions, areaShapeKey, listDiagonals } from '../../src/sketch/polygonArea';
+import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, computePolygon, PolygonAreaShapes, PolygonAreaOptions, areaShapeKey, listDiagonals } from '../../src/sketch/polygonArea';
 import { AREA_FIELD_PREFIX, withPairs } from '../../src/components/sketch/AreaOptionsSection';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { NumpadTarget } from '../../src/components/sketch/WallHeightSection';
@@ -734,9 +734,37 @@ export default function DrawSketchScreen() {
     if (target) target.set(update(target.get()));
     else setLineMeasurementExpression(update);
   };
+  // Feld im Flächen-Bereich, das nach dem Öffnen des Maß-Fensters ausgewählt werden soll
+  const [pendingAreaField, setPendingAreaField] = useState<string | null>(null);
   useEffect(() => {
-    clearNumpadTarget();
+    if (!pendingAreaField) clearNumpadTarget();
   }, [selectedLineSegment?.elementId, selectedLineSegment?.segmentIndex, showLineMeasurementNumpad]);
+  // Nach dem Verschieben einer Ecke: Ist der Raum noch nicht durch Winkel/Diagonalen bestimmt,
+  // wird die Diagonale ab der verschobenen Ecke angelegt und ihr Eingabefeld ausgewählt
+  const autoDiagonalAfterPointMove = (element: DrawElement, pointIndex: number): boolean => {
+    const n = element.data?.points?.length || 0;
+    const option = polygonAreaOptions[element.id];
+    if (!element.data?.closed || n < 4 || option?.rightAngles) return false;
+    const result = computePolygon(element, lineSegmentMeasurements, undefined, option);
+    if (!result || result.extras >= n - 3) return false;
+    const existing = listDiagonals(option, n);
+    let pick = existing.find(d => !d.value.trim());
+    for (let step = 2; !pick && step <= n - 2; step++) {
+      const other = (pointIndex + step) % n;
+      const i = Math.min(pointIndex, other);
+      const j = Math.max(pointIndex, other);
+      if (!existing.some(d => d.i === i && d.j === j)) pick = { i, j, value: '' };
+    }
+    if (!pick) return false;
+    const { i, j } = pick;
+    setPolygonAreaOptions(prev => ({
+      ...prev,
+      [element.id]: withPairs(prev[element.id], n, pairs => { if (pairs[`${i}-${j}`] === undefined) pairs[`${i}-${j}`] = ''; }),
+    }));
+    changePanelOptionsOpen(true);
+    setPendingAreaField(`${AREA_FIELD_PREFIX}diag-${i}-${j}`);
+    return true;
+  };
 
   // Bearbeiten-Unterpunkt „Punkte verschieben“: nur Eckpunkte greifen (großzügige Trefferfläche),
   // das Maß-Fenster öffnet sich dabei nicht
@@ -1630,7 +1658,7 @@ export default function DrawSketchScreen() {
     androidTranslateY, drawMode, currentPathRef, generateId, drawColor, strokeWidth, addToHistory,
     elements, currentPenPointsRef, setCurrentPath, currentPath, angleEditMode, setAngleEditMode,
     setAngleEditBaseId, setAngleEditOriginals, setDragStart, dragMode, editingPolylinePoint,
-    selectedElementId, pointMoveOnly, setSelectedLineSegment, measureLineStyles,
+    selectedElementId, pointMoveOnly, autoDiagonalAfterPointMove, setSelectedLineSegment, measureLineStyles,
     setTempMeasureLineColor, setTempMeasureLineStrokeWidth, setTempMeasureLineFontSize,
     setLineMeasurementExpression, setShowLineMeasurementNumpad, lineMeasurementInputRef,
     movingGroupBaseId, originalGroupElements, setEditingPolylinePoint, setDragMode, setResizeHandle,
@@ -2262,7 +2290,7 @@ export default function DrawSketchScreen() {
           changePanelOptionsOpen, changeLineAutoAdd, lineAutoNext, changeLineAutoNext,
           changeLaserSound, lineMeasureHistory, undoLastLineMeasurement, lineNumbersVisible,
           changeLineNumbersVisible, polygonWalls, setPolygonWalls, setWallSectionOpen,
-          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId,
+          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField,
           calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
           polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick,
           setPolygonAreaOptions, setShowMeasureStyleSettings, showMeasureStyleSettings,

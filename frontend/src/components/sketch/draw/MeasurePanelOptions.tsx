@@ -35,6 +35,8 @@ export type MeasurePanelOptionsProps = {
   setPanelKeyboardOpen: React.Dispatch<React.SetStateAction<boolean>>;
   numpadTargetRef: React.RefObject<NumpadTarget | null>;
   setNumpadTargetId: React.Dispatch<React.SetStateAction<string | null>>;
+  pendingAreaField: string | null;
+  setPendingAreaField: React.Dispatch<React.SetStateAction<string | null>>;
   calculatePolygonAreaM2: (element: DrawElement) => number | null;
   polygonAreaVisible: { [elementId: string]: boolean; };
   setPolygonAreaVisible: React.Dispatch<React.SetStateAction<{ [elementId: string]: boolean; }>>;
@@ -52,7 +54,7 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
     changeLineAutoNext, laserSound, changeLaserSound, lineMeasureHistory, undoLastLineMeasurement,
     lineNumbersVisible, changeLineNumbersVisible, selectedLineSegment, elements,
     lineSegmentMeasurements, polygonWalls, setPolygonWalls, wallSectionOpen, setWallSectionOpen,
-    numpadTargetId, panelKeyboardOpen, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId,
+    numpadTargetId, panelKeyboardOpen, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField,
     calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
     polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick, setPolygonAreaOptions,
   } = props;
@@ -207,6 +209,8 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
           onPickDiagonal={(active) => setDiagonalPick(active ? { elementId: selectedLineSegment.elementId, first: null } : null)}
           onChange={(option) => setPolygonAreaOptions(prev => ({ ...prev, [selectedLineSegment.elementId]: option }))}
           activeFieldId={numpadTargetId}
+          focusFieldId={pendingAreaField}
+          onFocusHandled={() => setPendingAreaField(null)}
           onFieldFocus={(id, target) => {
             if (!panelKeyboardOpen) setPanelKeyboardOpen(true);
             numpadTargetRef.current = target;

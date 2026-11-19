@@ -628,6 +628,7 @@ export type OnTouchEndImplCtx = {
   editingPolylinePoint: number | null;
   selectedElementId: string | null;
   pointMoveOnly: boolean;
+  autoDiagonalAfterPointMove: (element: DrawElement, pointIndex: number) => boolean;
   setSelectedLineSegment: React.Dispatch<React.SetStateAction<{ elementId: string; segmentIndex: number; } | null>>;
   measureLineStyles: { [elementId: string]: { color: string; strokeWidth: number; fontSize: number; }; };
   setTempMeasureLineColor: React.Dispatch<React.SetStateAction<string>>;
@@ -673,7 +674,7 @@ export function onTouchEndImpl(ctx: OnTouchEndImplCtx, event: any) {
     canvasHeight, setAndroidViewBox, setScale, androidZoomScale, androidTranslateX,
     androidTranslateY, drawMode, currentPathRef, generateId, drawColor, strokeWidth, addToHistory,
     elements, currentPenPointsRef, setCurrentPath, currentPath, angleEditMode, setAngleEditMode,
-    setAngleEditBaseId, setAngleEditOriginals, setDragStart, dragMode, editingPolylinePoint,
+    setAngleEditBaseId, setAngleEditOriginals, setDragStart, dragMode, editingPolylinePoint, autoDiagonalAfterPointMove,
     selectedElementId, pointMoveOnly, setSelectedLineSegment, measureLineStyles,
     setTempMeasureLineColor, setTempMeasureLineStrokeWidth, setTempMeasureLineFontSize,
     setLineMeasurementExpression, setShowLineMeasurementNumpad, lineMeasurementInputRef,
@@ -774,7 +775,9 @@ export function onTouchEndImpl(ctx: OnTouchEndImplCtx, event: any) {
       // Automatisch Maß-Eingabe öffnen für das bearbeitete Segment
       const editedPointIdx = editingPolylinePoint;
       const polyEl = elements.find(el => el.id === selectedElementId);
-      if (!pointMoveOnly && polyEl && polyEl.type === 'polyline' && polyEl.data?.points) {
+      // Schiefer Raum ohne Winkel/Diagonale: passende Diagonale anlegen und Eingabe öffnen
+      const autoDiagonal = !!polyEl && polyEl.type === 'polyline' && autoDiagonalAfterPointMove(polyEl, editedPointIdx);
+      if ((!pointMoveOnly || autoDiagonal) && polyEl && polyEl.type === 'polyline' && polyEl.data?.points) {
         const points = polyEl.data.points;
         // Das Segment VOR dem Punkt (Punkt i-1 → i) ist das natürlichste
         const segmentIdx = editedPointIdx > 0 ? editedPointIdx - 1 : 0;
@@ -788,7 +791,7 @@ export function onTouchEndImpl(ctx: OnTouchEndImplCtx, event: any) {
           setTempMeasureLineFontSize(existingStyle?.fontSize || 11);
           setLineMeasurementExpression('');
           setShowLineMeasurementNumpad(true);
-          setTimeout(() => lineMeasurementInputRef.current?.focus(), 100);
+          if (!autoDiagonal) setTimeout(() => lineMeasurementInputRef.current?.focus(), 100);
         }
       }
     } else if (movingGroupBaseId && originalGroupElements.length > 0) {

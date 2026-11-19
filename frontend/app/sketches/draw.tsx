@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Speichereffiziente Deep-Clone-Funktion (verhindert OOM bei großen base64-Strings)
 import { DrawElement, FontFamily, DrawMode, TOOL_SIZES_KEY } from '../../src/sketch/sketchShared';
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
-import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, computePolygon, PolygonAreaShapes, PolygonAreaOptions, areaShapeKey, listDiagonals } from '../../src/sketch/polygonArea';
+import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, computePolygon, straightenedPolygonPoints, PolygonAreaShapes, PolygonAreaOptions, areaShapeKey, listDiagonals } from '../../src/sketch/polygonArea';
 import { AREA_FIELD_PREFIX, withPairs } from '../../src/components/sketch/AreaOptionsSection';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { NumpadTarget } from '../../src/components/sketch/WallHeightSection';
@@ -746,6 +746,25 @@ export default function DrawSketchScreen() {
       : el);
     setElements(newElements);
     addToHistory(newElements);
+  };
+  // Alle eindeutig bestimmten Räume in einem Schritt geraderücken (ein Rückgängig-Schritt)
+  const straightenAllPolygons = () => {
+    let count = 0;
+    const newElements = elements.map(el => {
+      if (el.type !== 'polyline' || !el.data?.closed) return el;
+      const points = straightenedPolygonPoints(el, lineSegmentMeasurements, polygonAreaShapes[el.id]?.points, polygonAreaOptions[el.id],
+        selectedLineSegment?.elementId === el.id ? selectedLineSegment.segmentIndex : undefined);
+      if (!points) return el;
+      count++;
+      return { ...el, data: { ...el.data, points } };
+    });
+    if (count === 0) {
+      showAlert('Geraderücken', 'Kein Raum zu ändern: Räume müssen eindeutig bestimmt sein (alle Seiten und genug Winkel oder Diagonalen) und von der Zeichnung abweichen.');
+      return;
+    }
+    setElements(newElements);
+    addToHistory(newElements);
+    showAlert('Geraderücken', count === 1 ? '1 Raum wurde geradegerückt.' : `${count} Räume wurden geradegerückt.`);
   };
   // Nach dem Verschieben einer Ecke: Ist der Raum noch nicht durch Winkel/Diagonalen bestimmt,
   // wird die Diagonale ab der verschobenen Ecke angelegt und ihr Eingabefeld ausgewählt
@@ -2298,7 +2317,7 @@ export default function DrawSketchScreen() {
           changePanelOptionsOpen, changeLineAutoAdd, lineAutoNext, changeLineAutoNext,
           changeLaserSound, lineMeasureHistory, undoLastLineMeasurement, lineNumbersVisible,
           changeLineNumbersVisible, polygonWalls, setPolygonWalls, setWallSectionOpen,
-          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon,
+          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons,
           calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
           polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick,
           setPolygonAreaOptions, setShowMeasureStyleSettings, showMeasureStyleSettings,

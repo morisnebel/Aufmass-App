@@ -38,6 +38,8 @@ export type MeasurePanelOptionsProps = {
   pendingAreaField: string | null;
   setPendingAreaField: React.Dispatch<React.SetStateAction<string | null>>;
   straightenPolygon: (elementId: string, points: { x: number; y: number }[]) => void;
+  straightenAllPolygons: () => void;
+  scrollMeasurePanelTo: (y: number) => void;
   calculatePolygonAreaM2: (element: DrawElement) => number | null;
   polygonAreaVisible: { [elementId: string]: boolean; };
   setPolygonAreaVisible: React.Dispatch<React.SetStateAction<{ [elementId: string]: boolean; }>>;
@@ -55,7 +57,7 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
     changeLineAutoNext, laserSound, changeLaserSound, lineMeasureHistory, undoLastLineMeasurement,
     lineNumbersVisible, changeLineNumbersVisible, selectedLineSegment, elements,
     lineSegmentMeasurements, polygonWalls, setPolygonWalls, wallSectionOpen, setWallSectionOpen,
-    numpadTargetId, panelKeyboardOpen, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon,
+    numpadTargetId, panelKeyboardOpen, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, scrollMeasurePanelTo,
     calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
     polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick, setPolygonAreaOptions,
   } = props;
@@ -213,6 +215,9 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
           focusFieldId={pendingAreaField}
           onFocusHandled={() => setPendingAreaField(null)}
           onStraighten={(points) => straightenPolygon(selectedLineSegment.elementId, points)}
+          anchorSegment={selectedLineSegment.segmentIndex}
+          onStraightenAll={straightenAllPolygons}
+          onScrollTo={scrollMeasurePanelTo}
           onFieldFocus={(id, target) => {
             if (!panelKeyboardOpen) setPanelKeyboardOpen(true);
             numpadTargetRef.current = target;

@@ -372,11 +372,54 @@ const computePolygonUncached = (
   };
 };
 
+// Alte Diagonalen-Angaben (von Ecke 0 aus) in Eckenpaare überführen, damit der Löser sie verarbeitet
+export const normalizeAreaOption = (option: PolygonAreaOption | undefined, pointCount: number): PolygonAreaOption | undefined => {
+  if (!option || option.pairs) return option;
+  const legacy = listDiagonals(option, pointCount);
+  if (legacy.length === 0) return option;
+  const pairs: { [key: string]: string } = {};
+  legacy.forEach(d => { pairs[`${d.i}-${d.j}`] = d.value; });
+  return { ...option, diagonal: undefined, diagonals: undefined, useDiagonals: true, pairs };
+};
+
+// Neue Eckpunkte für „geraderücken“ – null, wenn die Form nicht eindeutig bestimmt ist oder schon passt
+export const straightenedPolygonPoints = (
+  element: any,
+  lineSegmentMeasurements: { [id: string]: { [seg: number]: string } },
+  shapePoints: { x: number; y: number }[] | undefined,
+  option: PolygonAreaOption | undefined,
+  anchorSegment?: number
+): { x: number; y: number }[] | null => {
+  const points: { x: number; y: number }[] = element?.data?.points || [];
+  const calcOption = normalizeAreaOption(option, points.length);
+  const result = computePolygon(element, lineSegmentMeasurements, calcOption?.useAngles ? undefined : shapePoints, calcOption);
+  if (!result || !result.determined) return null;
+  const fitted = fitVerticesToDrawing(result.vertices, points, anchorSegment);
+  return fitted && fitted.some((p, k) => Math.hypot(p.x - points[k].x, p.y - points[k].y) > 1) ? fitted : null;
+};
+
 // Berechnete Form (Meter) bestmöglich auf die Zeichnung legen: gleiche Lage, Drehung und Größe,
 // aber mit den rechnerischen Winkeln und Seitenverhältnissen (für „Skizze geraderücken“)
-export const fitVerticesToDrawing = (vertices: { x: number; y: number }[], points: { x: number; y: number }[]): { x: number; y: number }[] | null => {
+// Mit anchorSegment bleibt diese Linie (beide Endpunkte) exakt an ihrem Platz – der Raum dreht sich nicht.
+export const fitVerticesToDrawing = (vertices: { x: number; y: number }[], points: { x: number; y: number }[], anchorSegment?: number): { x: number; y: number }[] | null => {
   const n = points.length;
   if (n < 3 || vertices.length !== n) return null;
+  if (anchorSegment !== undefined && anchorSegment >= 0 && anchorSegment < n) {
+    const a = anchorSegment;
+    const b = (a + 1) % n;
+    const vx = vertices[b].x - vertices[a].x; const vy = vertices[b].y - vertices[a].y;
+    const px = points[b].x - points[a].x; const py = points[b].y - points[a].y;
+    const norm = vx * vx + vy * vy;
+    if (norm > 0 && Math.hypot(px, py) > 1e-9) {
+      // Ähnlichkeitsabbildung (Drehung + Maßstab), die die Bezugslinie auf sich selbst abbildet
+      const re = (px * vx + py * vy) / norm;
+      const im = (py * vx - px * vy) / norm;
+      return vertices.map(v => {
+        const dx = v.x - vertices[a].x; const dy = v.y - vertices[a].y;
+        return { x: points[a].x + re * dx - im * dy, y: points[a].y + im * dx + re * dy };
+      });
+    }
+  }
   const center = (list: { x: number; y: number }[]) => ({ x: list.reduce((s, p) => s + p.x, 0) / n, y: list.reduce((s, p) => s + p.y, 0) / n });
   const cv = center(vertices);
   const cp = center(points);

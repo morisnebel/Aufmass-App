@@ -64,6 +64,7 @@ export type LineMeasurePanelProps = {
   pendingAreaField: string | null;
   setPendingAreaField: React.Dispatch<React.SetStateAction<string | null>>;
   straightenPolygon: (elementId: string, points: { x: number; y: number }[]) => void;
+  straightenAllPolygons: () => void;
   calculatePolygonAreaM2: (element: DrawElement) => number | null;
   polygonAreaVisible: { [elementId: string]: boolean; };
   setPolygonAreaVisible: React.Dispatch<React.SetStateAction<{ [elementId: string]: boolean; }>>;
@@ -95,6 +96,7 @@ export type LineMeasurePanelProps = {
 };
 
 export function LineMeasurePanel(props: LineMeasurePanelProps) {
+  const scrollRef = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
   const {
     showLineMeasurementNumpad, isPhoneDevice, numpadSize, screenWidth, screenHeight, insets,
     panelKeyboardOpen, measureKeyboardHeight, measureKeyboardMode, panelOptionsOpen, wallSectionOpen,
@@ -105,7 +107,7 @@ export function LineMeasurePanel(props: LineMeasurePanelProps) {
     removeMeasurementFromSelectedLine, changePanelOptionsOpen, changeLineAutoAdd, lineAutoNext,
     changeLineAutoNext, changeLaserSound, lineMeasureHistory, undoLastLineMeasurement,
     lineNumbersVisible, changeLineNumbersVisible, polygonWalls, setPolygonWalls, setWallSectionOpen,
-    numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, calculatePolygonAreaM2,
+    numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, calculatePolygonAreaM2,
     polygonAreaVisible, setPolygonAreaVisible, formatAreaM2, polygonAreaOptions, polygonAreaShapes,
     diagonalPick, setDiagonalPick, setPolygonAreaOptions, setShowMeasureStyleSettings,
     showMeasureStyleSettings, tempMeasureLineColor, setTempMeasureLineColor, setMeasureLineStyles,
@@ -168,7 +170,7 @@ export function LineMeasurePanel(props: LineMeasurePanelProps) {
           </View>
           
           {/* Inhalt: auf dem iPhone scrollbar, damit die Knöpfe unten erreichbar bleiben */}
-          <MeasurePanelBody {...measurePanelBodyProps}>
+          <MeasurePanelBody ref={scrollRef} {...measurePanelBodyProps}>
           {/* Fortschritt: Linie x von n */}
           {selectedLineSegment && (() => {
             const segmentCount = segmentCountOf(elements.find(e => e.id === selectedLineSegment.elementId));
@@ -249,13 +251,14 @@ export function LineMeasurePanel(props: LineMeasurePanelProps) {
           </View>
 
           <MeasurePanelOptions
+            scrollMeasurePanelTo={(y) => scrollRef.current?.scrollTo({ y: Math.max(0, y - 30), animated: true })}
             {...{
               panelOptionsOpen, isPhoneDevice, lineAutoAdd, changeLineAutoAdd, lineAutoNext,
               changeLineAutoNext, laserSound, changeLaserSound, lineMeasureHistory,
               undoLastLineMeasurement, lineNumbersVisible, changeLineNumbersVisible,
               selectedLineSegment, elements, lineSegmentMeasurements, polygonWalls, setPolygonWalls,
               wallSectionOpen, setWallSectionOpen, numpadTargetId, panelKeyboardOpen,
-              setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, calculatePolygonAreaM2,
+              setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, calculatePolygonAreaM2,
               polygonAreaVisible, setPolygonAreaVisible, formatAreaM2, polygonAreaOptions,
               polygonAreaShapes, diagonalPick, setDiagonalPick, setPolygonAreaOptions,
             }}

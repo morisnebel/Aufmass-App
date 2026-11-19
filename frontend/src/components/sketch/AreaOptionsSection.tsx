@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
-import { PolygonAreaOption, computePolygon, fitVerticesToDrawing, formatAreaM2, listDiagonals, angleExtraId, pairExtraId, vertexDistance } from '../../sketch/polygonArea';
+import { PolygonAreaOption, computePolygon, fitVerticesToDrawing, normalizeAreaOption, formatAreaM2, listDiagonals, angleExtraId, pairExtraId, vertexDistance } from '../../sketch/polygonArea';
 import { NumpadTarget } from './WallHeightSection';
 
 // Genauere Flächenberechnung für ein Polygon (alles optional):
@@ -24,6 +24,12 @@ type Props = {
   onFocusHandled?: () => void;
   // Zeichnung auf die berechnete Form ziehen (neue Eckpunkte in Skizzen-Koordinaten)
   onStraighten?: (points: { x: number; y: number }[]) => void;
+  // Ausgewählte Linie bleibt beim Geraderücken an ihrem Platz
+  anchorSegment?: number;
+  // Alle eindeutig bestimmten Räume der Skizze geraderücken
+  onStraightenAll?: () => void;
+  // Maß-Fenster zu einer Stelle scrollen (y relativ zum scrollbaren Inhalt)
+  onScrollTo?: (y: number) => void;
 };
 
 // Reihenfolge der Eingaben merken: frühere Angaben haben bei Widersprüchen Vorrang
@@ -48,14 +54,26 @@ export const withPairs = (option: PolygonAreaOption | undefined, pointCount: num
 // Ecke k liegt zwischen Linie k und Linie k+1 (Ecke 0: zwischen letzter Linie und Linie 1)
 const cornerName = (k: number, n: number) => `Linie ${k === 0 ? n : k}/${k + 1}`;
 
-export const AreaOptionsSection = ({ element, measures, shapePoints, option, onChange, activeFieldId, onFieldFocus, pickState, onPickDiagonal, focusFieldId, onFocusHandled, onStraighten }: Props) => {
+export const AreaOptionsSection = ({ element, measures, shapePoints, option, onChange, activeFieldId, onFieldFocus, pickState, onPickDiagonal, focusFieldId, onFocusHandled, onStraighten, anchorSegment, onStraightenAll, onScrollTo }: Props) => {
   const latest = useRef({ option, onChange });
   latest.current = { option, onChange };
   const values = useRef<{ [id: string]: string }>({});
   const targets = useRef<{ [id: string]: NumpadTarget }>({});
+  // Automatisch gewähltes Feld sichtbar machen: Lage des Bereichs + Lage der Feld-Zeile im Bereich
+  const boxY = useRef<number | null>(null);
+  const rowY = useRef<{ [id: string]: number }>({});
+  const scrollWanted = useRef<string | null>(null);
+  const tryScroll = () => {
+    const id = scrollWanted.current;
+    if (!id || boxY.current === null || rowY.current[id] === undefined) return;
+    scrollWanted.current = null;
+    onScrollTo?.(boxY.current + rowY.current[id]);
+  };
   useEffect(() => {
     if (!focusFieldId || !targets.current[focusFieldId]) return;
     onFieldFocus(focusFieldId, targets.current[focusFieldId]);
+    scrollWanted.current = focusFieldId;
+    tryScroll();
     onFocusHandled?.();
   });
   const points: { x: number; y: number }[] = element?.data?.points || [];
@@ -67,7 +85,7 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   const diagonals = listDiagonals(option, n);
   const useDiagonals = !!option?.useDiagonals || diagonals.length > 0;
   // Alte Diagonalen-Form für die Anzeige wie die neue rechnen (liefert berechnete Werte)
-  const calcOption = option && !option.pairs && diagonals.length > 0 ? withPairs(option, n, () => {}) : option;
+  const calcOption = normalizeAreaOption(option, n);
   const result = computePolygon(element, { [element.id]: measures || {} }, useAngles ? undefined : shapePoints, calcOption);
   const needed = n - 3;
   const hasShape = !!result && result.vertices.length === n;
@@ -120,7 +138,7 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   );
 
   // Geraderücken: nur anbieten, wenn die Zeichnung sichtbar von der berechneten Form abweicht
-  const straightened = hasShape ? fitVerticesToDrawing(result!.vertices, points) : null;
+  const straightened = hasShape ? fitVerticesToDrawing(result!.vertices, points, anchorSegment) : null;
   const canStraighten = !!straightened && straightened.some((p, k) => Math.hypot(p.x - points[k].x, p.y - points[k].y) > 1);
 
   let status = 'Fläche aus den gezeichneten Winkeln – Abweichung vom genauen Maß möglich. Für genaue Werte Winkel oder Diagonalen angeben.';
@@ -142,7 +160,7 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   }
 
   return (
-    <View style={styles.box}>
+    <View style={styles.box} onLayout={(e) => { boxY.current = e.nativeEvent.layout.y; tryScroll(); }}>
       <Text testID="area-status" style={[styles.hint, warn && styles.warn]}>{status}</Text>
       {!!onStraighten && hasShape && (
         <TouchableOpacity
@@ -153,8 +171,14 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
         >
           <Ionicons name="git-merge-outline" size={16} color={canStraighten ? '#2e7d32' : '#999'} />
           <Text style={[styles.pickText, !canStraighten && styles.pickTextDisabled]} numberOfLines={2}>
-            {canStraighten ? `Skizze geraderücken${result!.determined ? '' : ' (Näherung)'}` : 'Skizze passt zu den Maßen'}
+            {canStraighten ? `Skizze geraderücken${result!.determined ? '' : ' (Näherung)'}${anchorSegment !== undefined ? ` · Linie ${anchorSegment + 1} bleibt` : ''}` : 'Skizze passt zu den Maßen'}
           </Text>
+        </TouchableOpacity>
+      )}
+      {!!onStraightenAll && (
+        <TouchableOpacity testID="area-straighten-all" style={styles.pick} onPress={onStraightenAll}>
+          <Ionicons name="albums-outline" size={16} color="#2e7d32" />
+          <Text style={styles.pickText} numberOfLines={2}>Alle Räume geraderücken</Text>
         </TouchableOpacity>
       )}
       {toggle('area-right-angles-toggle', 'Alle Ecken rechtwinklig', rightAngles, () => onChange({ ...option, rightAngles: !rightAngles }), 'square-outline')}
@@ -169,7 +193,11 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
       {useDiagonals && (
         <>
           {diagonals.map(d => (
-            <View key={`${d.i}-${d.j}`} style={styles.row}>
+            <View
+              key={`${d.i}-${d.j}`}
+              style={styles.row}
+              onLayout={(e) => { rowY.current[`area-diag-${d.i}-${d.j}`] = e.nativeEvent.layout.y; tryScroll(); }}
+            >
               {field(`area-diag-${d.i}-${d.j}`, `Ecke ${cornerName(d.i, n)} ↔ Ecke ${cornerName(d.j, n)}`, d.value, 'z.B. 4,65m',
                 (current, text) => withOrder(withPairs(current, n, pairs => { pairs[`${d.i}-${d.j}`] = text; }), pairExtraId(d.i, d.j), text),
                 hasShape ? formatMeters(vertexDistance(result!.vertices, d.i, d.j)) : undefined, isRejected(pairExtraId(d.i, d.j)))}

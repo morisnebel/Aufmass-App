@@ -39,7 +39,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Speichereffiziente Deep-Clone-Funktion (verhindert OOM bei großen base64-Strings)
 import { deepCloneElement, simplifyPath, DrawElement, FontFamily, FONT_FAMILIES, DrawMode, TOOL_SIZES_KEY } from '../../src/sketch/sketchShared';
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
-import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared } from '../../src/sketch/polygonArea';
+import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, PolygonAreaShapes, areaShapeKey } from '../../src/sketch/polygonArea';
 import BufferedTextInput from '../../src/components/BufferedTextInput';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { LaserSoundOptions } from '../../src/components/sketch/LaserSoundOptions';
@@ -481,6 +481,26 @@ export default function DrawSketchScreen() {
   
   // Polyline Label Offsets - Position relativ zum Zentrum (für Verschiebbarkeit)
   const [labelOffsets, setLabelOffsets] = useState<{ [elementId: string]: { x: number; y: number } }>({});
+  // Eingefrorene Polygon-Form für die Flächenberechnung: wird nur neu übernommen, wenn sich
+  // ein Linien-Maß oder die Punktanzahl ändert – Punkte verschieben ändert die Fläche nicht
+  const [polygonAreaShapes, setPolygonAreaShapes] = useState<PolygonAreaShapes>({});
+  useEffect(() => {
+    setPolygonAreaShapes(prev => {
+      let changed = false;
+      const next: PolygonAreaShapes = {};
+      elements.forEach(el => {
+        if (el.type !== 'polyline' || !el.data?.closed || !el.data.points) return;
+        const key = areaShapeKey(el.data.points.length, lineSegmentMeasurements[el.id]);
+        if (prev[el.id]?.key === key) {
+          next[el.id] = prev[el.id];
+        } else {
+          next[el.id] = { points: el.data.points.map((p: { x: number; y: number }) => ({ x: p.x, y: p.y })), key };
+          changed = true;
+        }
+      });
+      return changed || Object.keys(prev).length !== Object.keys(next).length ? next : prev;
+    });
+  }, [elements, lineSegmentMeasurements]);
   // Wandhöhen/Abzüge pro Polygon (für Wandflächen)
   const [polygonWalls, setPolygonWalls] = useState<PolygonWalls>({});
   // Nach dem Teilen/Löschen von Punkten passen die Linien-Nummern nicht mehr: Angaben pro Linie verwerfen
@@ -1072,7 +1092,7 @@ export default function DrawSketchScreen() {
   // rekonstruiert (Bowditch-Ausgleich für den Schließfehler), dann Shoelace-Formel.
   // So ergibt z.B. ein Rechteck mit 5m × 4m exakt 20,00 m².
   const calculatePolygonAreaM2 = (element: DrawElement): number | null =>
-    calculatePolygonAreaM2Shared(element, lineSegmentMeasurements);
+    calculatePolygonAreaM2Shared(element, lineSegmentMeasurements, polygonAreaShapes[element.id]?.points);
 
   // Formatiert eine Fläche für die Anzeige (deutsches Format)
   const formatAreaM2 = (area: number): string => `${area.toFixed(2).replace('.', ',')} m²`;
@@ -1639,6 +1659,7 @@ export default function DrawSketchScreen() {
         labelOffsets,
         polygonAreaVisible,
         polygonWalls,
+        polygonAreaShapes,
       };
       // Große Bild-URIs separat speichern (wie beim normalen Speichern)
       const extractedImageOps: Promise<any>[] = [];
@@ -1933,6 +1954,7 @@ export default function DrawSketchScreen() {
             setPolygonAreaVisible({});
           }
           setPolygonWalls(metadata.polygonWalls || {});
+          setPolygonAreaShapes(metadata.polygonAreaShapes || {});
         } else if (sketch.metadata) {
           // Fallback: metadata still in main array (shouldn't happen after migration)
           try {
@@ -1966,6 +1988,7 @@ export default function DrawSketchScreen() {
               setPolygonAreaVisible(parsedMeta.polygonAreaVisible);
             }
             setPolygonWalls(parsedMeta.polygonWalls || {});
+            setPolygonAreaShapes(parsedMeta.polygonAreaShapes || {});
           } catch (e) {
             console.error('Error parsing fallback metadata:', e);
           }
@@ -2320,6 +2343,7 @@ export default function DrawSketchScreen() {
           labelOffsets,
           polygonAreaVisible,
           polygonWalls,
+          polygonAreaShapes,
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
@@ -6162,6 +6186,7 @@ export default function DrawSketchScreen() {
         labelOffsets, // Speichere Polyline-Label-Positionen
         polygonAreaVisible, // Speichere Polygon-Flächen-Sichtbarkeit
         polygonWalls, // Speichere Wandhöhen/Abzüge
+        polygonAreaShapes,
       };
 
       console.log('Saving sketch with', elements.length, 'elements, bgChanged:', backgroundImageChangedRef.current);

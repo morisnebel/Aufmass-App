@@ -58,3 +58,19 @@ assert.strictEqual(transmit('2,50m', '3,62', 200, true).fixed, '2,50m3,62');
 assert.strictEqual(transmit('2,5', '0', 5, true).fixed, '2,50');
 
 console.log('OK');
+
+// iter76: erstes Messen – Komma kam als Taste an, fehlt aber im Feldtext ("291m")
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { withKeys } = require('../../frontend/src/components/BufferedTextInput');
+const lost = (start: string, shown: string, keys: string, replace: boolean) => {
+  let text = start; let seq = EMPTY_SEQUENCE; let now = 1000;
+  for (const ch of shown) { const next = text + ch; seq = advanceSequence(seq, text, next, now); text = next; now += 5; }
+  return expectedText(withKeys(seq, keys), text, replace);
+};
+assert.strictEqual(lost('', '291m', '2,91m', true), '2,91m');
+assert.strictEqual(lost('', '1245m', '12.45m', true), '12.45m');
+assert.strictEqual(lost('3,62m', '291m', '2,91m', true), '2,91m');
+assert.strictEqual(lost('Wand ', '291m', '2,91m', false), 'Wand 2,91m');
+assert.strictEqual(lost('', '291m', '', true), '291m'); // keine Tasten bekannt → unverändert
+assert.strictEqual(lost('', '2,91m', '2,91m', true), '2,91m');
+console.log('OK keys');

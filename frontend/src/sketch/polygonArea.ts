@@ -14,9 +14,21 @@ export const parseMeasurementToMeters = (measurement: string): number => {
   return 0;
 };
 
-export const calculatePolygonAreaM2 = (element: any, lineSegmentMeasurements: { [id: string]: { [seg: number]: string } }): number | null => {
+// Eingefrorene Form je Polygon: Die Winkel für die Flächenberechnung stammen aus dem Stand,
+// als zuletzt ein Maß geändert wurde – Punkte verschieben ändert die Fläche dadurch nicht.
+export type PolygonAreaShapes = { [elementId: string]: { points: { x: number; y: number }[]; key: string } };
+
+export const areaShapeKey = (pointCount: number, measures: { [seg: number]: string } | undefined): string =>
+  `${pointCount}|${Array.from({ length: pointCount }, (_, i) => measures?.[i] || '').join('|')}`;
+
+export const calculatePolygonAreaM2 = (
+  element: any,
+  lineSegmentMeasurements: { [id: string]: { [seg: number]: string } },
+  shapePoints?: { x: number; y: number }[]
+): number | null => {
   if (element.type !== 'polyline' || !element.data?.closed) return null;
-  const points: { x: number; y: number }[] = element.data.points;
+  const points: { x: number; y: number }[] =
+    shapePoints && shapePoints.length === element.data.points?.length ? shapePoints : element.data.points;
   if (!points || points.length < 3) return null;
   const measures = lineSegmentMeasurements[element.id];
   if (!measures) return null;

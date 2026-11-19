@@ -52,6 +52,14 @@ export const isDeviceMeasurement = (seq: InputSequence): boolean =>
   (seq.lastAt - seq.startAt) / (seq.count - 1) <= DEVICE_AVG_GAP_MS &&
   MEASUREMENT_RE.test(seq.typed);
 
+// Tastendrücke als zweite Quelle: Fehlt im Feldtext ein Zeichen, das als Taste ankam
+// (auf dem iPad ging bei der ersten Laser-Messung das Komma verloren: "291m" statt "2,91m"),
+// gilt die Tastenfolge – sofern sie ein vollständiger Messwert in Geräte-Geschwindigkeit ist.
+export const withKeys = (seq: InputSequence, keys: string): InputSequence => {
+  const fast = seq.count >= DEVICE_MIN_EVENTS && (seq.lastAt - seq.startAt) / (seq.count - 1) <= DEVICE_AVG_GAP_MS;
+  return fast && keys.length > seq.typed.length && MEASUREMENT_RE.test(keys) ? { ...seq, typed: keys } : seq;
+};
+
 // Soll-Inhalt des Feldes für die laufende Eingabe
 export const expectedText = (seq: InputSequence, current: string, replace: boolean): string => {
   if (seq.count < 2) return current;
@@ -83,7 +91,7 @@ const CHECK_VISIBLE_MS = 1500;
 type InputInstance = React.ComponentRef<typeof TextInput>;
 
 const BufferedTextInput = forwardRef<any, Props>(
-  ({ value, onChangeText, replaceOnBurst, onDeviceInput, containerStyle, onBlur, onSubmitEditing, onLayout, ...rest }, ref) => {
+  ({ value, onChangeText, replaceOnBurst, onDeviceInput, containerStyle, onBlur, onSubmitEditing, onLayout, onKeyPress, ...rest }, ref) => {
     const [text, setText] = useState(value);
     const inputRef = useRef<InputInstance>(null);
     const textRef = useRef(value);
@@ -91,6 +99,8 @@ const BufferedTextInput = forwardRef<any, Props>(
     const emitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const finalizeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const seq = useRef<InputSequence>(EMPTY_SEQUENCE);
+    const keys = useRef({ text: '', lastAt: 0 });
+    const current = () => withKeys(seq.current, keys.current.text);
     const emitRef = useRef(onChangeText);
     const replaceRef = useRef(!!replaceOnBurst);
     const deviceRef = useRef(onDeviceInput);
@@ -123,9 +133,10 @@ const BufferedTextInput = forwardRef<any, Props>(
     // Eingabe abschließen: Feldinhalt ggf. korrigieren/ersetzen und melden
     const finalize = useCallback((mounted = true) => {
       clearTimers();
-      const next = expectedText(seq.current, textRef.current, replaceRef.current);
-      const fromDevice = isDeviceMeasurement(seq.current);
+      const next = expectedText(current(), textRef.current, replaceRef.current);
+      const fromDevice = isDeviceMeasurement(current());
       seq.current = EMPTY_SEQUENCE;
+      keys.current = { text: '', lastAt: 0 };
       if (next !== textRef.current) {
         textRef.current = next;
         if (mounted) {
@@ -154,7 +165,7 @@ const BufferedTextInput = forwardRef<any, Props>(
         setText(next);
         clearTimers();
         emitTimer.current = setTimeout(
-          () => emit(expectedText(seq.current, textRef.current, replaceRef.current)),
+          () => emit(expectedText(current(), textRef.current, replaceRef.current)),
           EMIT_MS
         );
         finalizeTimer.current = setTimeout(finalize, SEQUENCE_GAP_MS + 20);
@@ -194,6 +205,17 @@ const BufferedTextInput = forwardRef<any, Props>(
         }}
         value={text}
         onChangeText={handleChange}
+        onKeyPress={(e) => {
+          const key = e.nativeEvent.key;
+          const now = Date.now();
+          const k = keys.current;
+          if (key.length !== 1) {
+            if (key === 'Backspace') keys.current = { text: '', lastAt: 0 };
+          } else {
+            keys.current = { text: (now - k.lastAt <= SEQUENCE_GAP_MS ? k.text : '') + key, lastAt: now };
+          }
+          onKeyPress?.(e);
+        }}
         onBlur={(e) => {
           finalize();
           onBlur?.(e);

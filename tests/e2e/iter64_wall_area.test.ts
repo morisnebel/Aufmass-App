@@ -47,3 +47,15 @@ for (const part of ['Wandliste (Skizzen)', 'Skizze 1 – S1 – Bad &lt;a&gt;', 
   assert.ok(html.includes(part), `fehlt im HTML: ${part}`);
 }
 console.log('OK html');
+
+// iter76: eingefrorene Form – Punkte verschieben ändert die Fläche nicht
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const pa = require('../../frontend/src/sketch/polygonArea');
+const m4 = { a: { 0: '4m', 1: '3m', 2: '4m', 3: '3m' } };
+const moved = { ...closed, data: { closed: true, points: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 160, y: 140 }, { x: 0, y: 80 }] } };
+assert.strictEqual(pa.calculatePolygonAreaM2(closed, m4), 12);
+assert.notStrictEqual(pa.calculatePolygonAreaM2(moved, m4), 12); // ohne Einfrieren ändert sich die Fläche
+assert.strictEqual(pa.calculatePolygonAreaM2(moved, m4, pts), 12); // mit eingefrorener Form nicht
+assert.strictEqual(pa.calculatePolygonAreaM2(moved, { a: { ...m4.a, 0: '5m', 2: '5m' } }, pts), 15);
+assert.notStrictEqual(pa.areaShapeKey(4, m4.a), pa.areaShapeKey(4, { ...m4.a, 0: '5m' }));
+console.log('OK shape');

@@ -1339,6 +1339,11 @@ export default function DrawSketchScreen() {
   // Expo Router 58: `repeat()` deaktiviert die Sperre und löst die Navigation erneut aus
   // (direktes navigation.dispatch würde wieder abgefangen -> Endlosschleife)
   usePreventRemove(elements.length > 0 || !!backgroundImage, ({ repeat }) => {
+    if (practiceStashRef.current && !allowLeaveRef.current) {
+      // Übung läuft: Zurück beendet nur die Übung
+      endPractice();
+      return;
+    }
     if (allowLeaveRef.current) {
       // Programmatische Navigation nach dem Speichern - durchlassen
       repeat();
@@ -1420,7 +1425,17 @@ export default function DrawSketchScreen() {
     setMeasureLineStyles(stash.measureLineStyles);
     practiceStashRef.current = null;
     setPractice(false);
+    // Übung aus der Hilfe gestartet: zurück zur Hilfe
+    if (practiceOnly) {
+      allowLeaveRef.current = true;
+      router.back();
+    }
   };
+  // Übung direkt aus der Hilfe (ohne Projekt): Editor öffnet mit leerer Übungsskizze
+  const practiceOnly = params.practice === '1';
+  useEffect(() => {
+    if (practiceOnly) startPractice();
+  }, []);
   // Zustand der Übung für die Schritt-Erkennung
   const practiceRoom = practice ? elements.find(el => el.type === 'polyline' && el.data?.closed) : undefined;
   const practiceResult = practiceRoom ? computePolygon(practiceRoom, lineSegmentMeasurements, undefined, polygonAreaOptions[practiceRoom.id]) : null;
@@ -2173,7 +2188,8 @@ export default function DrawSketchScreen() {
           setPdfSize, showAlert, sketchId, setShowDemo, saveSketch, loading,
         }}
       />
-      <SketchTour />
+      {/* Übung aus der Hilfe: Einstiegs-Tour nicht über die Übungskarte legen */}
+      {!practiceOnly && <SketchTour />}
       <SketchDemoModal visible={showDemo} onClose={() => setShowDemo(false)} />
 
       {/* Auto-Save Hinweis */}
@@ -2533,6 +2549,7 @@ export default function DrawSketchScreen() {
 
       <SketchLegend
         {...{
+          lineSegmentMeasurements,
           getPolylineElementsWithMeasurements, legendPan, legendPanResponder, t,
           calculateTotalLfmForElement, polygonAreaVisible, calculatePolygonAreaM2, setRenamePolyline,
           formatAreaM2,
@@ -2700,7 +2717,15 @@ export default function DrawSketchScreen() {
         }}
       />
       <RoomTutorialModal visible={autoTutorial} onClose={() => setAutoTutorial(false)} onPractice={startPractice} />
-      {practice && <RoomCoach status={practiceStatus} bottom={insets.bottom + 10} onExit={endPractice} />}
+      {practice && (
+        <RoomCoach
+          status={practiceStatus}
+          bottom={insets.bottom + 10}
+          onExit={endPractice}
+          compact={isPhoneDevice && (showLineMeasurementNumpad || (drawMode === 'polyline' && polylinePoints.length > 0))}
+          maxWidth={!showLineMeasurementNumpad ? Math.max(110, screenWidth - 250) : Math.max(130, screenWidth - 26 - Math.round(screenWidth * (panelOptionsOpen && wallSectionOpen ? 0.78 : numpadSize === 'L' ? 0.55 : numpadSize === 'M' ? 0.45 : 0.35)))}
+        />
+      )}
       <OpeningInsertMenu
         visible={!!openingInsert}
         line={(openingInsert?.segmentIndex ?? 0) + 1}

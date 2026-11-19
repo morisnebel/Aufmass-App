@@ -1,4 +1,4 @@
-import { PolygonAreaOptions, listDiagonals, computePolygon, pairExtraId } from './polygonArea';
+import { PolygonAreaOptions, listDiagonals, computePolygon, pairExtraId, lfmBreakdown } from './polygonArea';
 import { PolygonWalls, hasWallHeights, segmentNumberPositions, openingMarkers, OPENING_COLORS } from './wallArea';
 // SVG-Vorschau-Erzeugung für Skizzen (ausgelagert aus app/sketches/draw.tsx)
 // Baut aus den Zeichen-Elementen ein eigenständiges SVG (als data:-URI) für PDF/Vorschau.
@@ -178,7 +178,7 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
     // VERGRÖSSERTE Legend für PDF/Vorschau
     const polylinesForLegend = getPolylineElementsWithMeasurements();
     // Breite an den längsten Eintrag (inkl. Raumname) anpassen, damit nichts abgeschnitten wird
-    const longestLegendName = polylinesForLegend.reduce((m: number, p: any) => Math.max(m, (p.name || '').length), 0);
+    const longestLegendName = polylinesForLegend.reduce((m: number, p: any) => Math.max(m, (p.name || '').length + lfmBreakdown(p, lineSegmentMeasurements[p.id]).length), 0);
     const svgLegendWidth = Math.max(220, 62 + (longestLegendName + 22) * 8);
     const svgLegendLineHeight = 36; // Deutlich höhere Zeilen
     const svgLegendHeight = polylinesForLegend.length > 0 ? (55 + polylinesForLegend.length * svgLegendLineHeight + 25) : 0;
@@ -556,7 +556,7 @@ export function buildPreviewSvg(ctx: PreviewSvgContext): string {
         // Value text - größere Schrift
         const legendAreaM2 = polygonAreaVisible[element.id] !== false ? calculatePolygonAreaM2(element) : null;
         const legendName = element.name ? `${String(element.name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')} ` : '';
-        const legendValueText = `${legendName}= ${totalForElement.toString().replace('.', ',')} lfm${legendAreaM2 !== null ? ` • ${formatAreaM2(legendAreaM2)}` : ''}`;
+        const legendValueText = `${legendName}${lfmBreakdown(element, lineSegmentMeasurements[element.id]) ? `${lfmBreakdown(element, lineSegmentMeasurements[element.id])} = ${totalForElement.toFixed(2).replace('.', ',')}` : `= ${totalForElement.toString().replace('.', ',')}`} lfm${legendAreaM2 !== null ? ` • ${formatAreaM2(legendAreaM2)}` : ''}`;
         svgElements += `<text x="${svgLegendXPos + 62}" y="${itemY + 2}" fill="#333" font-size="16">${legendValueText}</text>`;
       });
     }

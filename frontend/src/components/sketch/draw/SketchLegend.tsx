@@ -1,3 +1,4 @@
+import { lfmBreakdown } from '../../../sketch/polygonArea';
 import type { PanResponderInstance } from 'react-native';
 import type { TFunction } from 'i18next';
 import React from 'react';
@@ -8,6 +9,7 @@ import { DrawElement } from '../../../sketch/sketchShared';
 
 
 export type SketchLegendProps = {
+  lineSegmentMeasurements: { [key: string]: { [segmentIndex: number]: string } };
   getPolylineElementsWithMeasurements: () => DrawElement[];
   legendPan: Animated.ValueXY;
   legendPanResponder: PanResponderInstance;
@@ -24,6 +26,7 @@ export function SketchLegend(props: SketchLegendProps) {
     getPolylineElementsWithMeasurements, legendPan, legendPanResponder, t,
     calculateTotalLfmForElement, polygonAreaVisible, calculatePolygonAreaM2, setRenamePolyline,
     formatAreaM2,
+    lineSegmentMeasurements,
   } = props;
   return (
     <>
@@ -56,7 +59,7 @@ export function SketchLegend(props: SketchLegendProps) {
                   <Text style={styles.sketchLegendLabelText}>S{index + 1}</Text>
                 </View>
                 <Text style={styles.sketchLegendValue}>
-                  {element.name ? `${element.name} ` : ''}= {totalForElement.toString().replace('.', ',')} lfm
+                  {element.name ? `${element.name} ` : ''}{lfmBreakdown(element, lineSegmentMeasurements[element.id]) ? `${lfmBreakdown(element, lineSegmentMeasurements[element.id])} = ${totalForElement.toFixed(2).replace('.', ',')}` : `= ${totalForElement.toString().replace('.', ',')}`} lfm
                   {legendAreaM2 !== null ? ` • ${formatAreaM2(legendAreaM2)}` : ''}
                 </Text>
                 <Ionicons name="pencil" size={11} color="#999" style={{ marginLeft: 4 }} />

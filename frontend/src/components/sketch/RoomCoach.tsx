@@ -29,9 +29,14 @@ const STEPS: Step[] = [
   { title: 'Öffnung verschieben', text: 'Schließe das Maß-Fenster und ziehe die Markierung der Öffnung auf ihrer Linie an eine andere Stelle. Die Maßkette zeigt die Abstände.', done: (s, start) => s.openingCount > 0 && s.openingKey !== start.openingKey },
 ];
 
-export function RoomCoach({ status, bottom, onExit }: { status: RoomCoachStatus; bottom: number; onExit: () => void }) {
+// compact: Maß-Fenster ist auf einem kleinen Bildschirm offen – Karte klappt zur schmalen Leiste ein
+// (maxWidth = freier Platz neben dem Fenster), Antippen klappt sie wieder auf.
+export function RoomCoach({ status, bottom, onExit, compact, maxWidth }: { status: RoomCoachStatus; bottom: number; onExit: () => void; compact?: boolean; maxWidth?: number }) {
   const [index, setIndex] = useState(0);
-  const [small, setSmall] = useState(false);
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  useEffect(() => { setToggled(null); }, [compact, index]);
+  const small = toggled ?? !!compact;
+  const setSmall = (value: boolean) => setToggled(value);
   const start = useRef(status);
   const finished = index >= STEPS.length;
   const step = STEPS[Math.min(index, STEPS.length - 1)];
@@ -47,11 +52,11 @@ export function RoomCoach({ status, bottom, onExit }: { status: RoomCoachStatus;
 
   return (
     <View pointerEvents="box-none" style={[s.wrap, { bottom }]}>
-      <View testID="room-coach" style={s.card}>
+      <View testID="room-coach" style={[s.card, small && !!maxWidth && { maxWidth }]}>
         <TouchableOpacity testID="room-coach-toggle" style={s.head} onPress={() => setSmall(!small)} activeOpacity={0.7}>
-          <Ionicons name="school" size={16} color="#fff" />
-          <Text testID="room-coach-count" style={s.headText} numberOfLines={1}>
-            {finished ? 'Übung geschafft' : `Übung · Schritt ${index + 1} von ${STEPS.length}`}
+          <Ionicons name={small && done ? 'checkmark-circle' : 'school'} size={16} color="#fff" />
+          <Text testID="room-coach-count" style={s.headText} numberOfLines={small ? 2 : 1}>
+            {finished ? 'Übung geschafft' : small ? `${index + 1}/${STEPS.length} · ${step.title}` : `Übung · Schritt ${index + 1} von ${STEPS.length}`}
           </Text>
           <Ionicons name={small ? 'chevron-up' : 'chevron-down'} size={18} color="#fff" />
         </TouchableOpacity>
@@ -87,7 +92,7 @@ export function RoomCoach({ status, bottom, onExit }: { status: RoomCoachStatus;
 }
 
 const s = StyleSheet.create({
-  wrap: { position: 'absolute', left: 8, right: 8, alignItems: 'flex-start' },
+  wrap: { position: 'absolute', left: 8, right: 8, alignItems: 'flex-start', zIndex: 1001, elevation: 12 },
   card: { width: '100%', maxWidth: 340, borderRadius: 12, backgroundColor: '#fff', overflow: 'hidden', borderWidth: 2, borderColor: '#1565c0', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 8, elevation: 8 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 40, paddingHorizontal: 10, backgroundColor: '#1565c0' },
   headText: { flex: 1, color: '#fff', fontSize: 13, fontWeight: '800' },

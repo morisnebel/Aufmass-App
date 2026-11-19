@@ -174,6 +174,7 @@ function Hl({ text, q }: { text: string; q: string }) {
 }
 
 function Chapter({ sec, open, onToggle }: { sec: ManualSection; open: boolean; onToggle: () => void }) {
+  const router = useRouter();
   const [info, setInfo] = useState<number | null>(null);
   const [demo, setDemo] = useState(false);
   return (
@@ -195,7 +196,7 @@ function Chapter({ sec, open, onToggle }: { sec: ManualSection; open: boolean; o
               <Text style={s.tourText}>Erklärvideo ansehen (Video oder Bilder)</Text>
             </TouchableOpacity>
           )}
-          {sec.id === 'raeume' && <RoomTutorialButton />}
+          {sec.id === 'raeume' && <RoomTutorialButton onPractice={() => router.push('/sketches/draw?practice=1' as any)} />}
           {sec.steps.map((st, i) => (
             <View key={i} style={s.step}>
               <View style={s.stepRow}>

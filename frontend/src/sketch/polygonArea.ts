@@ -397,6 +397,15 @@ export const shiftIntoBounds = (points: { x: number; y: number }[], width: numbe
   return dx === 0 && dy === 0 ? points : points.map(p => ({ x: p.x + dx, y: p.y + dy }));
 };
 
+// Offener Linienzug mit mehreren Maßen: Einzelmaße in Zeichenreihenfolge als „4,00 + 3,00 + 2,50“
+// (leer bei Räumen oder nur einem Maß) – steht in der Übersicht vor der Summe in lfm
+export const lfmBreakdown = (element: any, measures: { [segmentIndex: number]: string } | undefined): string => {
+  if (element?.type !== 'polyline' || element.data?.closed || !measures) return '';
+  const parts = Object.keys(measures).map(Number).sort((a, b) => a - b)
+    .map(i => parseMeasurementToMeters(measures[i] || '')).filter(v => v > 0);
+  return parts.length < 2 ? '' : parts.map(v => v.toFixed(2).replace('.', ',')).join(' + ');
+};
+
 // Alte Diagonalen-Angaben (von Ecke 0 aus) in Eckenpaare überführen, damit der Löser sie verarbeitet
 export const normalizeAreaOption = (option: PolygonAreaOption | undefined, pointCount: number): PolygonAreaOption | undefined => {
   if (!option || option.pairs) return option;

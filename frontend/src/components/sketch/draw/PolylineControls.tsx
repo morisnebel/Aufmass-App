@@ -33,6 +33,8 @@ export function PolylineControls(props: PolylineControlsProps) {
     backgroundImage, gridSnapEnabled, setGridSnapEnabled, undoLastPolylinePoint, finishPolyline,
     cancelPolyline,
   } = props;
+  const labelled = { width: 'auto' as const, minHeight: 36, paddingHorizontal: 10, flexDirection: 'row' as const, gap: 4 };
+  const labelText = { color: '#fff', fontSize: 12, fontWeight: '700' as const };
   return (
     <>
       {/* Polyline Steuerung - kompakt und verschiebbar */}
@@ -153,19 +155,23 @@ export function PolylineControls(props: PolylineControlsProps) {
               <Ionicons name="arrow-undo" size={16} color="#fff" />
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.polylineButtonCompact, styles.polylineButtonFinish]} 
+              testID="polyline-finish-line"
+              style={[styles.polylineButtonCompact, styles.polylineButtonFinish, labelled]} 
               onPress={() => finishPolyline(false)}
               activeOpacity={0.7}
             >
               <Ionicons name="checkmark" size={16} color="#fff" />
+              <Text style={labelText}>Linie</Text>
             </TouchableOpacity>
             {polylinePoints.length >= 3 && (
               <TouchableOpacity 
-                style={[styles.polylineButtonCompact, styles.polylineButtonClose]} 
+                testID="polyline-finish-room"
+                style={[styles.polylineButtonCompact, styles.polylineButtonClose, labelled]} 
                 onPress={() => finishPolyline(true)}
                 activeOpacity={0.7}
               >
                 <Ionicons name="link" size={16} color="#fff" />
+                <Text style={labelText}>Raum</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity 
@@ -176,6 +182,11 @@ export function PolylineControls(props: PolylineControlsProps) {
               <Ionicons name="trash" size={16} color="#fff" />
             </TouchableOpacity>
           </View>
+          {/* Erklärung der beiden Abschlüsse */}
+          <Text testID="polyline-finish-hint" style={{ fontSize: 10, color: '#555', marginTop: 6, maxWidth: 200, lineHeight: 14 }}>
+            <Text style={{ fontWeight: '700', color: '#2e7d32' }}>Linie</Text>: offen beenden – Maße werden einzeln und als Summe (lfm) gezeigt.{polylinePoints.length >= 3 ? ' ' : ''}
+            {polylinePoints.length >= 3 && <Text><Text style={{ fontWeight: '700', color: '#1565c0' }}>Raum</Text>: schließen – mit Fläche in m².</Text>}
+          </Text>
         </Animated.View>
       )}
     </>

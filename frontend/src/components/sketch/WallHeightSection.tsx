@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
 import { formatAreaM2 } from '../../sketch/polygonArea';
-import { OPENING_PRESETS, PolygonWall, WallSegment, calculateWallAreaM2, openingAreaM2, segmentDeductionM2, wallSegmentAreaM2 } from '../../sketch/wallArea';
+import { OPENING_PRESETS, PolygonWall, WallSegment, calculateWallAreaM2, openingAreaM2, segmentDeductionM2, wallSegmentAreaM2, OPENING_KINDS, openingKindOf, WallOpening } from '../../sketch/wallArea';
 
 // Aufklappbarer Bereich im Maß-Fenster: Wandhöhe (für alle Linien / diese Linie),
 // Abzug für Öffnungen und die daraus berechnete Wandfläche.
@@ -57,7 +57,7 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
   const setSegment = (patch: WallSegment) =>
     onChange({ ...wall, segments: { ...wall?.segments, [segmentIndex]: { ...segment, ...patch } } });
 
-  const setOpening = (index: number, patch: { width?: string; height?: string }) =>
+  const setOpening = (index: number, patch: Partial<WallOpening>) =>
     setSegment({ openings: openings.map((o, i) => (i === index ? { ...o, ...patch } : o)) });
 
   const input = (testID: string, value: string, placeholder: string, onChangeText: (t: string) => void, flex = false) => {
@@ -107,7 +107,23 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
           {/* Öffnungen (Türen/Fenster) dieser Linie: Breite × Höhe */}
           <Text style={styles.label}>Türen / Fenster diese Linie (Breite × Höhe)</Text>
           {openings.map((opening, i) => (
-            <View key={i} style={styles.openingRow} onLayout={(e) => { rowY.current[i] = e.nativeEvent.layout.y; }}>
+            <View key={i} style={styles.openingBox} onLayout={(e) => { rowY.current[i] = e.nativeEvent.layout.y; }}>
+            <View style={styles.kindRow}>
+              {OPENING_KINDS.map(kind => {
+                const selected = openingKindOf(opening) === kind.id;
+                return (
+                  <TouchableOpacity
+                    key={kind.id}
+                    testID={`wall-opening-kind-${kind.id}-${i}`}
+                    style={[styles.kindChip, selected && styles.kindChipActive]}
+                    onPress={() => setOpening(i, { kind: kind.id })}
+                  >
+                    <Text style={[styles.kindText, selected && styles.kindTextActive]} numberOfLines={1}>{kind.id === 'other' ? 'Sonst.' : kind.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <View style={styles.openingRow}>
               {input(`wall-opening-width-${i}`, opening.width, 'Breite', (t) => setOpening(i, { width: t }), true)}
               <Text style={styles.times}>×</Text>
               {input(`wall-opening-height-${i}`, opening.height, 'Höhe', (t) => setOpening(i, { height: t }), true)}
@@ -120,6 +136,11 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
                 <Ionicons name="close" size={18} color="#f44336" />
               </TouchableOpacity>
               <Text testID={`wall-opening-area-${i}`} style={styles.openingArea}>= {formatAreaM2(openingAreaM2(opening))}</Text>
+            </View>
+            <View style={styles.offsetRow}>
+              <Text style={styles.offsetLabel} numberOfLines={2}>Abstand ab Linienanfang</Text>
+              {input(`wall-opening-offset-${i}`, opening.offset || '', 'z.B. 0,80m', (t) => setOpening(i, { offset: t, position: undefined }), true)}
+            </View>
             </View>
           ))}
           <View style={styles.presetRow}>
@@ -141,7 +162,7 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
           <TouchableOpacity
             testID="wall-opening-add"
             style={styles.addButton}
-            onPress={() => setSegment({ openings: [...openings, { width: '', height: '' }] })}
+            onPress={() => setSegment({ openings: [...openings, { width: '', height: '', kind: 'other' }] })}
           >
             <Ionicons name="add" size={16} color="#5d4037" />
             <Text style={styles.addButtonText}>Eigenes Maß</Text>
@@ -172,6 +193,14 @@ const styles = StyleSheet.create({
   scroll: { maxHeight: 300 },
   flex: { flex: 1 },
   field: { gap: 2 },
+  openingBox: { gap: 4, padding: 6, borderRadius: 6, borderWidth: 1, borderColor: '#d7ccc8', backgroundColor: '#f5f1ef' },
+  kindRow: { flexDirection: 'row', gap: 4 },
+  kindChip: { flex: 1, minHeight: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 6, borderWidth: 1, borderColor: '#bcaaa4', backgroundColor: '#fff', paddingHorizontal: 2 },
+  kindChipActive: { backgroundColor: '#5d4037', borderColor: '#5d4037' },
+  kindText: { fontSize: 11, fontWeight: '600', color: '#5d4037' },
+  kindTextActive: { color: '#fff' },
+  offsetRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  offsetLabel: { flex: 1, fontSize: 10, fontWeight: '600', color: '#6d4c41' },
   openingRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4 },
   times: { fontSize: 14, fontWeight: '700', color: '#6d4c41' },
   removeButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },

@@ -5,7 +5,28 @@ export type PolygonWall = {
   height?: string; // Höhe für alle Linien des Polygons
   segments?: { [segmentIndex: number]: WallSegment };
 };
-export type WallOpening = { width: string; height: string }; // Tür/Fenster: Breite × Höhe
+export type OpeningKind = 'door' | 'window' | 'other';
+// Tür/Fenster: Breite × Höhe. offset = Abstand vom Linienanfang (Ecke) bis zur Öffnung,
+// position = Lage der Mitte als Anteil der Linie (0..1), falls die Linie noch kein Maß hat.
+export type WallOpening = { width: string; height: string; kind?: OpeningKind; offset?: string; position?: number };
+// Art der Öffnung: gewählt oder (ältere Einträge) aus der Höhe abgeleitet – ab 1,80 m Tür
+export const openingKindOf = (opening: WallOpening): OpeningKind =>
+  opening.kind || (parseMeasurementToMeters(opening.height || '') >= 1.8 ? 'door' : 'window');
+export const OPENING_KINDS: { id: OpeningKind; label: string; short: string }[] = [
+  { id: 'door', label: 'Tür', short: 'T' },
+  { id: 'window', label: 'Fenster', short: 'F' },
+  { id: 'other', label: 'Sonstiges', short: 'S' },
+];
+const formatOffset = (meters: number) => `${(Math.round(meters * 100) / 100).toFixed(2).replace('.', ',')}m`;
+// Lage einer Öffnung aus einer Stelle auf der Linie (Anteil 0..1 = Mitte der Öffnung):
+// mit Linienmaß und Breite wird zusätzlich der Abstand zur Ecke in Metern gespeichert
+export const openingPlacement = (fraction: number, measure: string | undefined, opening: WallOpening): { position: number; offset?: string } => {
+  const meters = parseMeasurementToMeters(measure || '');
+  const width = parseMeasurementToMeters(opening.width || '');
+  if (!(meters > 0) || !(width > 0) || width >= meters) return { position: Math.max(0, Math.min(1, fraction)), offset: undefined };
+  const start = Math.max(0, Math.min(meters - width, fraction * meters - width / 2));
+  return { position: (start + width / 2) / meters, offset: formatOffset(start) };
+};
 export type WallSegment = { height?: string; deduction?: string; openings?: WallOpening[] };
 export type PolygonWalls = { [elementId: string]: PolygonWall };
 
@@ -101,18 +122,19 @@ export const segmentNumberPositions = (points: { x: number; y: number }[], close
 };
 
 // Schnellvorlagen für Öffnungen
-export const OPENING_PRESETS: { id: string; label: string; opening: WallOpening }[] = [
-  { id: 'door', label: 'Tür', opening: { width: '0,885m', height: '2,01m' } },
-  { id: 'window', label: 'Fenster', opening: { width: '1,00m', height: '1,20m' } },
+export const OPENING_PRESETS: { id: OpeningKind; label: string; opening: WallOpening }[] = [
+  { id: 'door', label: 'Tür', opening: { width: '0,885m', height: '2,01m', kind: 'door' } },
+  { id: 'window', label: 'Fenster', opening: { width: '1,00m', height: '1,20m', kind: 'window' } },
 ];
 
-// Türen/Fenster als Markierung auf der Linie: gleichmäßig verteilt, Länge maßstäblich zur Linie
-// (wenn Linienmaß und Breite bekannt sind). Höhe ab 1,80 m gilt als Tür, sonst Fenster.
+// Türen/Fenster als Markierung auf der Linie, Länge maßstäblich zur Linie (wenn Linienmaß und Breite
+// bekannt sind). Lage: gespeicherter Abstand zur Ecke, sonst gespeicherter Anteil, sonst gleichmäßig verteilt.
 export type OpeningMarker = {
-  segmentIndex: number; openingIndex: number; kind: 'door' | 'window';
+  segmentIndex: number; openingIndex: number; kind: OpeningKind;
   x1: number; y1: number; x2: number; y2: number; // Markierung auf der Linie
   nx: number; ny: number; // Einheitsvektor quer zur Linie, zeigt ins Rauminnere
   labelX: number; labelY: number; label: string;
+  offsetMeters: number | null; // Abstand vom Linienanfang bis zur Öffnung (wenn bekannt)
 };
 export const openingMarkers = (
   points: { x: number; y: number }[],
@@ -144,20 +166,30 @@ export const openingMarkers = (
     const slot = pixelLength / openings.length;
     openings.forEach((opening, j) => {
       const width = parseMeasurementToMeters(opening.width || '');
+      const placed = (opening.offset || '').trim() !== '' || opening.position !== undefined;
       const scaled = meters > 0 && width > 0 ? (width / meters) * pixelLength : 26;
-      const length = Math.max(14, Math.min(scaled, slot * 0.8));
-      const center = slot * (j + 0.5);
+      const length = Math.max(14, Math.min(scaled, placed ? pixelLength * 0.95 : slot * 0.8));
+      let center = slot * (j + 0.5);
+      let offsetMeters: number | null = null;
+      if ((opening.offset || '').trim() !== '' && meters > 0) {
+        offsetMeters = parseMeasurementToMeters(opening.offset || '');
+        center = ((offsetMeters + width / 2) / meters) * pixelLength;
+      } else if (opening.position !== undefined) {
+        center = opening.position * pixelLength;
+        if (meters > 0 && width > 0) offsetMeters = Math.max(0, opening.position * meters - width / 2);
+      }
+      center = Math.max(length / 2, Math.min(pixelLength - length / 2, center));
       const ax = p1.x + ux * (center - length / 2);
       const ay = p1.y + uy * (center - length / 2);
-      const kind = parseMeasurementToMeters(opening.height || '') >= 1.8 ? 'door' : 'window';
+      const kind = openingKindOf(opening);
       markers.push({
-        segmentIndex: i, openingIndex: j, kind, nx, ny,
+        segmentIndex: i, openingIndex: j, kind, nx, ny, offsetMeters,
         x1: ax, y1: ay, x2: ax + ux * length, y2: ay + uy * length,
         labelX: p1.x + ux * center + nx * 30, labelY: p1.y + uy * center + ny * 30,
-        label: `${kind === 'door' ? 'T' : 'F'} ${short(opening.width)}×${short(opening.height)}`,
+        label: `${OPENING_KINDS.find(k => k.id === kind)!.short} ${short(opening.width)}×${short(opening.height)}${offsetMeters !== null ? ` ↦${offsetMeters.toFixed(2).replace('.', ',')}` : ''}`,
       });
     });
   }
   return markers;
 };
-export const OPENING_COLORS = { door: '#6d4c41', window: '#0277bd' };
+export const OPENING_COLORS: { [kind in OpeningKind]: string } = { door: '#6d4c41', window: '#0277bd', other: '#546e7a' };

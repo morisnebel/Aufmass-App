@@ -479,6 +479,7 @@ export function handleRemovePointTouchImpl(ctx: HandleRemovePointTouchImplCtx, x
 
 
 export type OnTouchMoveImplCtx = {
+  handleOpeningDragMove: (x: number, y: number) => boolean;
   showProtractor: boolean;
   handleProtractorDragMove: (e: any) => void;
   zoomMode: boolean;
@@ -508,7 +509,7 @@ export type OnTouchMoveImplCtx = {
 
 export function onTouchMoveImpl(ctx: OnTouchMoveImplCtx, event: any) {
   const {
-    showProtractor, handleProtractorDragMove, zoomMode, androidPinchRef, androidZoomScale,
+    handleOpeningDragMove, showProtractor, handleProtractorDragMove, zoomMode, androidPinchRef, androidZoomScale,
     androidTranslateX, androidTranslateY, androidViewBox, screenWidth, canvasHeight, drawMode,
     dragMode, originalElement, dragStart, handleSelectTouchMove, currentPathRef, currentPenPointsRef,
     buildSmoothPath, setCurrentPath, draggingLabelId, labelDragStartRef, setLabelOffsets,
@@ -563,6 +564,7 @@ export function onTouchMoveImpl(ctx: OnTouchMoveImplCtx, event: any) {
     locationY = androidViewBox.y + (locationY / canvasHeight) * androidViewBox.h;
   }
 
+  if (handleOpeningDragMove(locationX, locationY)) return;
   if (drawMode === 'select' && dragMode && originalElement && dragStart) {
     handleSelectTouchMove(locationX, locationY);
   } else if (drawMode === 'pen' && currentPathRef.current) {
@@ -597,6 +599,7 @@ export function onTouchMoveImpl(ctx: OnTouchMoveImplCtx, event: any) {
 
 
 export type OnTouchEndImplCtx = {
+  handleOpeningDragEnd: () => boolean;
   showProtractor: boolean;
   handleProtractorDragEnd: () => void;
   zoomMode: boolean;
@@ -670,7 +673,7 @@ export type OnTouchEndImplCtx = {
 
 export function onTouchEndImpl(ctx: OnTouchEndImplCtx, event: any) {
   const {
-    showProtractor, handleProtractorDragEnd, zoomMode, androidPinchRef, androidViewBox, screenWidth,
+    handleOpeningDragEnd, showProtractor, handleProtractorDragEnd, zoomMode, androidPinchRef, androidViewBox, screenWidth,
     canvasHeight, setAndroidViewBox, setScale, androidZoomScale, androidTranslateX,
     androidTranslateY, drawMode, currentPathRef, generateId, drawColor, strokeWidth, addToHistory,
     elements, currentPenPointsRef, setCurrentPath, currentPath, angleEditMode, setAngleEditMode,
@@ -685,6 +688,7 @@ export function onTouchEndImpl(ctx: OnTouchEndImplCtx, event: any) {
     setArrowText, arrowInputRef, setStartPoint, setTempElement, setPendingPointer, setPointerText,
     setShowPointerModal, setPendingMemo, setMemoText, setShowMemoModal, tempElement,
   } = ctx;
+  if (handleOpeningDragEnd()) return;
   // Winkelmesser aktiv: Drag-Steuerung übernimmt der Canvas
   if (showProtractor && Platform.OS !== 'web') {
     handleProtractorDragEnd();
@@ -1045,6 +1049,7 @@ export type HandleSelectTouchStartImplCtx = {
   handleDiagonalPick: (x: number, y: number) => void;
   handleAngleCornerTap: (x: number, y: number) => boolean;
   handleOpeningTap: (x: number, y: number) => boolean;
+  startOpeningLongPress: (element: DrawElement, segmentIndex: number, x: number, y: number) => void;
   findPolylineLabelAtPoint: (x: number, y: number) => { elementId: string; centerX: number; centerY: number; } | null;
   labelOffsets: { [elementId: string]: { x: number; y: number; }; };
   setDraggingLabelId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -1116,7 +1121,7 @@ export type HandleSelectTouchStartImplCtx = {
 
 export function handleSelectTouchStartImpl(ctx: HandleSelectTouchStartImplCtx, locationX: number, locationY: number) {
   const {
-    diagonalPick, handleDiagonalPick, handleAngleCornerTap, handleOpeningTap, findPolylineLabelAtPoint, labelOffsets, setDraggingLabelId,
+    diagonalPick, handleDiagonalPick, handleAngleCornerTap, handleOpeningTap, startOpeningLongPress, findPolylineLabelAtPoint, labelOffsets, setDraggingLabelId,
     labelDragStartRef, pointMoveOnly, findNearestPolylinePoint, selectedElementId,
     setSelectedElementId, setSelectedLineSegment, elements, setEditingPolylinePoint, setDragMode,
     setDragStart, setOriginalElement, setMagnifierTargetPosition, setMagnifierPosition, canvasLayout,
@@ -1294,6 +1299,8 @@ export function handleSelectTouchStartImpl(ctx: HandleSelectTouchStartImplCtx, l
   const segmentHit = pointMoveOnly ? null : (numberHit || findPolylineSegmentAtPoint(locationX, locationY));
   if (segmentHit) {
     // Segment gefunden - Maß-Eingabe DIREKT öffnen (ohne "Maß hinzufügen" Button)
+    // Langer Druck auf die Linie: Tür/Fenster an dieser Stelle einfügen
+    startOpeningLongPress(segmentHit.element, segmentHit.segmentIndex, locationX, locationY);
     setSelectedLineSegment({ 
       elementId: segmentHit.element.id, 
       segmentIndex: segmentHit.segmentIndex 

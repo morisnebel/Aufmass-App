@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, Alert, TextInput, Dimensions, Platform, ScrollView, BackHandler, Animated, PanResponder, Image as RNImage, useWindowDimensions } from 'react-native';
+import { View, Text, Alert, TextInput, Dimensions, Platform, ScrollView, BackHandler, Animated, PanResponder, Image as RNImage, useWindowDimensions, Vibration } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { styles } from '../../src/styles/sketchDrawStyles';
 import { usePreventRemove } from 'expo-router/react-navigation';
@@ -19,7 +19,8 @@ import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePo
 import { AREA_FIELD_PREFIX, withPairs } from '../../src/components/sketch/AreaOptionsSection';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { NumpadTarget } from '../../src/components/sketch/WallHeightSection';
-import { PolygonWalls, openingMarkers } from '../../src/sketch/wallArea';
+import { PolygonWalls, WallOpening, OpeningKind, OPENING_PRESETS, openingMarkers, openingPlacement } from '../../src/sketch/wallArea';
+import { OpeningInsertMenu } from '../../src/components/sketch/OpeningInsertMenu';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import { SketchTour } from '../../src/components/SketchTour';
 import { SketchDemoModal } from '../../src/components/SketchDemo';
@@ -816,8 +817,7 @@ export default function DrawSketchScreen() {
   const [diagonalPick, setDiagonalPick] = useState<{ elementId: string; first: number | null } | null>(null);
   // Tür/Fenster-Markierung in der Skizze angetippt: Linie wählen, Wand-Bereich aufklappen, Breite-Feld auswählen
   const replaceOnNextKeyRef = useRef<string | null>(null);
-  const handleOpeningTap = (x: number, y: number): boolean => {
-    if (pointMoveOnly) return false;
+  const findOpeningAt = (x: number, y: number) => {
     const tolerance = Math.max(12, 16 / Math.max(scale, 0.5));
     for (const el of elements) {
       if (el.type !== 'polyline' || !el.data?.points || !polygonWalls[el.id]?.segments) continue;
@@ -827,23 +827,100 @@ export default function DrawSketchScreen() {
         const t = Math.max(0, Math.min(1, ((x - marker.x1) * dx + (y - marker.y1) * dy) / (dx * dx + dy * dy || 1)));
         const onLine = Math.hypot(x - (marker.x1 + dx * t), y - (marker.y1 + dy * t)) <= tolerance;
         const onLabel = Math.abs(x - marker.labelX) <= 32 && Math.abs(y - marker.labelY) <= 10;
-        if (!onLine && !onLabel) continue;
-        setSelectedElementId(el.id);
-        setSelectedLineSegment({ elementId: el.id, segmentIndex: marker.segmentIndex });
-        const existingStyle = measureLineStyles[el.id];
-        setTempMeasureLineColor(existingStyle?.color || '#1976d2');
-        setTempMeasureLineStrokeWidth(existingStyle?.strokeWidth || 1.2);
-        setTempMeasureLineFontSize(existingStyle?.fontSize || 11);
-        setLineMeasurementExpression('');
-        setShowLineMeasurementNumpad(true);
-        changePanelOptionsOpen(true);
-        setWallSectionOpen(true);
-        setPendingAreaField(`wall-opening-width-${marker.openingIndex}`);
-        replaceOnNextKeyRef.current = `wall-opening-width-${marker.openingIndex}`;
-        return true;
+        if (onLine || onLabel) return { element: el, marker };
       }
     }
-    return false;
+    return null;
+  };
+  // Linie wählen, Maß-Fenster + Wand-Bereich öffnen und das Breite-Feld der Öffnung auswählen
+  const openOpeningEditor = (elementId: string, segmentIndex: number, openingIndex: number) => {
+    setSelectedElementId(elementId);
+    setSelectedLineSegment({ elementId, segmentIndex });
+    const existingStyle = measureLineStyles[elementId];
+    setTempMeasureLineColor(existingStyle?.color || '#1976d2');
+    setTempMeasureLineStrokeWidth(existingStyle?.strokeWidth || 1.2);
+    setTempMeasureLineFontSize(existingStyle?.fontSize || 11);
+    setLineMeasurementExpression('');
+    setShowLineMeasurementNumpad(true);
+    changePanelOptionsOpen(true);
+    setWallSectionOpen(true);
+    setPendingAreaField(`wall-opening-width-${openingIndex}`);
+    replaceOnNextKeyRef.current = `wall-opening-width-${openingIndex}`;
+  };
+  // Anteil (0..1) einer Stelle entlang einer Linie des Polygons
+  const fractionOnSegment = (element: DrawElement, segmentIndex: number, x: number, y: number) => {
+    const points = element.data.points;
+    const p1 = points[segmentIndex];
+    const p2 = points[(segmentIndex + 1) % points.length];
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    return Math.max(0, Math.min(1, ((x - p1.x) * dx + (y - p1.y) * dy) / (dx * dx + dy * dy || 1)));
+  };
+  const updateOpenings = (elementId: string, segmentIndex: number, update: (openings: WallOpening[]) => WallOpening[]) =>
+    setPolygonWalls(prev => {
+      const wall = prev[elementId] || {};
+      const segment = wall.segments?.[segmentIndex] || {};
+      return { ...prev, [elementId]: { ...wall, segments: { ...wall.segments, [segmentIndex]: { ...segment, openings: update(segment.openings || []) } } } };
+    });
+  // Öffnung auf der Linie ziehen: Berührung beginnt auf der Markierung; ohne Bewegung zählt es als Antippen
+  const openingDragRef = useRef<{ elementId: string; segmentIndex: number; openingIndex: number; startX: number; startY: number; moved: boolean } | null>(null);
+  // Langer Druck auf eine Linie: Tür/Fenster an dieser Stelle einfügen
+  const openingLongPressRef = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null);
+  const [openingInsert, setOpeningInsert] = useState<{ elementId: string; segmentIndex: number; fraction: number } | null>(null);
+  const cancelOpeningLongPress = () => {
+    if (openingLongPressRef.current) clearTimeout(openingLongPressRef.current.timer);
+    openingLongPressRef.current = null;
+  };
+  const startOpeningLongPress = (element: DrawElement, segmentIndex: number, x: number, y: number) => {
+    cancelOpeningLongPress();
+    const fraction = fractionOnSegment(element, segmentIndex, x, y);
+    const timer = setTimeout(() => {
+      openingLongPressRef.current = null;
+      if (Platform.OS !== 'web') Vibration.vibrate(30);
+      setOpeningInsert({ elementId: element.id, segmentIndex, fraction });
+    }, 600);
+    openingLongPressRef.current = { timer, x, y };
+  };
+  const insertOpening = (kind: OpeningKind) => {
+    if (!openingInsert) return;
+    const { elementId, segmentIndex, fraction } = openingInsert;
+    const preset: WallOpening = OPENING_PRESETS.find(p => p.id === kind)?.opening || { width: '', height: '', kind };
+    const opening = { ...preset, ...openingPlacement(fraction, lineSegmentMeasurements[elementId]?.[segmentIndex], preset) };
+    const index = polygonWalls[elementId]?.segments?.[segmentIndex]?.openings?.length || 0;
+    updateOpenings(elementId, segmentIndex, openings => [...openings, opening]);
+    setOpeningInsert(null);
+    openOpeningEditor(elementId, segmentIndex, index);
+    // Nach dem Schließen der Auswahl erneut wählen (das Schließen kann den Fokus zurück ins Maß-Feld legen)
+    setTimeout(() => setPendingAreaField(`wall-opening-width-${index}`), 350);
+  };
+  const handleOpeningTap = (x: number, y: number): boolean => {
+    if (pointMoveOnly) return false;
+    const hit = findOpeningAt(x, y);
+    if (!hit) return false;
+    openingDragRef.current = { elementId: hit.element.id, segmentIndex: hit.marker.segmentIndex, openingIndex: hit.marker.openingIndex, startX: x, startY: y, moved: false };
+    return true;
+  };
+  const handleOpeningDragMove = (x: number, y: number): boolean => {
+    const press = openingLongPressRef.current;
+    if (press && Math.hypot(x - press.x, y - press.y) > 8) cancelOpeningLongPress();
+    const drag = openingDragRef.current;
+    if (!drag) return false;
+    if (!drag.moved && Math.hypot(x - drag.startX, y - drag.startY) < 6) return true;
+    drag.moved = true;
+    const element = elements.find(el => el.id === drag.elementId);
+    if (!element) return true;
+    const fraction = fractionOnSegment(element, drag.segmentIndex, x, y);
+    const measure = lineSegmentMeasurements[drag.elementId]?.[drag.segmentIndex];
+    updateOpenings(drag.elementId, drag.segmentIndex, openings => openings.map((o, i) => (i === drag.openingIndex ? { ...o, ...openingPlacement(fraction, measure, o) } : o)));
+    return true;
+  };
+  const handleOpeningDragEnd = (): boolean => {
+    cancelOpeningLongPress();
+    const drag = openingDragRef.current;
+    if (!drag) return false;
+    openingDragRef.current = null;
+    if (!drag.moved) openOpeningEditor(drag.elementId, drag.segmentIndex, drag.openingIndex);
+    return true;
   };
   // Maß-Fenster offen und „Winkel angeben“ an: Ecke des Raums antippen wählt das passende Winkel-Feld
   // (nicht im „Punkte“-Modus – dort werden Ecken verschoben)
@@ -1719,7 +1796,7 @@ export default function DrawSketchScreen() {
   }, x, y);
 
   const onTouchMove = (event: any) => onTouchMoveImpl({
-    showProtractor, handleProtractorDragMove, zoomMode, androidPinchRef, androidZoomScale,
+    handleOpeningDragMove, showProtractor, handleProtractorDragMove, zoomMode, androidPinchRef, androidZoomScale,
     androidTranslateX, androidTranslateY, androidViewBox, screenWidth, canvasHeight, drawMode,
     dragMode, originalElement, dragStart, handleSelectTouchMove, currentPathRef, currentPenPointsRef,
     buildSmoothPath, setCurrentPath, draggingLabelId, labelDragStartRef, setLabelOffsets,
@@ -1727,7 +1804,7 @@ export default function DrawSketchScreen() {
   }, event);
 
   const onTouchEnd = (event: any) => onTouchEndImpl({
-    showProtractor, handleProtractorDragEnd, zoomMode, androidPinchRef, androidViewBox, screenWidth,
+    handleOpeningDragEnd, showProtractor, handleProtractorDragEnd, zoomMode, androidPinchRef, androidViewBox, screenWidth,
     canvasHeight, setAndroidViewBox, setScale, androidZoomScale, androidTranslateX,
     androidTranslateY, drawMode, currentPathRef, generateId, drawColor, strokeWidth, addToHistory,
     elements, currentPenPointsRef, setCurrentPath, currentPath, angleEditMode, setAngleEditMode,
@@ -1883,7 +1960,7 @@ export default function DrawSketchScreen() {
 
   // Selection & Transform handlers
   const handleSelectTouchStart = (locationX: number, locationY: number) => handleSelectTouchStartImpl({
-    diagonalPick, handleDiagonalPick, handleAngleCornerTap, handleOpeningTap, findPolylineLabelAtPoint, labelOffsets, setDraggingLabelId,
+    diagonalPick, handleDiagonalPick, handleAngleCornerTap, handleOpeningTap, startOpeningLongPress, findPolylineLabelAtPoint, labelOffsets, setDraggingLabelId,
     labelDragStartRef, pointMoveOnly, findNearestPolylinePoint, selectedElementId,
     setSelectedElementId, setSelectedLineSegment, elements, setEditingPolylinePoint, setDragMode,
     setDragStart, setOriginalElement, setMagnifierTargetPosition, setMagnifierPosition, canvasLayout,
@@ -2511,6 +2588,12 @@ export default function DrawSketchScreen() {
           showProtractorAngleInput, protractorAngleInput, setProtractorAngleTo, showProtractorHint,
           setShowProtractorHint,
         }}
+      />
+      <OpeningInsertMenu
+        visible={!!openingInsert}
+        line={(openingInsert?.segmentIndex ?? 0) + 1}
+        onPick={insertOpening}
+        onClose={() => setOpeningInsert(null)}
       />
       <RenamePromptModal
         visible={!!renamePolyline}

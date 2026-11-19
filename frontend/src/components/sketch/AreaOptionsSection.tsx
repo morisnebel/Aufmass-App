@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
-import { PolygonAreaOption, computePolygon, formatAreaM2, listDiagonals, angleExtraId, pairExtraId, vertexDistance } from '../../sketch/polygonArea';
+import { PolygonAreaOption, computePolygon, fitVerticesToDrawing, formatAreaM2, listDiagonals, angleExtraId, pairExtraId, vertexDistance } from '../../sketch/polygonArea';
 import { NumpadTarget } from './WallHeightSection';
 
 // Genauere Flächenberechnung für ein Polygon (alles optional):
@@ -22,6 +22,8 @@ type Props = {
   // Feld, das von außen ausgewählt werden soll (z. B. automatisch angelegte Diagonale)
   focusFieldId?: string | null;
   onFocusHandled?: () => void;
+  // Zeichnung auf die berechnete Form ziehen (neue Eckpunkte in Skizzen-Koordinaten)
+  onStraighten?: (points: { x: number; y: number }[]) => void;
 };
 
 // Reihenfolge der Eingaben merken: frühere Angaben haben bei Widersprüchen Vorrang
@@ -46,7 +48,7 @@ export const withPairs = (option: PolygonAreaOption | undefined, pointCount: num
 // Ecke k liegt zwischen Linie k und Linie k+1 (Ecke 0: zwischen letzter Linie und Linie 1)
 const cornerName = (k: number, n: number) => `Linie ${k === 0 ? n : k}/${k + 1}`;
 
-export const AreaOptionsSection = ({ element, measures, shapePoints, option, onChange, activeFieldId, onFieldFocus, pickState, onPickDiagonal, focusFieldId, onFocusHandled }: Props) => {
+export const AreaOptionsSection = ({ element, measures, shapePoints, option, onChange, activeFieldId, onFieldFocus, pickState, onPickDiagonal, focusFieldId, onFocusHandled, onStraighten }: Props) => {
   const latest = useRef({ option, onChange });
   latest.current = { option, onChange };
   const values = useRef<{ [id: string]: string }>({});
@@ -117,6 +119,10 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
     </TouchableOpacity>
   );
 
+  // Geraderücken: nur anbieten, wenn die Zeichnung sichtbar von der berechneten Form abweicht
+  const straightened = hasShape ? fitVerticesToDrawing(result!.vertices, points) : null;
+  const canStraighten = !!straightened && straightened.some((p, k) => Math.hypot(p.x - points[k].x, p.y - points[k].y) > 1);
+
   let status = 'Fläche aus den gezeichneten Winkeln – Abweichung vom genauen Maß möglich. Für genaue Werte Winkel oder Diagonalen angeben.';
   let warn = true;
   if (!result) {
@@ -138,6 +144,19 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   return (
     <View style={styles.box}>
       <Text testID="area-status" style={[styles.hint, warn && styles.warn]}>{status}</Text>
+      {!!onStraighten && hasShape && (
+        <TouchableOpacity
+          testID="area-straighten"
+          disabled={!canStraighten}
+          style={[styles.pick, !canStraighten && styles.pickDisabled]}
+          onPress={() => straightened && onStraighten(straightened)}
+        >
+          <Ionicons name="git-merge-outline" size={16} color={canStraighten ? '#2e7d32' : '#999'} />
+          <Text style={[styles.pickText, !canStraighten && styles.pickTextDisabled]} numberOfLines={2}>
+            {canStraighten ? `Skizze geraderücken${result!.determined ? '' : ' (Näherung)'}` : 'Skizze passt zu den Maßen'}
+          </Text>
+        </TouchableOpacity>
+      )}
       {toggle('area-right-angles-toggle', 'Alle Ecken rechtwinklig', rightAngles, () => onChange({ ...option, rightAngles: !rightAngles }), 'square-outline')}
 
       {toggle('area-angles-toggle', 'Winkel angeben', useAngles, () => onChange({ ...option, useAngles: !useAngles }), 'analytics')}
@@ -200,6 +219,8 @@ const styles = StyleSheet.create({
   pickActive: { backgroundColor: '#2e7d32', borderColor: '#2e7d32' },
   pickText: { flexShrink: 1, fontSize: 12, fontWeight: '600', color: '#2e7d32' },
   pickTextActive: { color: '#fff' },
+  pickDisabled: { borderColor: '#ddd', backgroundColor: '#f5f5f5' },
+  pickTextDisabled: { color: '#999' },
   hint: { fontSize: 11, fontWeight: '600', color: '#2e7d32' },
   warn: { color: '#d84315' },
 });

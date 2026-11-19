@@ -372,6 +372,29 @@ const computePolygonUncached = (
   };
 };
 
+// Berechnete Form (Meter) bestmöglich auf die Zeichnung legen: gleiche Lage, Drehung und Größe,
+// aber mit den rechnerischen Winkeln und Seitenverhältnissen (für „Skizze geraderücken“)
+export const fitVerticesToDrawing = (vertices: { x: number; y: number }[], points: { x: number; y: number }[]): { x: number; y: number }[] | null => {
+  const n = points.length;
+  if (n < 3 || vertices.length !== n) return null;
+  const center = (list: { x: number; y: number }[]) => ({ x: list.reduce((s, p) => s + p.x, 0) / n, y: list.reduce((s, p) => s + p.y, 0) / n });
+  const cv = center(vertices);
+  const cp = center(points);
+  let re = 0; let im = 0; let norm = 0;
+  for (let k = 0; k < n; k++) {
+    const vx = vertices[k].x - cv.x; const vy = vertices[k].y - cv.y;
+    const px = points[k].x - cp.x; const py = points[k].y - cp.y;
+    re += vx * px + vy * py;
+    im += vx * py - vy * px;
+    norm += vx * vx + vy * vy;
+  }
+  if (!(norm > 0) || Math.hypot(re, im) < 1e-9) return null;
+  return vertices.map(v => {
+    const vx = v.x - cv.x; const vy = v.y - cv.y;
+    return { x: cp.x + (re * vx - im * vy) / norm, y: cp.y + (im * vx + re * vy) / norm };
+  });
+};
+
 export const calculatePolygonAreaM2 = (
   element: any,
   lineSegmentMeasurements: { [id: string]: { [seg: number]: string } },

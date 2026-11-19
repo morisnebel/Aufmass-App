@@ -739,6 +739,14 @@ export default function DrawSketchScreen() {
   useEffect(() => {
     if (!pendingAreaField) clearNumpadTarget();
   }, [selectedLineSegment?.elementId, selectedLineSegment?.segmentIndex, showLineMeasurementNumpad]);
+  // „Skizze geraderücken“: Eckpunkte des Polygons auf die berechnete Form setzen (rückgängig machbar)
+  const straightenPolygon = (elementId: string, points: { x: number; y: number }[]) => {
+    const newElements = elements.map(el => el.id === elementId && el.data?.points?.length === points.length
+      ? { ...el, data: { ...el.data, points } }
+      : el);
+    setElements(newElements);
+    addToHistory(newElements);
+  };
   // Nach dem Verschieben einer Ecke: Ist der Raum noch nicht durch Winkel/Diagonalen bestimmt,
   // wird die Diagonale ab der verschobenen Ecke angelegt und ihr Eingabefeld ausgewählt
   const autoDiagonalAfterPointMove = (element: DrawElement, pointIndex: number): boolean => {
@@ -2290,7 +2298,7 @@ export default function DrawSketchScreen() {
           changePanelOptionsOpen, changeLineAutoAdd, lineAutoNext, changeLineAutoNext,
           changeLaserSound, lineMeasureHistory, undoLastLineMeasurement, lineNumbersVisible,
           changeLineNumbersVisible, polygonWalls, setPolygonWalls, setWallSectionOpen,
-          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField,
+          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon,
           calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
           polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick,
           setPolygonAreaOptions, setShowMeasureStyleSettings, showMeasureStyleSettings,

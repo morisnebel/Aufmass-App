@@ -1,3 +1,4 @@
+import type { WallOpening } from '../../../sketch/wallArea';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -39,6 +40,8 @@ export type MeasurePanelOptionsProps = {
   setPendingAreaField: React.Dispatch<React.SetStateAction<string | null>>;
   straightenPolygon: (elementId: string, points: { x: number; y: number }[]) => void;
   straightenAllPolygons: () => void;
+  openingCopy: { elementId: string; segmentIndex: number; openingIndex: number; opening: WallOpening; } | null;
+  setOpeningCopy: React.Dispatch<React.SetStateAction<{ elementId: string; segmentIndex: number; openingIndex: number; opening: WallOpening; } | null>>;
   scrollMeasurePanelTo: (y: number) => void;
   calculatePolygonAreaM2: (element: DrawElement) => number | null;
   polygonAreaVisible: { [elementId: string]: boolean; };
@@ -57,7 +60,7 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
     changeLineAutoNext, laserSound, changeLaserSound, lineMeasureHistory, undoLastLineMeasurement,
     lineNumbersVisible, changeLineNumbersVisible, selectedLineSegment, elements,
     lineSegmentMeasurements, polygonWalls, setPolygonWalls, wallSectionOpen, setWallSectionOpen,
-    numpadTargetId, panelKeyboardOpen, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, scrollMeasurePanelTo,
+    numpadTargetId, panelKeyboardOpen, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, openingCopy, setOpeningCopy, scrollMeasurePanelTo,
     calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
     polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick, setPolygonAreaOptions,
   } = props;
@@ -166,6 +169,11 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
           focusFieldId={pendingAreaField}
           onFocusHandled={() => setPendingAreaField(null)}
           onScrollTo={scrollMeasurePanelTo}
+          copyIndex={openingCopy && openingCopy.elementId === selectedLineSegment.elementId && openingCopy.segmentIndex === selectedLineSegment.segmentIndex ? openingCopy.openingIndex : null}
+          onCopy={(index) => {
+            const opening = index === null ? undefined : polygonWalls[selectedLineSegment.elementId]?.segments?.[selectedLineSegment.segmentIndex]?.openings?.[index];
+            setOpeningCopy(opening && index !== null ? { elementId: selectedLineSegment.elementId, segmentIndex: selectedLineSegment.segmentIndex, openingIndex: index, opening } : null);
+          }}
           onFieldFocus={(id, target) => {
             // Wandfelder nutzen immer das Numpad des Fensters: bei Bedarf aufklappen
             if (!panelKeyboardOpen) setPanelKeyboardOpen(true);

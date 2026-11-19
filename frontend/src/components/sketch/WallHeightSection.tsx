@@ -1,9 +1,10 @@
+import { parseMeasurementToMeters } from '../../sketch/polygonArea';
 import React, { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import BufferedTextInput from '../BufferedTextInput';
 import { formatAreaM2 } from '../../sketch/polygonArea';
-import { OPENING_PRESETS, PolygonWall, WallSegment, calculateWallAreaM2, openingAreaM2, segmentDeductionM2, wallSegmentAreaM2, OPENING_KINDS, openingKindOf, WallOpening } from '../../sketch/wallArea';
+import { OPENING_PRESETS, PolygonWall, WallSegment, calculateWallAreaM2, openingAreaM2, segmentDeductionM2, wallSegmentAreaM2, OPENING_KINDS, openingKindOf, WallOpening, openingConflict } from '../../sketch/wallArea';
 
 // Aufklappbarer Bereich im Maß-Fenster: Wandhöhe (für alle Linien / diese Linie),
 // Abzug für Öffnungen und die daraus berechnete Wandfläche.
@@ -27,11 +28,14 @@ type Props = {
   focusFieldId?: string | null;
   onFocusHandled?: () => void;
   onScrollTo?: (y: number) => void;
+  // Öffnung auf eine andere Linie kopieren: Index der Öffnung, für die gerade die Ziel-Linie gewählt wird
+  copyIndex?: number | null;
+  onCopy?: (index: number | null) => void;
 };
 
 export type NumpadTarget = { get: () => string; set: (value: string) => void; label?: string };
 
-export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange, scrollable = true, open, onToggle, useNumpad, activeFieldId, onFieldFocus, focusFieldId, onFocusHandled, onScrollTo }: Props) => {
+export const WallHeightSection = ({ element, segmentIndex, measures, wall, onChange, scrollable = true, open, onToggle, useNumpad, activeFieldId, onFieldFocus, focusFieldId, onFocusHandled, onScrollTo, copyIndex, onCopy }: Props) => {
   // Aktuelle Werte/Handler je Feld, damit das Numpad immer auf dem neuesten Stand schreibt
   const fields = useRef<{ [id: string]: { value: string; onChangeText: (t: string) => void } }>({});
   const boxY = useRef(0);
@@ -60,14 +64,15 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
   const setOpening = (index: number, patch: Partial<WallOpening>) =>
     setSegment({ openings: openings.map((o, i) => (i === index ? { ...o, ...patch } : o)) });
 
-  const input = (testID: string, value: string, placeholder: string, onChangeText: (t: string) => void, flex = false) => {
+  const lineMeters = parseMeasurementToMeters(measures?.[segmentIndex] || '');
+  const input = (testID: string, value: string, placeholder: string, onChangeText: (t: string) => void, flex = false, invalid = false) => {
     fields.current[testID] = { value, onChangeText };
     return (
       <BufferedTextInput
         testID={testID}
         replaceOnBurst
         containerStyle={flex ? styles.flex : undefined}
-        style={[styles.input, useNumpad && activeFieldId === testID && styles.inputActive]}
+        style={[styles.input, invalid && styles.inputInvalid, useNumpad && activeFieldId === testID && styles.inputActive]}
         showSoftInputOnFocus={!useNumpad}
         onFocus={() => onFieldFocus(testID, {
           get: () => fields.current[testID]?.value ?? '',
@@ -139,8 +144,27 @@ export const WallHeightSection = ({ element, segmentIndex, measures, wall, onCha
             </View>
             <View style={styles.offsetRow}>
               <Text style={styles.offsetLabel} numberOfLines={2}>Abstand ab Linienanfang</Text>
-              {input(`wall-opening-offset-${i}`, opening.offset || '', 'z.B. 0,80m', (t) => setOpening(i, { offset: t, position: undefined }), true)}
+              {input(`wall-opening-offset-${i}`, opening.offset || '', 'z.B. 0,80m', (t) => setOpening(i, { offset: t, position: undefined }), true, !!openingConflict(openings, i, lineMeters))}
             </View>
+            {!!openingConflict(openings, i, lineMeters) && (
+              <Text testID={`wall-opening-conflict-${i}`} style={styles.conflict}>
+                {openingConflict(openings, i, lineMeters) === 'outside'
+                  ? `Ragt über die Linie hinaus (Linie ${lineMeters.toFixed(2).replace('.', ',')} m)`
+                  : 'Überlappt eine andere Öffnung dieser Linie'}
+              </Text>
+            )}
+            {!!onCopy && (
+              <TouchableOpacity
+                testID={`wall-opening-copy-${i}`}
+                style={[styles.copyButton, copyIndex === i && styles.copyButtonActive]}
+                onPress={() => onCopy(copyIndex === i ? null : i)}
+              >
+                <Ionicons name={copyIndex === i ? 'close' : 'copy-outline'} size={14} color={copyIndex === i ? '#fff' : '#5d4037'} />
+                <Text style={[styles.addButtonText, copyIndex === i && styles.copyTextActive]} numberOfLines={2}>
+                  {copyIndex === i ? 'Ziel-Linie in der Skizze antippen (Abbrechen)' : 'Auf andere Linie kopieren'}
+                </Text>
+              </TouchableOpacity>
+            )}
             </View>
           ))}
           <View style={styles.presetRow}>
@@ -212,6 +236,11 @@ const styles = StyleSheet.create({
   addButtonText: { fontSize: 12, fontWeight: '600', color: '#5d4037' },
   label: { fontSize: 10, fontWeight: '600', color: '#6d4c41' },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#d7ccc8', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 8, fontSize: 14, color: '#333', minHeight: 40 },
+  inputInvalid: { borderColor: '#d32f2f', backgroundColor: '#ffebee' },
+  conflict: { fontSize: 11, fontWeight: '700', color: '#d32f2f' },
+  copyButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 40, paddingHorizontal: 6, borderRadius: 6, borderWidth: 1, borderColor: '#bcaaa4', backgroundColor: '#fff' },
+  copyButtonActive: { backgroundColor: '#e65100', borderColor: '#e65100' },
+  copyTextActive: { color: '#fff' },
   inputActive: { borderColor: '#1976d2', borderWidth: 2 },
   result: { fontSize: 12, fontWeight: '700', color: '#4e342e' },
 });

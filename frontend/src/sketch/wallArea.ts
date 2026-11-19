@@ -43,6 +43,20 @@ export const openingPlacement = (fraction: number, measure: string | undefined, 
   }
   return { position: (start + width / 2) / meters, offset: formatOffset(start) };
 };
+// Passt die Lage einer Öffnung nicht? 'outside' = ragt über die Linie hinaus, 'overlap' = überlappt eine andere
+export const openingConflict = (openings: WallOpening[], index: number, lineMeters: number): 'outside' | 'overlap' | null => {
+  const start = openings[index] ? openingOffsetMeters(openings[index], lineMeters) : null;
+  const width = parseMeasurementToMeters(openings[index]?.width || '');
+  if (start === null || !(width > 0)) return null;
+  if (start + width > lineMeters + 0.005) return 'outside';
+  const overlaps = openings.some((other, i) => {
+    if (i === index) return false;
+    const otherStart = openingOffsetMeters(other, lineMeters);
+    const otherWidth = parseMeasurementToMeters(other.width || '');
+    return otherStart !== null && otherWidth > 0 && start < otherStart + otherWidth - 0.005 && otherStart < start + width - 0.005;
+  });
+  return overlaps ? 'overlap' : null;
+};
 // Abstand vom Linienanfang bis zur Öffnung in Metern (null, wenn die Lage nicht bekannt ist)
 export const openingOffsetMeters = (opening: WallOpening, lineMeters: number): number | null => {
   if (!(lineMeters > 0)) return null;
@@ -164,6 +178,7 @@ export type OpeningMarker = {
   labelX: number; labelY: number; label: string;
   offsetMeters: number | null; // Abstand vom Linienanfang bis zur Öffnung (wenn bekannt)
   restMeters: number | null; // Abstand von der Öffnung bis zum Linienende (wenn bekannt)
+  conflict: 'outside' | 'overlap' | null; // Lage passt nicht (ragt hinaus / überlappt)
   startX: number; startY: number; endX: number; endY: number; // Anfang und Ende der Linie
 };
 export const openingMarkers = (
@@ -194,6 +209,7 @@ export const openingMarkers = (
     const ny = ux * sign;
     const meters = parseMeasurementToMeters(measures?.[i] || '');
     const slot = pixelLength / openings.length;
+    const placedLabels: { marker: OpeningMarker; center: number }[] = [];
     openings.forEach((opening, j) => {
       const width = parseMeasurementToMeters(opening.width || '');
       const placed = (opening.offset || '').trim() !== '' || opening.position !== undefined;
@@ -212,14 +228,28 @@ export const openingMarkers = (
       const ax = p1.x + ux * (center - length / 2);
       const ay = p1.y + uy * (center - length / 2);
       const kind = openingKindOf(opening);
-      markers.push({
+      const marker: OpeningMarker = {
         segmentIndex: i, openingIndex: j, kind, nx, ny, offsetMeters,
+        conflict: openingConflict(openings, j, meters),
         restMeters: offsetMeters !== null && width > 0 ? Math.max(0, meters - offsetMeters - width) : null,
         startX: p1.x, startY: p1.y, endX: p2.x, endY: p2.y,
         x1: ax, y1: ay, x2: ax + ux * length, y2: ay + uy * length,
         labelX: p1.x + ux * center + nx * 30, labelY: p1.y + uy * center + ny * 30,
         label: `${OPENING_KINDS.find(k => k.id === kind)!.short} ${short(opening.width)}×${short(opening.height)}${offsetMeters !== null ? ` ↦${offsetMeters.toFixed(2).replace('.', ',')}` : ''}`,
-      });
+      };
+      markers.push(marker);
+      placedLabels.push({ marker, center });
+    });
+    // Beschriftungen dicht benachbarter Öffnungen abwechselnd weiter nach innen setzen, damit sie lesbar bleiben
+    placedLabels.sort((a, b) => a.center - b.center);
+    let previous: { center: number; level: number; chars: number } | null = null;
+    placedLabels.forEach(({ marker, center }) => {
+      const chars = marker.label.length;
+      const tooClose = previous !== null && center - previous.center < ((chars + previous.chars) / 2) * 5 + 4;
+      const level = tooClose ? (previous!.level + 1) % 3 : 0;
+      marker.labelX = p1.x + ux * center + nx * (30 + level * 13);
+      marker.labelY = p1.y + uy * center + ny * (30 + level * 13);
+      previous = { center, level, chars };
     });
   }
   return markers;

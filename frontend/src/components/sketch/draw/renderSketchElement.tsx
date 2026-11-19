@@ -588,7 +588,7 @@ export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawEl
                 <Line x1={marker.x1} y1={marker.y1} x2={marker.x2} y2={marker.y2} stroke={color} strokeWidth={marker.kind === 'door' ? 2 : 4} strokeDasharray={marker.kind === 'door' ? '4,3' : undefined} />
                 {tick(marker.x1, marker.y1)}
                 {tick(marker.x2, marker.y2)}
-                <SvgText x={marker.labelX} y={marker.labelY + 3} fill={active ? '#e65100' : color} fontSize={active ? 11 : 9} fontWeight="bold" textAnchor="middle">{marker.label}</SvgText>
+                <SvgText x={marker.labelX} y={marker.labelY + 3} fill={marker.conflict ? '#d32f2f' : active ? '#e65100' : color} fontSize={active ? 11 : 9} fontWeight="bold" textAnchor="middle">{marker.conflict ? `⚠ ${marker.label}` : marker.label}</SvgText>
                 {/* Maßkette beim Ziehen/Bearbeiten: Abstände zu beiden Ecken der Linie (außen an der Linie) */}
                 {(active || (openingDrag?.elementId === element.id && openingDrag.segmentIndex === marker.segmentIndex && openingDrag.openingIndex === marker.openingIndex))
                   && marker.offsetMeters !== null && marker.restMeters !== null && (() => {

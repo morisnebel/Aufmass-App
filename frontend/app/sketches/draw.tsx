@@ -710,8 +710,8 @@ export default function DrawSketchScreen() {
   const [measureKeyboardHeight, setMeasureKeyboardHeight] = useState(0);
   const numpadTargetLabel = (id: string) => {
     if (id.startsWith(AREA_FIELD_PREFIX)) return numpadTargetRef.current?.label || 'Eingabe';
-    const opening = id.match(/^wall-opening-(width|height)-(\d+)$/);
-    if (opening) return `Öffnung ${parseInt(opening[2], 10) + 1} ${opening[1] === 'width' ? 'Breite' : 'Höhe'}`;
+    const opening = id.match(/^wall-opening-(width|height|offset)-(\d+)$/);
+    if (opening) return `Öffnung ${parseInt(opening[2], 10) + 1} ${{ width: 'Breite', height: 'Höhe', offset: 'Abstand' }[opening[1] as 'width' | 'height' | 'offset']}`;
     return ({ 'wall-height-all': 'Höhe alle Linien', 'wall-height-line': 'Höhe diese Linie', 'wall-deduction-line': 'Weiterer Abzug' } as { [key: string]: string })[id] || 'Eingabe';
   };
   const numpadTargetValue = (id: string): string => {
@@ -724,8 +724,8 @@ export default function DrawSketchScreen() {
     }
     const wall = polygonWalls[selectedLineSegment.elementId];
     const segment = wall?.segments?.[selectedLineSegment.segmentIndex];
-    const opening = id.match(/^wall-opening-(width|height)-(\d+)$/);
-    if (opening) return segment?.openings?.[parseInt(opening[2], 10)]?.[opening[1] as 'width' | 'height'] || '';
+    const opening = id.match(/^wall-opening-(width|height|offset)-(\d+)$/);
+    if (opening) return segment?.openings?.[parseInt(opening[2], 10)]?.[opening[1] as 'width' | 'height' | 'offset'] || '';
     if (id === 'wall-height-all') return wall?.height || '';
     if (id === 'wall-height-line') return segment?.height || '';
     return segment?.deduction || '';
@@ -817,6 +817,10 @@ export default function DrawSketchScreen() {
   const [diagonalPick, setDiagonalPick] = useState<{ elementId: string; first: number | null } | null>(null);
   // Tür/Fenster-Markierung in der Skizze angetippt: Linie wählen, Wand-Bereich aufklappen, Breite-Feld auswählen
   const replaceOnNextKeyRef = useRef<string | null>(null);
+  // Abstand-Feld gewählt: Der (meist berechnete) Wert wird mit der ersten Ziffer ersetzt statt verlängert
+  useEffect(() => {
+    if (numpadTargetId?.startsWith('wall-opening-offset-')) replaceOnNextKeyRef.current = numpadTargetId;
+  }, [numpadTargetId]);
   const findOpeningAt = (x: number, y: number) => {
     const tolerance = Math.max(12, 16 / Math.max(scale, 0.5));
     for (const el of elements) {
@@ -896,7 +900,26 @@ export default function DrawSketchScreen() {
     // Nach dem Schließen der Auswahl erneut wählen (das Schließen kann den Fokus zurück ins Maß-Feld legen)
     setTimeout(() => setPendingAreaField(`wall-opening-width-${index}`), 350);
   };
+  // Öffnung kopieren: nach „Auf andere Linie kopieren“ wählt der nächste Tipp auf eine Raumlinie das Ziel
+  const [openingCopy, setOpeningCopy] = useState<{ elementId: string; segmentIndex: number; openingIndex: number; opening: WallOpening } | null>(null);
+  useEffect(() => {
+    if (!showLineMeasurementNumpad) setOpeningCopy(null);
+  }, [showLineMeasurementNumpad]);
+  const handleOpeningCopyTap = (x: number, y: number): boolean => {
+    if (!openingCopy) return false;
+    const hit = findPolylineSegmentAtPoint(x, y);
+    if (!hit) return true; // daneben getippt: Auswahl bleibt aktiv
+    const existing = polygonWalls[hit.element.id]?.segments?.[hit.segmentIndex]?.openings || [];
+    const { offset: _offset, position: _position, ...size } = openingCopy.opening;
+    const fraction = fractionOnSegment(hit.element, hit.segmentIndex, x, y);
+    const copy = { ...size, ...openingPlacement(fraction, lineSegmentMeasurements[hit.element.id]?.[hit.segmentIndex], size, existing) };
+    updateOpenings(hit.element.id, hit.segmentIndex, openings => [...openings, copy]);
+    setOpeningCopy(null);
+    openOpeningEditor(hit.element.id, hit.segmentIndex, existing.length);
+    return true;
+  };
   const handleOpeningTap = (x: number, y: number): boolean => {
+    if (handleOpeningCopyTap(x, y)) return true;
     if (pointMoveOnly) return false;
     const hit = findOpeningAt(x, y);
     if (!hit) return false;
@@ -2448,7 +2471,7 @@ export default function DrawSketchScreen() {
           changePanelOptionsOpen, changeLineAutoAdd, lineAutoNext, changeLineAutoNext,
           changeLaserSound, lineMeasureHistory, undoLastLineMeasurement, lineNumbersVisible,
           changeLineNumbersVisible, polygonWalls, setPolygonWalls, setWallSectionOpen,
-          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons,
+          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, openingCopy, setOpeningCopy,
           calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
           polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick,
           setPolygonAreaOptions, setShowMeasureStyleSettings, showMeasureStyleSettings,

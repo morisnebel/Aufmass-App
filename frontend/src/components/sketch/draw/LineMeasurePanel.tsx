@@ -1,3 +1,4 @@
+import type { WallOpening } from '../../../sketch/wallArea';
 import type { PanResponderInstance, TextInput } from 'react-native';
 import type { TFunction } from 'i18next';
 import type { EdgeInsets } from 'react-native-safe-area-context';
@@ -65,6 +66,8 @@ export type LineMeasurePanelProps = {
   setPendingAreaField: React.Dispatch<React.SetStateAction<string | null>>;
   straightenPolygon: (elementId: string, points: { x: number; y: number }[]) => void;
   straightenAllPolygons: () => void;
+  openingCopy: { elementId: string; segmentIndex: number; openingIndex: number; opening: WallOpening; } | null;
+  setOpeningCopy: React.Dispatch<React.SetStateAction<{ elementId: string; segmentIndex: number; openingIndex: number; opening: WallOpening; } | null>>;
   calculatePolygonAreaM2: (element: DrawElement) => number | null;
   polygonAreaVisible: { [elementId: string]: boolean; };
   setPolygonAreaVisible: React.Dispatch<React.SetStateAction<{ [elementId: string]: boolean; }>>;
@@ -107,7 +110,7 @@ export function LineMeasurePanel(props: LineMeasurePanelProps) {
     removeMeasurementFromSelectedLine, changePanelOptionsOpen, changeLineAutoAdd, lineAutoNext,
     changeLineAutoNext, changeLaserSound, lineMeasureHistory, undoLastLineMeasurement,
     lineNumbersVisible, changeLineNumbersVisible, polygonWalls, setPolygonWalls, setWallSectionOpen,
-    numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, calculatePolygonAreaM2,
+    numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, openingCopy, setOpeningCopy, calculatePolygonAreaM2,
     polygonAreaVisible, setPolygonAreaVisible, formatAreaM2, polygonAreaOptions, polygonAreaShapes,
     diagonalPick, setDiagonalPick, setPolygonAreaOptions, setShowMeasureStyleSettings,
     showMeasureStyleSettings, tempMeasureLineColor, setTempMeasureLineColor, setMeasureLineStyles,
@@ -258,7 +261,7 @@ export function LineMeasurePanel(props: LineMeasurePanelProps) {
               undoLastLineMeasurement, lineNumbersVisible, changeLineNumbersVisible,
               selectedLineSegment, elements, lineSegmentMeasurements, polygonWalls, setPolygonWalls,
               wallSectionOpen, setWallSectionOpen, numpadTargetId, panelKeyboardOpen,
-              setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, calculatePolygonAreaM2,
+              setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, openingCopy, setOpeningCopy, calculatePolygonAreaM2,
               polygonAreaVisible, setPolygonAreaVisible, formatAreaM2, polygonAreaOptions,
               polygonAreaShapes, diagonalPick, setDiagonalPick, setPolygonAreaOptions,
             }}

@@ -961,9 +961,11 @@ export default function DrawSketchScreen() {
   };
   const handleOpeningTap = (x: number, y: number): boolean => {
     if (handleOpeningCopyTap(x, y)) return true;
-    if (pointMoveOnly) return false;
+    // „Punkte“ an: Ecken haben Vorrang. Wird stattdessen eine Tür/ein Fenster gegriffen, schaltet sich „Punkte“ aus
+    if (pointMoveOnly && findNearestPolylinePoint(x, y)) return false;
     const hit = findOpeningAt(x, y);
     if (!hit) return false;
+    if (pointMoveOnly) setPointMoveOnly(false);
     openingDragRef.current = { elementId: hit.element.id, segmentIndex: hit.marker.segmentIndex, openingIndex: hit.marker.openingIndex, startX: x, startY: y, moved: false };
     return true;
   };

@@ -144,7 +144,7 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   const straightened = hasShape ? fitVerticesToDrawing(result!.vertices, points, anchorSegment) : null;
   const canStraighten = !!straightened && straightened.some((p, k) => Math.hypot(p.x - points[k].x, p.y - points[k].y) > 1);
 
-  const missing = (count: number) => `Noch ${count} ${count === 1 ? 'Angabe fehlt' : 'Angaben fehlen'}: unten „Winkel angeben“ (rechte Ecke = 90) oder „Diagonalen angeben“ – dann ist die Fläche genau${autoStraighten ? ' und die Skizze rückt sich gerade' : ''}. Bis dahin Näherung aus der Zeichnung.`;
+  const missing = (count: number) => `Noch ${count} ${count === 1 ? 'Angabe fehlt' : 'Angaben fehlen'}: unten „Winkel angeben“ (rechte Ecke: Taste 90°) oder „Diagonalen angeben“ – dann ist die Fläche genau${autoStraighten ? ' und die Skizze rückt sich gerade' : ''}. Bis dahin Näherung aus der Zeichnung.`;
   let status = missing(Math.max(1, needed));
   let warn = true;
   if (!result) {
@@ -193,10 +193,22 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
       {n >= 4 && rightAngles && toggle('area-right-angles-toggle', 'Alle Ecken rechtwinklig (alte Angabe – antippen zum Entfernen)', rightAngles, () => onChange({ ...option, rightAngles: false }), 'square-outline')}
 
       {n >= 4 && toggle('area-angles-toggle', 'Winkel angeben', useAngles, () => onChange({ ...option, useAngles: !useAngles }), 'analytics')}
-      {n >= 4 && useAngles && points.map((_, k) =>
-        field(`area-angle-${k}`, `Winkel Ecke ${cornerName(k, n)} (°)`, option?.angles?.[k] || '', 'Winkel in °',
-          (current, text) => withOrder({ ...current, angles: { ...current?.angles, [k]: text } }, angleExtraId(k), text),
-          hasShape ? formatDegrees(result!.angles[k]) : undefined, isRejected(angleExtraId(k)), true))}
+      {n >= 4 && useAngles && points.map((_, k) => (
+        <View key={`angle-row-${k}`} style={styles.row} onLayout={(e) => { rowY.current[`area-angle-${k}`] = e.nativeEvent.layout.y; tryScroll(); }}>
+          {field(`area-angle-${k}`, `Winkel Ecke ${cornerName(k, n)} (°)`, option?.angles?.[k] || '', 'Winkel in °',
+            (current, text) => withOrder({ ...current, angles: { ...current?.angles, [k]: text } }, angleExtraId(k), text),
+            hasShape ? formatDegrees(result!.angles[k]) : undefined, isRejected(angleExtraId(k)))}
+          {/* Rechte Ecke mit einem Tipp eintragen */}
+          <TouchableOpacity
+            testID={`area-angle-90-${k}`}
+            accessibilityLabel="90 Grad eintragen"
+            style={styles.ninety}
+            onPress={() => onChange(withOrder({ ...option, angles: { ...option?.angles, [k]: '90' } }, angleExtraId(k), '90'))}
+          >
+            <Text style={styles.ninetyText}>90°</Text>
+          </TouchableOpacity>
+        </View>
+      ))}
 
       {n >= 4 && toggle('area-diagonals-toggle', 'Diagonalen angeben', useDiagonals, () => onChange({ ...withPairs(option, n, () => {}), useDiagonals: !useDiagonals }), 'git-compare')}
       {n >= 4 && useDiagonals && (
@@ -252,6 +264,8 @@ const styles = StyleSheet.create({
   computed: { fontSize: 11, fontWeight: '700', color: '#2e7d32' },
   computedRejected: { color: '#d32f2f' },
   remove: { width: 40, height: 40, marginTop: 14, alignItems: 'center', justifyContent: 'center' },
+  ninety: { width: 48, height: 40, marginTop: 14, alignItems: 'center', justifyContent: 'center', borderRadius: 6, borderWidth: 1, borderColor: '#a5d6a7', backgroundColor: '#e8f5e9' },
+  ninetyText: { fontSize: 13, fontWeight: '800', color: '#2e7d32' },
   pick: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, minHeight: 44, paddingHorizontal: 8, borderRadius: 8, borderWidth: 1, borderColor: '#a5d6a7', backgroundColor: '#fff' },
   pickActive: { backgroundColor: '#2e7d32', borderColor: '#2e7d32' },
   pickText: { flexShrink: 1, fontSize: 12, fontWeight: '600', color: '#2e7d32' },

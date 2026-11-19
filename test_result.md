@@ -392,3 +392,5 @@ agent_communication:
       message: "ITERATION 70 REQUEST (user): deep live test of (1) RoomTutorial auto-start + complete RoomCoach practice mode step by step, (2) wall openings (doors/windows): drag along line, overlap prevention, distance validation, copy to other line, type switch. iteration_69 only code-reviewed these. Set localStorage app_language='de' so the UI is German."
     - agent: "main"
       message: "ITERATION 71: added testIDs (see /app/tests/e2e/iter71_recipe.md, recipe verified live by main agent: polygon drawn, auto tutorial appeared). Re-run T1-T4 and O1-O7 from iteration_70 LIVE."
+    - agent: "main"
+      message: "ITERATION 72: test auto-straighten (photo exception, old sketch load, 8-corner room, toggle off, phone size), new 90° buttons (area-angle-90-<k>), removal of 'Alle Ecken rechtwinklig', coach step texts, pointMoveOnly auto-off on opening insert. Recipe: /app/tests/e2e/iter71_recipe.md"

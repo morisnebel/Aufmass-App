@@ -1285,6 +1285,12 @@ export function handleSelectTouchStartImpl(ctx: HandleSelectTouchStartImplCtx, l
     }
   }
 
+  // „Punkte“ an und keine Ecke getroffen: Langer Druck auf eine Linie fügt trotzdem Tür/Fenster ein
+  if (pointMoveOnly && !pointMoveHit) {
+    const lineHit = findPolylineSegmentAtPoint(locationX, locationY);
+    if (lineHit) startOpeningLongPress(lineHit.element, lineHit.segmentIndex, locationX, locationY);
+  }
+
   // Reset polyline point editing when clicking elsewhere
   setEditingPolylinePoint(null);
   

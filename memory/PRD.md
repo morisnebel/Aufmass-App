@@ -882,3 +882,9 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Selbst live geprueft: Winkel 90 -> springt auf Rechteck; Uebung Schritt 5->6 nach Diagonale 5; Undo ohne Rueck-Sprung.
   NICHT geprueft: Automatik AUS, Foto-Ausnahme, Laden alter Skizze, Raum mit >4 Ecken, Handy-Groesse.
 - Coach Schritt 8 + Tutorial-Seite 'move' + manual: kein 'Mass-Fenster schliessen', kein 'Ziehen'-Chip; insertOpening schaltet pointMoveOnly aus.
+- iteration_72: LIVE-PASS A1 (90°-Taste -> Rechteck), A2 (Massaenderung re-snap, stabil), A3 (Automatik AUS + Reload), A7 Dreieck, A8 Undo/Redo, Coach 1->6.
+  Fix danach: Punkte-Modus blockierte Long-Press-Einfuegen und Oeffnung-Greifen -> jetzt: Long-Press auf Linie geht auch im Punkte-Modus
+  (touchHandlers), Greifen einer Oeffnung schaltet Punkte aus (handleOpeningTap), Ecken haben Vorrang (28px). Main agent live verifiziert.
+  90°-Taste: area-angle-90-<k>. Coach Schritt 4 ohne 'Schliessen'/'Ziehen'.
+  NICHT live: Foto-Ausnahme, Laden alter Skizze, 6/8-Eck komplett, Oeffnungen nach Snap, Legacy rightAngles, Coach 6->8.
+  UX-Hinweis Handy 390x844: 'Mehr'-Bereich nur ~160px sichtbar ueber dem Ziffernblock.

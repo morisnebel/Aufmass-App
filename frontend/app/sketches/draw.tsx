@@ -1889,7 +1889,7 @@ export default function DrawSketchScreen() {
   // Render element
   const renderElement = (element: DrawElement) => renderSketchElement({
     selectedElementId, renderTransformHandles, selectedLineSegment, lineSegmentMeasurements,
-    measureLineStyles, polygonAreaOptions, diagonalPick, lineNumbersVisible, polygonWalls, scale,
+    measureLineStyles, polygonAreaOptions, diagonalPick, numpadTargetId, lineNumbersVisible, polygonWalls, scale,
     getPolylineElementsWithMeasurements, labelOffsets, polygonAreaVisible, calculatePolygonAreaM2,
     formatAreaM2, editingPolylinePoint,
   }, element);

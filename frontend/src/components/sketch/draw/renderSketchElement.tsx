@@ -13,6 +13,7 @@ export type RenderSketchElementCtx = {
   measureLineStyles: { [elementId: string]: { color: string; strokeWidth: number; fontSize: number; }; };
   polygonAreaOptions: PolygonAreaOptions;
   diagonalPick: { elementId: string; first: number | null; } | null;
+  numpadTargetId: string | null;
   lineNumbersVisible: boolean;
   polygonWalls: PolygonWalls;
   scale: number;
@@ -27,7 +28,7 @@ export type RenderSketchElementCtx = {
 export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawElement) {
   const {
     selectedElementId, renderTransformHandles, selectedLineSegment, lineSegmentMeasurements,
-    measureLineStyles, polygonAreaOptions, diagonalPick, lineNumbersVisible, polygonWalls, scale,
+    measureLineStyles, polygonAreaOptions, diagonalPick, numpadTargetId, lineNumbersVisible, polygonWalls, scale,
     getPolylineElementsWithMeasurements, labelOffsets, polygonAreaVisible, calculatePolygonAreaM2,
     formatAreaM2, editingPolylinePoint,
   } = ctx;
@@ -509,6 +510,44 @@ export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawEl
           {diagonalPick?.elementId === element.id && diagonalPick.first !== null && points[diagonalPick.first] && (
             <Circle cx={points[diagonalPick.first].x} cy={points[diagonalPick.first].y} r={12} fill="none" stroke="#2e7d32" strokeWidth={3} />
           )}
+          {/* Ausgewähltes Winkel-/Diagonalen-Feld im Maß-Fenster: Ecke bzw. Diagonale in der Skizze hervorheben */}
+          {closed && selectedLineSegment?.elementId === element.id && !!numpadTargetId && (() => {
+            const highlight = '#ff6d00';
+            const ring = (k: number) => points[k] && (
+              <Circle key={`highlight-ring-${k}`} cx={points[k].x} cy={points[k].y} r={15} fill="rgba(255,109,0,0.18)" stroke={highlight} strokeWidth={3} />
+            );
+            if (numpadTargetId.startsWith('area-angle-')) {
+              const k = parseInt(numpadTargetId.slice(11), 10);
+              const corner = points[k];
+              if (!corner) return null;
+              // Beide Schenkel des Winkels ein Stück weit kräftig nachziehen
+              const leg = (other: { x: number; y: number }) => {
+                const len = Math.hypot(other.x - corner.x, other.y - corner.y) || 1;
+                const reach = Math.min(len, 45);
+                return { x: corner.x + ((other.x - corner.x) / len) * reach, y: corner.y + ((other.y - corner.y) / len) * reach };
+              };
+              const before = leg(points[(k - 1 + points.length) % points.length]);
+              const after = leg(points[(k + 1) % points.length]);
+              return (
+                <G testID="highlight-angle">
+                  <Path d={`M ${before.x} ${before.y} L ${corner.x} ${corner.y} L ${after.x} ${after.y}`} fill="none" stroke={highlight} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" />
+                  {ring(k)}
+                </G>
+              );
+            }
+            if (numpadTargetId.startsWith('area-diag-')) {
+              const [i, j] = numpadTargetId.slice(10).split('-').map(Number);
+              if (!points[i] || !points[j]) return null;
+              return (
+                <G testID="highlight-diagonal">
+                  <Line x1={points[i].x} y1={points[i].y} x2={points[j].x} y2={points[j].y} stroke={highlight} strokeWidth={4} strokeDasharray="8,5" />
+                  {ring(i)}
+                  {ring(j)}
+                </G>
+              );
+            }
+            return null;
+          })()}
           {/* Winkel je Ecke: immer der berechnete Wert – grün = Eingabe verwendet, rot = Eingabe abgelehnt, grau = berechnet */}
           {closed && polygonAreaOptions[element.id]?.useAngles && (() => {
             const cx = points.reduce((sum: number, p: any) => sum + p.x, 0) / points.length;
@@ -524,7 +563,8 @@ export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawEl
                   key={`angle-${element.id}-${k}`}
                   x={points[k].x + ((cx - points[k].x) / len) * 26}
                   y={points[k].y + ((cy - points[k].y) / len) * 26 + 4}
-                  fill={angleRejected ? '#d32f2f' : entered ? '#2e7d32' : '#777'} fontSize={11} fontWeight="bold" textAnchor="middle"
+                  fill={angleRejected ? '#d32f2f' : numpadTargetId === `area-angle-${k}` && selectedLineSegment?.elementId === element.id ? '#e65100' : entered ? '#2e7d32' : '#777'}
+                  fontSize={numpadTargetId === `area-angle-${k}` && selectedLineSegment?.elementId === element.id ? 15 : 11} fontWeight="bold" textAnchor="middle"
                 >
                   {`${(Math.round(angle * 10) / 10).toString().replace('.', ',')}°`}
                 </SvgText>

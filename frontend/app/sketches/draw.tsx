@@ -19,8 +19,10 @@ import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePo
 import { AREA_FIELD_PREFIX, withPairs } from '../../src/components/sketch/AreaOptionsSection';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { NumpadTarget } from '../../src/components/sketch/WallHeightSection';
-import { PolygonWalls, WallOpening, OpeningKind, OPENING_PRESETS, openingMarkers, openingPlacement } from '../../src/sketch/wallArea';
+import { PolygonWalls, hasWallHeights, WallOpening, OpeningKind, OPENING_PRESETS, openingMarkers, openingPlacement } from '../../src/sketch/wallArea';
 import { OpeningInsertMenu } from '../../src/components/sketch/OpeningInsertMenu';
+import { RoomCoach, RoomCoachStatus } from '../../src/components/sketch/RoomCoach';
+import { RoomTutorialModal, ROOM_TUTORIAL_KEY } from '../../src/components/sketch/RoomTutorial';
 import { RenamePromptModal } from '../../src/components/RenamePromptModal';
 import { SketchTour } from '../../src/components/SketchTour';
 import { SketchDemoModal } from '../../src/components/SketchDemo';
@@ -1374,6 +1376,83 @@ export default function DrawSketchScreen() {
   const autoSaveNoticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const performAutoSaveRef = useRef<() => void>(() => {});
 
+  // === Tutorial zum Mitmachen: leere Übungsskizze im Editor; die eigene Skizze wird beiseitegelegt und danach zurückgeholt ===
+  const practiceStashRef = useRef<null | {
+    elements: DrawElement[]; history: DrawElement[][]; historyIndex: number;
+    lineSegmentMeasurements: typeof lineSegmentMeasurements; polygonWalls: PolygonWalls;
+    polygonAreaOptions: PolygonAreaOptions; polygonAreaShapes: PolygonAreaShapes;
+    labelOffsets: typeof labelOffsets; measureLineStyles: typeof measureLineStyles;
+  }>(null);
+  const [practice, setPractice] = useState(false);
+  const closeEditorPanels = () => {
+    setShowLineMeasurementNumpad(false);
+    setSelectedLineSegment(null);
+    setSelectedElementId(null);
+    setPointMoveOnly(false);
+  };
+  const startPractice = () => {
+    if (practiceStashRef.current) return;
+    practiceStashRef.current = { elements, history, historyIndex, lineSegmentMeasurements, polygonWalls, polygonAreaOptions, polygonAreaShapes, labelOffsets, measureLineStyles };
+    closeEditorPanels();
+    setElements([]);
+    setHistory([[]]);
+    setHistoryIndex(0);
+    setLineSegmentMeasurements({});
+    setPolygonWalls({});
+    setPolygonAreaOptions({});
+    setPolygonAreaShapes({});
+    setLabelOffsets({});
+    setMeasureLineStyles({});
+    setPractice(true);
+  };
+  const endPractice = () => {
+    const stash = practiceStashRef.current;
+    if (!stash) return;
+    closeEditorPanels();
+    setElements(stash.elements);
+    setHistory(stash.history);
+    setHistoryIndex(stash.historyIndex);
+    setLineSegmentMeasurements(stash.lineSegmentMeasurements);
+    setPolygonWalls(stash.polygonWalls);
+    setPolygonAreaOptions(stash.polygonAreaOptions);
+    setPolygonAreaShapes(stash.polygonAreaShapes);
+    setLabelOffsets(stash.labelOffsets);
+    setMeasureLineStyles(stash.measureLineStyles);
+    practiceStashRef.current = null;
+    setPractice(false);
+  };
+  // Zustand der Übung für die Schritt-Erkennung
+  const practiceRoom = practice ? elements.find(el => el.type === 'polyline' && el.data?.closed) : undefined;
+  const practiceResult = practiceRoom ? computePolygon(practiceRoom, lineSegmentMeasurements, undefined, polygonAreaOptions[practiceRoom.id]) : null;
+  const practiceOpenings = practiceRoom ? Object.values(polygonWalls[practiceRoom.id]?.segments || {}).flatMap(segment => segment.openings || []) : [];
+  const practiceStatus: RoomCoachStatus = {
+    roomClosed: !!practiceRoom,
+    lineSelected: !!practiceRoom && showLineMeasurementNumpad && selectedLineSegment?.elementId === practiceRoom.id,
+    allMeasured: !!practiceResult,
+    pointsKey: JSON.stringify(practiceRoom?.data?.points || []),
+    determined: !!practiceResult?.determined,
+    straight: !!practiceRoom && !!practiceResult?.determined && !straightenedPolygonPoints(practiceRoom, lineSegmentMeasurements, undefined, polygonAreaOptions[practiceRoom.id]),
+    hasHeight: !!practiceRoom && hasWallHeights(polygonWalls[practiceRoom.id]),
+    openingCount: practiceOpenings.length,
+    openingKey: JSON.stringify(practiceOpenings.map(o => [o.offset, o.position])),
+  };
+  // Tutorial einmalig automatisch zeigen, sobald in dieser Sitzung der erste Raum geschlossen wurde
+  const [autoTutorial, setAutoTutorial] = useState(false);
+  const closedRoomCount = elements.filter(el => el.type === 'polyline' && el.data?.closed).length;
+  const closedRoomCountRef = useRef<number | null>(null);
+  const editorOpenedAtRef = useRef(Date.now());
+  useEffect(() => {
+    const previous = closedRoomCountRef.current;
+    closedRoomCountRef.current = closedRoomCount;
+    // Nicht beim Laden einer vorhandenen Skizze und nicht in der Übung
+    if (previous !== 0 || closedRoomCount < 1 || practiceStashRef.current || Date.now() - editorOpenedAtRef.current < 2500) return;
+    AsyncStorage.getItem(ROOM_TUTORIAL_KEY).then(done => {
+      if (done) return;
+      AsyncStorage.setItem(ROOM_TUTORIAL_KEY, '1').catch(() => {});
+      setAutoTutorial(true);
+    }).catch(() => {});
+  }, [closedRoomCount]);
+
   const performAutoSave = async () => performAutoSaveImpl({
     autoSavingRef, isSaving, loading, sketchId, lastLoadedSketchId, elements,
     lastAutoSavedElementsRef, backgroundImageChangedRef, lineSegmentMeasurements, measureLineStyles,
@@ -1381,7 +1460,8 @@ export default function DrawSketchScreen() {
     polygonAreaShapes, polygonAreaOptions, projectId, title, pdfSize, backgroundImage, isMountedRef,
     setAutoSaveNotice, autoSaveNoticeTimerRef,
   });
-  performAutoSaveRef.current = performAutoSave;
+  // In der Übung wird nichts automatisch gespeichert
+  performAutoSaveRef.current = practice ? async () => {} : performAutoSave;
 
   useEffect(() => {
     const intervalId = setInterval(() => performAutoSaveRef.current(), 120000); // alle 2 Minuten
@@ -1625,7 +1705,7 @@ export default function DrawSketchScreen() {
   const canRedo = historyIndex < history.length - 1;
 
   // Handle back button - auto save before navigating back
-  const handleBackPress = async () => handleBackPressImpl({
+  const handleBackPress = async () => practiceStashRef.current ? endPractice() : handleBackPressImpl({
     isSaving, lastLoadedSketchId, elements, sketchId, setIsSaving, lineSegmentMeasurements,
     measureLineStyles, totalLfmBoxPositions, legendPosition, notes, labelOffsets, polygonAreaVisible,
     polygonWalls, polygonAreaShapes, polygonAreaOptions, generatePreviewSvg, backgroundImage, title,
@@ -2063,7 +2143,7 @@ export default function DrawSketchScreen() {
       polygonWalls, lineNumbersVisible, polygonAreaOptions,
     });
 
-  const saveSketch = async () => saveSketchImpl({
+  const saveSketch = async () => practiceStashRef.current ? showAlert('Übung läuft', 'Die Übungsskizze wird nicht gespeichert. Bitte erst die Übung beenden – danach ist deine eigene Skizze wieder da.') : saveSketchImpl({
     title, showAlert, t, setLoading, elements, lineSegmentMeasurements, measureLineStyles,
     totalLfmBoxPositions, legendPosition, notes, labelOffsets, polygonAreaVisible, polygonWalls,
     polygonAreaShapes, polygonAreaOptions, backgroundImageChangedRef, generatePreviewSvg,
@@ -2471,7 +2551,7 @@ export default function DrawSketchScreen() {
           changePanelOptionsOpen, changeLineAutoAdd, lineAutoNext, changeLineAutoNext,
           changeLaserSound, lineMeasureHistory, undoLastLineMeasurement, lineNumbersVisible,
           changeLineNumbersVisible, polygonWalls, setPolygonWalls, setWallSectionOpen,
-          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, openingCopy, setOpeningCopy,
+          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, openingCopy, setOpeningCopy, startPractice, practice,
           calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
           polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick,
           setPolygonAreaOptions, setShowMeasureStyleSettings, showMeasureStyleSettings,
@@ -2619,6 +2699,8 @@ export default function DrawSketchScreen() {
           setShowProtractorHint,
         }}
       />
+      <RoomTutorialModal visible={autoTutorial} onClose={() => setAutoTutorial(false)} onPractice={startPractice} />
+      {practice && <RoomCoach status={practiceStatus} bottom={insets.bottom + 10} onExit={endPractice} />}
       <OpeningInsertMenu
         visible={!!openingInsert}
         line={(openingInsert?.segmentIndex ?? 0) + 1}

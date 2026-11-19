@@ -19,6 +19,9 @@ const STEPS: { scene: Scene; title: string; text: string; hint?: string }[] = [
   { scene: 'pdf', title: 'Ergebnis im PDF', text: 'Mit dem Haken speichern. Im Projekt-PDF steht die Wandliste: je Wand Länge, Höhe, Abzüge mit Art und Abstand zur Ecke sowie die Netto-Fläche.' },
 ];
 
+// Merker: Tutorial wurde nach dem ersten geschlossenen Raum schon einmal automatisch gezeigt
+export const ROOM_TUTORIAL_KEY = 'aufmassprofi_room_tutorial_done';
+
 const BLUE = '#1976d2';
 const ORANGE = '#ff6d00';
 const P = [[50, 50], [250, 50], [250, 160], [50, 160]];
@@ -181,7 +184,8 @@ function Illustration({ scene }: { scene: Scene }) {
   );
 }
 
-export function RoomTutorialModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+// onPractice: im Skizzen-Editor – startet die Übungsskizze zum Mitmachen
+export function RoomTutorialModal({ visible, onClose, onPractice }: { visible: boolean; onClose: () => void; onPractice?: () => void }) {
   const [i, setI] = useState(0);
   const { width, height } = useWindowDimensions();
   useEffect(() => { if (visible) setI(0); }, [visible]);
@@ -211,6 +215,12 @@ export function RoomTutorialModal({ visible, onClose }: { visible: boolean; onCl
                 <Text style={s.hintText}>{step.hint}</Text>
               </View>
             )}
+            {!!onPractice && (
+              <TouchableOpacity testID="room-tutorial-practice" style={s.practice} onPress={() => { onClose(); onPractice(); }}>
+                <Ionicons name="hand-left-outline" size={18} color="#fff" />
+                <Text style={s.practiceText} numberOfLines={2}>Selbst ausprobieren (Übungsskizze)</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
           <View style={s.row}>
             <TouchableOpacity testID="room-tutorial-back" style={s.back} disabled={i === 0} onPress={() => setI(i - 1)}>
@@ -230,7 +240,7 @@ export function RoomTutorialModal({ visible, onClose }: { visible: boolean; onCl
 }
 
 // Knopf, der das Tutorial öffnet (Hilfe-Seite und Maß-Fenster)
-export function RoomTutorialButton({ compact }: { compact?: boolean }) {
+export function RoomTutorialButton({ compact, onPractice }: { compact?: boolean; onPractice?: () => void }) {
   const [visible, setVisible] = useState(false);
   return (
     <>
@@ -238,7 +248,7 @@ export function RoomTutorialButton({ compact }: { compact?: boolean }) {
         <Ionicons name="school-outline" size={compact ? 16 : 20} color="#1565c0" />
         <Text style={[s.openText, compact && s.openTextCompact]} numberOfLines={2}>Tutorial: Räume, Türen & Fenster</Text>
       </TouchableOpacity>
-      <RoomTutorialModal visible={visible} onClose={() => setVisible(false)} />
+      <RoomTutorialModal visible={visible} onClose={() => setVisible(false)} onPractice={onPractice} />
     </>
   );
 }
@@ -256,6 +266,8 @@ const s = StyleSheet.create({
   text: { fontSize: 15, color: '#334155', lineHeight: 21 },
   hint: { flexDirection: 'row', gap: 6, padding: 10, borderRadius: 10, backgroundColor: '#fffbeb', marginTop: 4 },
   hintText: { flex: 1, fontSize: 13, color: '#92400e', lineHeight: 18 },
+  practice: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 48, paddingHorizontal: 12, borderRadius: 12, backgroundColor: '#2e7d32', marginTop: 8 },
+  practiceText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#e2e8f0' },
   back: { minHeight: 44, minWidth: 72, justifyContent: 'center' },
   backText: { color: '#64748b', fontWeight: '700', fontSize: 14 },

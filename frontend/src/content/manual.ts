@@ -102,7 +102,7 @@ export const MANUAL: ManualSection[] = [
       { text: 'Öffnung kopieren: Im Wand-Bereich „Auf andere Linie kopieren“ tippen und danach die Ziel-Linie in der Skizze antippen. Die Kopie hat gleiche Art, Breite und Höhe.' },
       { text: 'Im PDF: Unter der Skizze steht die Wandliste – je Wand Länge, Höhe, Abzüge (mit Art und Abstand zur Ecke) und Netto-Fläche, dazu die Summe. Gemessene Diagonalen und die Öffnungen sind auch im Skizzenbild zu sehen.' },
     ],
-    tips: ['Reihenfolge, die sich bewährt: Raum zeichnen → alle Seiten bemaßen → eine Diagonale messen → geraderücken → Wandhöhe → Türen und Fenster.', 'Im Maß-Fenster unter „Mehr“ und hier im Kapitel gibt es ein Bild-Tutorial zu genau diesen Schritten.'],
+    tips: ['Reihenfolge, die sich bewährt: Raum zeichnen → alle Seiten bemaßen → eine Diagonale messen → geraderücken → Wandhöhe → Türen und Fenster.', 'Im Maß-Fenster unter „Mehr“ und hier im Kapitel gibt es ein Bild-Tutorial zu genau diesen Schritten. Es erscheint einmalig automatisch nach dem ersten geschlossenen Raum.', 'Zum Mitmachen: Im Tutorial in der Skizze auf „Selbst ausprobieren (Übungsskizze)“ tippen. Die App führt dich Schritt für Schritt durch eine leere Übungsskizze – deine eigene Skizze kommt danach unverändert zurück, gespeichert wird in der Übung nichts.'],
   },
   {
     id: 'laser', icon: 'bluetooth-outline', color: '#0277bd', title: 'Laser-Entfernungsmesser (Bluetooth)',

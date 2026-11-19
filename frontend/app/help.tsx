@@ -11,6 +11,7 @@ import * as Sharing from 'expo-sharing';
 import { getManual, QUICK_START, manualHtml, ManualSection } from '../src/content/manual';
 import { createPdfFile } from '../services/PdfExport';
 import { SketchDemoModal } from '../src/components/SketchDemo';
+import { RoomTutorialButton } from '../src/components/sketch/RoomTutorial';
 
 // Bedienungsanleitung: Kurzanleitung + aufklappbare Kapitel mit Erklärungen, als PDF teilbar
 export default function HelpScreen() {
@@ -194,6 +195,7 @@ function Chapter({ sec, open, onToggle }: { sec: ManualSection; open: boolean; o
               <Text style={s.tourText}>Erklärvideo ansehen (Video oder Bilder)</Text>
             </TouchableOpacity>
           )}
+          {sec.id === 'raeume' && <RoomTutorialButton />}
           {sec.steps.map((st, i) => (
             <View key={i} style={s.step}>
               <View style={s.stepRow}>

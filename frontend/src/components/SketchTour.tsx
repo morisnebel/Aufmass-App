@@ -16,7 +16,7 @@ const STEPS: TourStep[] = [
   { key: null, title: 'Maße eintragen', text: 'Linie antippen und das Maß eingeben – es wird an der Linie angezeigt. Die Zeichnung selbst ändert sich dabei nicht.' },
   { key: 'sk-undo', title: 'Rückgängig & Wiederholen', text: 'Ein falscher Strich? Einfach den letzten Schritt rückgängig machen.' },
   { key: 'sk-save', title: 'Speichern', text: 'Mit dem Haken speicherst du die Skizze – sie erscheint im Projekt und im PDF.' },
-  { key: 'sk-help', title: 'Hilfe', text: 'Über das ? öffnest du jederzeit die Anleitung zu Skizzen.' },
+  { key: 'sk-help', title: 'Hilfe', text: 'Über das ? öffnest du jederzeit die Anleitung zu Skizzen. Im Maß-Fenster unter „Mehr“ gibt es ein Tutorial zu Räumen, Türen und Fenstern.' },
 ];
 
 export function SketchTour() {

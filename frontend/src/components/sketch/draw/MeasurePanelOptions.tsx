@@ -1,3 +1,4 @@
+import { RoomTutorialButton } from '../RoomTutorial';
 import type { WallOpening } from '../../../sketch/wallArea';
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
@@ -152,6 +153,8 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
           <LaserSoundOptions />
         </View>
       )}
+
+      <RoomTutorialButton compact />
 
       {/* Wandhöhe / Wandfläche (bei Bedarf aufklappen) */}
       {selectedLineSegment && elements.find(e => e.id === selectedLineSegment.elementId)?.type === 'polyline' && (

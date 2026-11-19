@@ -888,3 +888,4 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
   90°-Taste: area-angle-90-<k>. Coach Schritt 4 ohne 'Schliessen'/'Ziehen'.
   NICHT live: Foto-Ausnahme, Laden alter Skizze, 6/8-Eck komplett, Oeffnungen nach Snap, Legacy rightAngles, Coach 6->8.
   UX-Hinweis Handy 390x844: 'Mehr'-Bereich nur ~160px sichtbar ueber dem Ziffernblock.
+- Uebung: onStep schaltet pointMoveOnly aus, sobald der Schritt 'points' nicht braucht (User blieb in Schritt 7 mit aktivem Punkte haengen).

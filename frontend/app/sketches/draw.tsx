@@ -2767,7 +2767,11 @@ export default function DrawSketchScreen() {
           status={practiceStatus}
           bottom={insets.bottom + 10}
           onExit={endPractice}
-          onStep={setCoachButtons}
+          onStep={(buttons) => {
+            setCoachButtons(buttons);
+            // Übung: „Punkte“ wird nur im Schritt „Ecke verschieben“ gebraucht und schaltet sich danach selbst aus
+            if (!buttons.includes('points')) setPointMoveOnly(false);
+          }}
           compact={isPhoneDevice && (showLineMeasurementNumpad || (drawMode === 'polyline' && polylinePoints.length > 0))}
           maxWidth={!showLineMeasurementNumpad ? Math.max(110, screenWidth - 250) : Math.max(130, screenWidth - 26 - Math.round(screenWidth * (panelOptionsOpen && wallSectionOpen ? 0.78 : numpadSize === 'L' ? 0.55 : numpadSize === 'M' ? 0.45 : 0.35)))}
         />

@@ -394,3 +394,5 @@ agent_communication:
       message: "ITERATION 71: added testIDs (see /app/tests/e2e/iter71_recipe.md, recipe verified live by main agent: polygon drawn, auto tutorial appeared). Re-run T1-T4 and O1-O7 from iteration_70 LIVE."
     - agent: "main"
       message: "ITERATION 72: test auto-straighten (photo exception, old sketch load, 8-corner room, toggle off, phone size), new 90° buttons (area-angle-90-<k>), removal of 'Alle Ecken rechtwinklig', coach step texts, pointMoveOnly auto-off on opening insert. Recipe: /app/tests/e2e/iter71_recipe.md"
+    - agent: "main"
+      message: "ITERATION 73: finish remaining live tests: photo exception, old sketch load, 6/8-corner rooms, openings after snap, legacy rightAngles, coach steps 6-8 (Punkte auto-off after step 4), phone 390x844 (keypad collapses when Mehr opens). Recipe /app/tests/e2e/iter71_recipe.md"

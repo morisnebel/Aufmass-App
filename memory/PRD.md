@@ -889,3 +889,9 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
   NICHT live: Foto-Ausnahme, Laden alter Skizze, 6/8-Eck komplett, Oeffnungen nach Snap, Legacy rightAngles, Coach 6->8.
   UX-Hinweis Handy 390x844: 'Mehr'-Bereich nur ~160px sichtbar ueber dem Ziffernblock.
 - Uebung: onStep schaltet pointMoveOnly aus, sobald der Schritt 'points' nicht braucht (User blieb in Schritt 7 mit aktivem Punkte haengen).
+- Handy: changePanelOptionsOpen klappt auf isPhoneDevice den Ziffernblock ein (Mehr offen) / wieder aus; auch beim Laden. Live: 118px -> 594px.
+- iteration_73 LIVE-PASS: alte Skizze bleibt beim Oeffnen schief (snap erst nach Massaenderung), Foto-Ausnahme (sketch_bg + image-Element),
+  Punkte-Modus Long-Press + Auto-Aus, Handy-Mehr. Main agent live: 6-Eck L-Raum 4/1,5/2/2/2/3,5 -> 'Noch 3/2/1', 3x 90°-Taste -> bestimmt,
+  10,00 m2, einspringende Ecke 270°, Skizze rueckt gerade.
+  NICHT live: 8-Eck, Oeffnungen nach Snap, Legacy rightAngles, Coach Schritte 6-8 + Punkte-Auto-Aus in der Uebung.
+  Testhinweis: nach keyboard.type ins Massfeld 500ms warten (BufferedTextInput), sonst commit mit leerem Wert.

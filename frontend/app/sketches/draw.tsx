@@ -691,12 +691,18 @@ export default function DrawSketchScreen() {
   const [panelKeyboardOpen, setPanelKeyboardOpen] = useState(true);
   const [wallSectionOpen, setWallSectionOpen] = useState(false);
   useEffect(() => {
-    AsyncStorage.getItem('aufmassprofi_panel_options_open').then(saved => setPanelOptionsOpen(saved === '1'));
-    AsyncStorage.getItem('aufmassprofi_panel_keyboard_open').then(saved => setPanelKeyboardOpen(saved !== '0'));
+    Promise.all([AsyncStorage.getItem('aufmassprofi_panel_options_open'), AsyncStorage.getItem('aufmassprofi_panel_keyboard_open')]).then(([options, keyboard]) => {
+      setPanelOptionsOpen(options === '1');
+      // Handy: „Mehr“ offen -> Ziffernblock eingeklappt (sonst bleibt kein Platz)
+      setPanelKeyboardOpen(keyboard !== '0' && !(options === '1' && isPhoneDevice));
+    });
   }, []);
   const changePanelOptionsOpen = (open: boolean) => {
     setPanelOptionsOpen(open);
     AsyncStorage.setItem('aufmassprofi_panel_options_open', open ? '1' : '0');
+    // Handy: „Mehr“ braucht den Platz des Ziffernblocks – er klappt ein und kommt beim Antippen eines Feldes
+    // (oder beim Schließen von „Mehr“) wieder
+    if (isPhoneDevice) setPanelKeyboardOpen(!open);
   };
   const changePanelKeyboardOpen = (open: boolean) => {
     setPanelKeyboardOpen(open);

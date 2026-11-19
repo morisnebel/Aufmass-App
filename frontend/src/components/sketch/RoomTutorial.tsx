@@ -2,21 +2,22 @@ import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import Svg, { Circle, G, Line, Polygon, Rect, Text as SvgText } from 'react-native-svg';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import { ButtonChips, SketchButtonKey } from './ButtonChips';
 
 // Tutorial „Räume, Türen & Fenster“: Bilder mit kurzem Text zum Durchblättern.
 // Zeigt Linien anwählen, Punkte verschieben, Winkel/Diagonalen, Wandhöhe und Öffnungen. Läuft offline.
 type Scene = 'draw' | 'select' | 'points' | 'angles' | 'straighten' | 'height' | 'insert' | 'move' | 'check' | 'pdf';
-const STEPS: { scene: Scene; title: string; text: string; hint?: string }[] = [
-  { scene: 'draw', title: 'Raum zeichnen', text: 'Werkzeug „Polygon“ wählen und nacheinander jede Ecke antippen. Zum Schließen wieder auf den ersten Punkt tippen.', hint: 'Grob zeichnen reicht – gerechnet wird später mit deinen Maßen.' },
-  { scene: 'select', title: 'Linie anwählen und bemaßen', text: 'Auf „Bearbeiten“ (Hand) wechseln und eine Linie antippen. Das Maß-Fenster öffnet sich: Länge eintippen und „Hinzufügen“. Sind alle Seiten bemaßt, erscheinen die m².', hint: 'Die gewählte Linie ist orange. Mit „Nächste Linie“ springt die App automatisch weiter.' },
-  { scene: 'points', title: 'Einzelne Punkte verschieben', text: '„Punkte“ in der Werkzeugleiste einschalten und eine Ecke an die richtige Stelle ziehen. In diesem Modus öffnet sich kein Maß-Fenster.', hint: 'Die Fläche ändert sich dabei nicht – sie hängt nur an deinen Maßen.' },
-  { scene: 'angles', title: 'Schiefe Räume: Winkel und Diagonalen', text: 'Im Maß-Fenster unter „Mehr“: „Alle Ecken rechtwinklig“, „Winkel angeben“ oder „Diagonalen angeben“. Unter jedem Feld steht der berechnete Wert. Nach dem Verschieben einer Ecke legt die App die passende Diagonale selbst an.', hint: 'Rot heißt: Die Angabe passt nicht zu den übrigen Maßen und wird nicht verwendet.' },
-  { scene: 'straighten', title: 'Skizze geraderücken', text: 'Ist der Raum eindeutig bestimmt, zieht „Skizze geraderücken“ die Zeichnung auf die berechnete Form. Die angetippte Linie bleibt an ihrem Platz.', hint: '„Alle Räume geraderücken“ erledigt das für die ganze Skizze. Mit Rückgängig nimmst du es zurück.' },
-  { scene: 'height', title: 'Wandhöhe eintragen', text: 'Im Maß-Fenster „Mehr“ → „Wandhöhe“ aufklappen. „Höhe alle Linien“ gilt für den ganzen Raum, „Höhe diese Linie“ nur für die gewählte Wand.', hint: 'Mit Wandhöhe bekommen die Linien Nummern – sie passen zur Wandliste im PDF.' },
-  { scene: 'insert', title: 'Tür oder Fenster einfügen', text: 'Eine Linie etwa eine halbe Sekunde gedrückt halten und Tür, Fenster oder Sonstiges wählen. Die Öffnung sitzt an der gedrückten Stelle. Alternativ im Wand-Bereich „+ Tür“ / „+ Fenster“.', hint: 'Breite × Höhe wird als Abzug von der Wandfläche gerechnet.' },
-  { scene: 'move', title: 'Öffnung verschieben und ändern', text: 'Die Markierung auf der Linie ziehen – sie stößt an Ecken und Nachbarn an, die Maßkette zeigt die Abstände zu beiden Ecken. Kurz antippen öffnet Breite, Höhe, Art und Abstand.', hint: 'T = Tür (braun), F = Fenster (blau), S = Sonstiges (grau).' },
-  { scene: 'check', title: 'Kopieren und Warnungen', text: '„Auf andere Linie kopieren“ und danach die Ziel-Linie antippen – gleiche Maße, neue Wand. Passt ein eingetippter Abstand nicht, wird er rot markiert.', hint: 'Rot mit ⚠: Die Öffnung ragt über die Linie hinaus oder überlappt eine andere.' },
-  { scene: 'pdf', title: 'Ergebnis im PDF', text: 'Mit dem Haken speichern. Im Projekt-PDF steht die Wandliste: je Wand Länge, Höhe, Abzüge mit Art und Abstand zur Ecke sowie die Netto-Fläche.' },
+const STEPS: { scene: Scene; buttons: SketchButtonKey[]; title: string; text: string; hint?: string }[] = [
+  { scene: 'draw', buttons: ['polygon', 'tap', 'finishRoom'], title: 'Raum zeichnen', text: 'Werkzeug „Polygon“ wählen und nacheinander jede Ecke antippen. Zum Schließen wieder auf den ersten Punkt tippen oder im kleinen Polygon-Fenster „Raum“ wählen („Linie“ beendet offen).', hint: 'Grob zeichnen reicht – gerechnet wird später mit deinen Maßen.' },
+  { scene: 'select', buttons: ['edit', 'tap', 'add'], title: 'Linie anwählen und bemaßen', text: 'Auf „Bearbeiten“ (Hand) wechseln und eine Linie antippen. Das Maß-Fenster öffnet sich: Länge eintippen und „Hinzufügen“. Sind alle Seiten bemaßt, erscheinen die m².', hint: 'Die gewählte Linie ist orange. Mit „Nächste Linie“ springt die App automatisch weiter.' },
+  { scene: 'points', buttons: ['points', 'drag'], title: 'Einzelne Punkte verschieben', text: '„Punkte“ in der Werkzeugleiste einschalten und eine Ecke an die richtige Stelle ziehen. In diesem Modus öffnet sich kein Maß-Fenster.', hint: 'Die Fläche ändert sich dabei nicht – sie hängt nur an deinen Maßen.' },
+  { scene: 'angles', buttons: ['more', 'rightAngles', 'angles', 'diagonals'], title: 'Schiefe Räume: Winkel und Diagonalen', text: 'Im Maß-Fenster unter „Mehr“: „Alle Ecken rechtwinklig“, „Winkel angeben“ oder „Diagonalen angeben“. Unter jedem Feld steht der berechnete Wert. Nach dem Verschieben einer Ecke legt die App die passende Diagonale selbst an.', hint: 'Rot heißt: Die Angabe passt nicht zu den übrigen Maßen und wird nicht verwendet.' },
+  { scene: 'straighten', buttons: ['more', 'straighten', 'straightenAll'], title: 'Skizze geraderücken', text: 'Ist der Raum eindeutig bestimmt, zieht „Skizze geraderücken“ die Zeichnung auf die berechnete Form. Die angetippte Linie bleibt an ihrem Platz.', hint: '„Alle Räume geraderücken“ erledigt das für die ganze Skizze. Mit Rückgängig nimmst du es zurück.' },
+  { scene: 'height', buttons: ['more', 'wall'], title: 'Wandhöhe eintragen', text: 'Im Maß-Fenster „Mehr“ → „Wandhöhe“ aufklappen. „Höhe alle Linien“ gilt für den ganzen Raum, „Höhe diese Linie“ nur für die gewählte Wand.', hint: 'Mit Wandhöhe bekommen die Linien Nummern – sie passen zur Wandliste im PDF.' },
+  { scene: 'insert', buttons: ['longPress', 'addOpening'], title: 'Tür oder Fenster einfügen', text: 'Eine Linie etwa eine halbe Sekunde gedrückt halten und Tür, Fenster oder Sonstiges wählen. Die Öffnung sitzt an der gedrückten Stelle. Alternativ im Wand-Bereich „+ Tür“ / „+ Fenster“.', hint: 'Breite × Höhe wird als Abzug von der Wandfläche gerechnet.' },
+  { scene: 'move', buttons: ['drag', 'tap'], title: 'Öffnung verschieben und ändern', text: 'Die Markierung auf der Linie ziehen – sie stößt an Ecken und Nachbarn an, die Maßkette zeigt die Abstände zu beiden Ecken. Kurz antippen öffnet Breite, Höhe, Art und Abstand.', hint: 'T = Tür (braun), F = Fenster (blau), S = Sonstiges (grau).' },
+  { scene: 'check', buttons: ['wall', 'copyOpening', 'tap'], title: 'Kopieren und Warnungen', text: '„Auf andere Linie kopieren“ und danach die Ziel-Linie antippen – gleiche Maße, neue Wand. Passt ein eingetippter Abstand nicht, wird er rot markiert.', hint: 'Rot mit ⚠: Die Öffnung ragt über die Linie hinaus oder überlappt eine andere.' },
+  { scene: 'pdf', buttons: ['save'], title: 'Ergebnis im PDF', text: 'Mit dem Haken speichern. Im Projekt-PDF steht die Wandliste: je Wand Länge, Höhe, Abzüge mit Art und Abstand zur Ecke sowie die Netto-Fläche.' },
 ];
 
 // Merker: Tutorial wurde nach dem ersten geschlossenen Raum schon einmal automatisch gezeigt
@@ -209,6 +210,7 @@ export function RoomTutorialModal({ visible, onClose, onPractice }: { visible: b
             <Text style={s.count}>Schritt {i + 1} von {STEPS.length}</Text>
             <Text testID="room-tutorial-title" style={s.title}>{step.title}</Text>
             <Text style={s.text}>{step.text}</Text>
+            <ButtonChips keys={step.buttons} />
             {!!step.hint && (
               <View style={s.hint}>
                 <Ionicons name="bulb-outline" size={16} color="#b45309" />

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@react-native-vector-icons/ionicons';
+import { ButtonChips, SketchButtonKey } from './ButtonChips';
 
 // Tutorial zum Mitmachen: begleitet die Schritte in einer leeren Übungsskizze im echten Editor.
 // Jeder Schritt wird automatisch abgehakt, sobald der Editor den passenden Zustand erreicht hat.
@@ -16,17 +17,17 @@ export type RoomCoachStatus = {
   openingKey: string; // Lage der Öffnungen (ändert sich beim Ziehen)
 };
 
-type Step = { title: string; text: string; done: (status: RoomCoachStatus, start: RoomCoachStatus) => boolean };
+type Step = { title: string; buttons: SketchButtonKey[]; text: string; done: (status: RoomCoachStatus, start: RoomCoachStatus) => boolean };
 const STEPS: Step[] = [
-  { title: 'Raum zeichnen', text: 'Wähle in der Werkzeugleiste „Polygon“ und tippe vier Ecken an. Zum Schließen tippst du wieder auf den ersten Punkt.', done: s => s.roomClosed },
-  { title: 'Linie anwählen', text: 'Wechsle auf „Bearbeiten“ (Hand) und tippe eine Linie des Raums an. Das Maß-Fenster öffnet sich.', done: s => s.lineSelected || s.allMeasured },
-  { title: 'Alle Seiten bemaßen', text: 'Tippe für jede Linie ein Maß ein (z. B. 4 und 3) und bestätige mit „Hinzufügen“. Danach die nächste Linie antippen, bis die m² erscheinen.', done: s => s.allMeasured },
-  { title: 'Eine Ecke verschieben', text: 'Schließe das Maß-Fenster, schalte „Punkte“ ein und ziehe eine Ecke ein Stück zur Seite. Die m² bleiben gleich.', done: (s, start) => s.pointsKey !== start.pointsKey },
-  { title: 'Diagonale eingeben', text: 'Die App hat die passende Diagonale angelegt und ihr Feld gewählt. Tippe eine Länge ein (bei 4 × 3 m z. B. 5). Alternativ „Alle Ecken rechtwinklig“ einschalten.', done: s => s.determined },
-  { title: 'Skizze geraderücken', text: 'Tippe im Maß-Fenster unter „Mehr“ auf „Skizze geraderücken“. Die Zeichnung springt auf die berechnete Form.', done: s => s.determined && s.straight },
-  { title: 'Wandhöhe eintragen', text: 'Unter „Mehr“ den Bereich „Wandhöhe“ aufklappen, „Höhe alle Linien“ antippen und z. B. 2,5 eintippen.', done: s => s.hasHeight },
-  { title: 'Tür oder Fenster einfügen', text: 'Halte eine Linie des Raums etwa eine halbe Sekunde gedrückt und wähle Tür oder Fenster.', done: s => s.openingCount > 0 },
-  { title: 'Öffnung verschieben', text: 'Schließe das Maß-Fenster und ziehe die Markierung der Öffnung auf ihrer Linie an eine andere Stelle. Die Maßkette zeigt die Abstände.', done: (s, start) => s.openingCount > 0 && s.openingKey !== start.openingKey },
+  { title: 'Raum zeichnen', buttons: ['polygon', 'tap', 'finishRoom'], text: 'Wähle in der Werkzeugleiste „Polygon“ und tippe vier Ecken an. Zum Schließen tippst du wieder auf den ersten Punkt.', done: s => s.roomClosed },
+  { title: 'Linie anwählen', buttons: ['edit', 'tap'], text: 'Wechsle auf „Bearbeiten“ (Hand) und tippe eine Linie des Raums an. Das Maß-Fenster öffnet sich.', done: s => s.lineSelected || s.allMeasured },
+  { title: 'Alle Seiten bemaßen', buttons: ['tap', 'add'], text: 'Tippe für jede Linie ein Maß ein (z. B. 4 und 3) und bestätige mit „Hinzufügen“. Danach die nächste Linie antippen, bis die m² erscheinen.', done: s => s.allMeasured },
+  { title: 'Eine Ecke verschieben', buttons: ['closePanel', 'points', 'drag'], text: 'Schließe das Maß-Fenster, schalte „Punkte“ ein und ziehe eine Ecke ein Stück zur Seite. Die m² bleiben gleich.', done: (s, start) => s.pointsKey !== start.pointsKey },
+  { title: 'Diagonale eingeben', buttons: ['diagonals', 'rightAngles'], text: 'Die App hat die passende Diagonale angelegt und ihr Feld gewählt. Tippe eine Länge ein (bei 4 × 3 m z. B. 5). Alternativ „Alle Ecken rechtwinklig“ einschalten.', done: s => s.determined },
+  { title: 'Skizze geraderücken', buttons: ['more', 'straighten'], text: 'Tippe im Maß-Fenster unter „Mehr“ auf „Skizze geraderücken“. Die Zeichnung springt auf die berechnete Form.', done: s => s.determined && s.straight },
+  { title: 'Wandhöhe eintragen', buttons: ['more', 'wall'], text: 'Unter „Mehr“ den Bereich „Wandhöhe“ aufklappen, „Höhe alle Linien“ antippen und z. B. 2,5 eintippen.', done: s => s.hasHeight },
+  { title: 'Tür oder Fenster einfügen', buttons: ['longPress'], text: 'Halte eine Linie des Raums etwa eine halbe Sekunde gedrückt und wähle Tür oder Fenster.', done: s => s.openingCount > 0 },
+  { title: 'Öffnung verschieben', buttons: ['closePanel', 'drag'], text: 'Schließe das Maß-Fenster und ziehe die Markierung der Öffnung auf ihrer Linie an eine andere Stelle. Die Maßkette zeigt die Abstände.', done: (s, start) => s.openingCount > 0 && s.openingKey !== start.openingKey },
 ];
 
 // compact: Maß-Fenster ist auf einem kleinen Bildschirm offen – Karte klappt zur schmalen Leiste ein
@@ -71,6 +72,7 @@ export function RoomCoach({ status, bottom, onExit, compact, maxWidth }: { statu
                   <Text testID="room-coach-title" style={[s.title, done && s.titleDone]}>{step.title}</Text>
                 </View>
                 <Text style={s.text}>{step.text}</Text>
+                <ButtonChips keys={step.buttons} small />
               </>
             )}
             <View style={s.row}>

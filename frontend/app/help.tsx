@@ -200,7 +200,13 @@ function Chapter({ sec, open, onToggle }: { sec: ManualSection; open: boolean; o
           {sec.steps.map((st, i) => (
             <View key={i} style={s.step}>
               <View style={s.stepRow}>
-                <Text style={s.stepNum}>{i + 1}.</Text>
+                {st.icon ? (
+                  <View style={[s.stepIcon, { borderColor: st.iconColor || '#333' }]}>
+                    <Ionicons name={st.icon as any} size={18} color={st.iconColor || '#333'} />
+                  </View>
+                ) : (
+                  <Text style={s.stepNum}>{i + 1}.</Text>
+                )}
                 <Text style={s.stepText}>{st.text}{st.pro && <Text style={s.proTag}>{"  ★ PRO"}</Text>}</Text>
                 {st.info && (
                   <TouchableOpacity testID={`help-info-${sec.id}-${i}`} hitSlop={8} style={s.infoBtn} onPress={() => setInfo(info === i ? null : i)}>
@@ -242,6 +248,7 @@ const s = StyleSheet.create({
   body: { paddingHorizontal: 16, paddingBottom: 14, borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 10 },
   step: { marginBottom: 10 },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  stepIcon: { width: 32, height: 32, borderRadius: 7, borderWidth: 1.5, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', marginRight: 2 },
   stepNum: { fontSize: 15, fontWeight: '800', color: '#1565c0', width: 22 },
   stepText: { flex: 1, fontSize: 15, color: '#1e293b', lineHeight: 21 },
   infoBtn: { minWidth: 44, minHeight: 32, alignItems: 'center', justifyContent: 'flex-start' },

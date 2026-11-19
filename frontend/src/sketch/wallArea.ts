@@ -20,12 +20,36 @@ export const OPENING_KINDS: { id: OpeningKind; label: string; short: string }[] 
 const formatOffset = (meters: number) => `${(Math.round(meters * 100) / 100).toFixed(2).replace('.', ',')}m`;
 // Lage einer Öffnung aus einer Stelle auf der Linie (Anteil 0..1 = Mitte der Öffnung):
 // mit Linienmaß und Breite wird zusätzlich der Abstand zur Ecke in Metern gespeichert
-export const openingPlacement = (fraction: number, measure: string | undefined, opening: WallOpening): { position: number; offset?: string } => {
+// others = übrige Öffnungen derselben Linie: Die Öffnung stößt an Nachbarn und Ecken an statt zu überlappen.
+export const openingPlacement = (fraction: number, measure: string | undefined, opening: WallOpening, others: WallOpening[] = []): { position: number; offset?: string } => {
   const meters = parseMeasurementToMeters(measure || '');
   const width = parseMeasurementToMeters(opening.width || '');
   if (!(meters > 0) || !(width > 0) || width >= meters) return { position: Math.max(0, Math.min(1, fraction)), offset: undefined };
-  const start = Math.max(0, Math.min(meters - width, fraction * meters - width / 2));
+  // Freie Abschnitte zwischen den platzierten Nachbarn; passt die Öffnung in keinen, bleibt nur die Linie als Grenze
+  const blocked = others
+    .map(o => ({ start: openingOffsetMeters(o, meters), width: parseMeasurementToMeters(o.width || '') }))
+    .filter((b): b is { start: number; width: number } => b.start !== null && b.width > 0)
+    .sort((a, b) => a.start - b.start);
+  const gaps: { from: number; to: number }[] = [];
+  let cursor = 0;
+  blocked.forEach(b => { gaps.push({ from: cursor, to: b.start }); cursor = Math.max(cursor, b.start + b.width); });
+  gaps.push({ from: cursor, to: meters });
+  const wanted = fraction * meters - width / 2;
+  const clampTo = (gap: { from: number; to: number }) => Math.max(gap.from, Math.min(gap.to - width, wanted));
+  const fitting = gaps.filter(g => g.to - g.from >= width - 1e-9);
+  let start = Math.max(0, Math.min(meters - width, wanted));
+  if (fitting.length > 0) {
+    start = fitting.map(clampTo).reduce((best, candidate) => (Math.abs(candidate - wanted) < Math.abs(best - wanted) ? candidate : best));
+  }
   return { position: (start + width / 2) / meters, offset: formatOffset(start) };
+};
+// Abstand vom Linienanfang bis zur Öffnung in Metern (null, wenn die Lage nicht bekannt ist)
+export const openingOffsetMeters = (opening: WallOpening, lineMeters: number): number | null => {
+  if (!(lineMeters > 0)) return null;
+  if ((opening.offset || '').trim() !== '') return parseMeasurementToMeters(opening.offset || '');
+  const width = parseMeasurementToMeters(opening.width || '');
+  if (opening.position !== undefined && width > 0) return Math.max(0, opening.position * lineMeters - width / 2);
+  return null;
 };
 export type WallSegment = { height?: string; deduction?: string; openings?: WallOpening[] };
 export type PolygonWalls = { [elementId: string]: PolygonWall };
@@ -79,7 +103,7 @@ export const calculateWallAreaM2 = (
 
 // Einzelne Wände eines Polygons (für die Wandliste im PDF)
 export const wallRows = (element: any, measures: { [segmentIndex: number]: string } | undefined, wall: PolygonWall | undefined) => {
-  const rows: { line: number; length: number; height: number; deduction: number; openings: WallOpening[]; area: number }[] = [];
+  const rows: { line: number; length: number; height: number; deduction: number; openings: (WallOpening & { kindLabel: string; offsetMeters: number | null })[]; area: number }[] = [];
   for (let i = 0; i < segmentCountOf(element); i++) {
     const area = wallSegmentAreaM2(measures?.[i], wall, i);
     if (area === null) continue;
@@ -89,7 +113,11 @@ export const wallRows = (element: any, measures: { [segmentIndex: number]: strin
       length: parseMeasurementToMeters(measures?.[i] || ''),
       height: parseMeasurementToMeters(segment?.height || wall?.height || ''),
       deduction: segmentDeductionM2(segment),
-      openings: (segment?.openings || []).filter(o => openingAreaM2(o) > 0),
+      openings: (segment?.openings || []).filter(o => openingAreaM2(o) > 0).map(o => ({
+        ...o,
+        kindLabel: OPENING_KINDS.find(k => k.id === openingKindOf(o))!.label,
+        offsetMeters: openingOffsetMeters(o, parseMeasurementToMeters(measures?.[i] || '')),
+      })),
       area,
     });
   }
@@ -135,6 +163,8 @@ export type OpeningMarker = {
   nx: number; ny: number; // Einheitsvektor quer zur Linie, zeigt ins Rauminnere
   labelX: number; labelY: number; label: string;
   offsetMeters: number | null; // Abstand vom Linienanfang bis zur Öffnung (wenn bekannt)
+  restMeters: number | null; // Abstand von der Öffnung bis zum Linienende (wenn bekannt)
+  startX: number; startY: number; endX: number; endY: number; // Anfang und Ende der Linie
 };
 export const openingMarkers = (
   points: { x: number; y: number }[],
@@ -184,6 +214,8 @@ export const openingMarkers = (
       const kind = openingKindOf(opening);
       markers.push({
         segmentIndex: i, openingIndex: j, kind, nx, ny, offsetMeters,
+        restMeters: offsetMeters !== null && width > 0 ? Math.max(0, meters - offsetMeters - width) : null,
+        startX: p1.x, startY: p1.y, endX: p2.x, endY: p2.y,
         x1: ax, y1: ay, x2: ax + ux * length, y2: ay + uy * length,
         labelX: p1.x + ux * center + nx * 30, labelY: p1.y + uy * center + ny * 30,
         label: `${OPENING_KINDS.find(k => k.id === kind)!.short} ${short(opening.width)}×${short(opening.height)}${offsetMeters !== null ? ` ↦${offsetMeters.toFixed(2).replace('.', ',')}` : ''}`,

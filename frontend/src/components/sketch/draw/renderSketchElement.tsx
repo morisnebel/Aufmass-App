@@ -14,6 +14,7 @@ export type RenderSketchElementCtx = {
   polygonAreaOptions: PolygonAreaOptions;
   diagonalPick: { elementId: string; first: number | null; } | null;
   numpadTargetId: string | null;
+  openingDrag: { elementId: string; segmentIndex: number; openingIndex: number } | null;
   lineNumbersVisible: boolean;
   polygonWalls: PolygonWalls;
   scale: number;
@@ -28,7 +29,7 @@ export type RenderSketchElementCtx = {
 export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawElement) {
   const {
     selectedElementId, renderTransformHandles, selectedLineSegment, lineSegmentMeasurements,
-    measureLineStyles, polygonAreaOptions, diagonalPick, numpadTargetId, lineNumbersVisible, polygonWalls, scale,
+    measureLineStyles, polygonAreaOptions, diagonalPick, numpadTargetId, openingDrag, lineNumbersVisible, polygonWalls, scale,
     getPolylineElementsWithMeasurements, labelOffsets, polygonAreaVisible, calculatePolygonAreaM2,
     formatAreaM2, editingPolylinePoint,
   } = ctx;
@@ -576,7 +577,7 @@ export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawEl
           {openingMarkers(points, !!closed, lineSegmentMeasurements[element.id], polygonWalls[element.id]).map(marker => {
             const color = OPENING_COLORS[marker.kind];
             const active = selectedLineSegment?.elementId === element.id && selectedLineSegment.segmentIndex === marker.segmentIndex
-              && (numpadTargetId === `wall-opening-width-${marker.openingIndex}` || numpadTargetId === `wall-opening-height-${marker.openingIndex}`);
+              && [`wall-opening-width-${marker.openingIndex}`, `wall-opening-height-${marker.openingIndex}`, `wall-opening-offset-${marker.openingIndex}`].includes(numpadTargetId || '');
             const tick = (x: number, y: number) => (
               <Line x1={x - marker.nx * 6} y1={y - marker.ny * 6} x2={x + marker.nx * 6} y2={y + marker.ny * 6} stroke={color} strokeWidth={2} />
             );
@@ -588,6 +589,28 @@ export function renderSketchElement(ctx: RenderSketchElementCtx, element: DrawEl
                 {tick(marker.x1, marker.y1)}
                 {tick(marker.x2, marker.y2)}
                 <SvgText x={marker.labelX} y={marker.labelY + 3} fill={active ? '#e65100' : color} fontSize={active ? 11 : 9} fontWeight="bold" textAnchor="middle">{marker.label}</SvgText>
+                {/* Maßkette beim Ziehen/Bearbeiten: Abstände zu beiden Ecken der Linie (außen an der Linie) */}
+                {(active || (openingDrag?.elementId === element.id && openingDrag.segmentIndex === marker.segmentIndex && openingDrag.openingIndex === marker.openingIndex))
+                  && marker.offsetMeters !== null && marker.restMeters !== null && (() => {
+                  const out = 30;
+                  const chain = (ax: number, ay: number, bx: number, by: number, meters: number, key: string) => (
+                    <G key={key}>
+                      <Line x1={ax - marker.nx * out} y1={ay - marker.ny * out} x2={bx - marker.nx * out} y2={by - marker.ny * out} stroke="#e65100" strokeWidth={1.5} />
+                      {[[ax, ay], [bx, by]].map(([x, y], t) => (
+                        <Line key={t} x1={x - marker.nx * (out - 5)} y1={y - marker.ny * (out - 5)} x2={x - marker.nx * (out + 5)} y2={y - marker.ny * (out + 5)} stroke="#e65100" strokeWidth={1.5} />
+                      ))}
+                      <SvgText x={(ax + bx) / 2 - marker.nx * (out + 11)} y={(ay + by) / 2 - marker.ny * (out + 11) + 4} fill="#e65100" fontSize={11} fontWeight="bold" textAnchor="middle" stroke="#fff" strokeWidth={0.4}>
+                        {meters.toFixed(2).replace('.', ',')}
+                      </SvgText>
+                    </G>
+                  );
+                  return (
+                    <G testID="opening-chain">
+                      {chain(marker.startX, marker.startY, marker.x1, marker.y1, marker.offsetMeters, 'before')}
+                      {chain(marker.x2, marker.y2, marker.endX, marker.endY, marker.restMeters, 'after')}
+                    </G>
+                  );
+                })()}
               </G>
             );
           })}

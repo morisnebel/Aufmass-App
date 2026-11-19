@@ -28,7 +28,7 @@ export const buildWallListHtml = (wallLists: { title: string; rows: ReturnType<t
                 <td style="${wc}">Linie ${r.line}</td>
                 <td style="text-align: right; ${wc}">${num(r.length)} m</td>
                 <td style="text-align: right; ${wc}">${num(r.height)} m</td>
-                <td style="text-align: right; ${wc}">${r.deduction > 0 ? `${formatAreaM2(r.deduction)}${r.openings.length > 0 ? `<br><span style="font-size: 8pt; color: #666;">${r.openings.map(o => `${esc(o.width)} × ${esc(o.height)} = ${num(openingAreaM2(o))}`).join('<br>')}</span>` : ''}` : '–'}</td>
+                <td style="text-align: right; ${wc}">${r.deduction > 0 ? `${formatAreaM2(r.deduction)}${r.openings.length > 0 ? `<br><span style="font-size: 8pt; color: #666;">${r.openings.map(o => `${esc(o.kindLabel)} ${esc(o.width)} × ${esc(o.height)} = ${num(openingAreaM2(o))}${o.offsetMeters !== null ? ` · ab Ecke ${num(o.offsetMeters)} m` : ''}`).join('<br>')}</span>` : ''}` : '–'}</td>
                 <td style="text-align: right; ${wc}">${formatAreaM2(r.area)}</td>
               </tr>`).join('')}
             <tr style="font-weight: 700; background: #e3f2fd;">

@@ -867,6 +867,8 @@ export default function DrawSketchScreen() {
   // Langer Druck auf eine Linie: Tür/Fenster an dieser Stelle einfügen
   const openingLongPressRef = useRef<{ timer: ReturnType<typeof setTimeout>; x: number; y: number } | null>(null);
   const [openingInsert, setOpeningInsert] = useState<{ elementId: string; segmentIndex: number; fraction: number } | null>(null);
+  // Öffnung, die gerade gezogen wird (für die Maßkette in der Skizze)
+  const [openingDrag, setOpeningDrag] = useState<{ elementId: string; segmentIndex: number; openingIndex: number } | null>(null);
   const cancelOpeningLongPress = () => {
     if (openingLongPressRef.current) clearTimeout(openingLongPressRef.current.timer);
     openingLongPressRef.current = null;
@@ -885,8 +887,9 @@ export default function DrawSketchScreen() {
     if (!openingInsert) return;
     const { elementId, segmentIndex, fraction } = openingInsert;
     const preset: WallOpening = OPENING_PRESETS.find(p => p.id === kind)?.opening || { width: '', height: '', kind };
-    const opening = { ...preset, ...openingPlacement(fraction, lineSegmentMeasurements[elementId]?.[segmentIndex], preset) };
-    const index = polygonWalls[elementId]?.segments?.[segmentIndex]?.openings?.length || 0;
+    const existing = polygonWalls[elementId]?.segments?.[segmentIndex]?.openings || [];
+    const opening = { ...preset, ...openingPlacement(fraction, lineSegmentMeasurements[elementId]?.[segmentIndex], preset, existing) };
+    const index = existing.length;
     updateOpenings(elementId, segmentIndex, openings => [...openings, opening]);
     setOpeningInsert(null);
     openOpeningEditor(elementId, segmentIndex, index);
@@ -906,12 +909,15 @@ export default function DrawSketchScreen() {
     const drag = openingDragRef.current;
     if (!drag) return false;
     if (!drag.moved && Math.hypot(x - drag.startX, y - drag.startY) < 6) return true;
+    if (!drag.moved) setOpeningDrag({ elementId: drag.elementId, segmentIndex: drag.segmentIndex, openingIndex: drag.openingIndex });
     drag.moved = true;
     const element = elements.find(el => el.id === drag.elementId);
     if (!element) return true;
     const fraction = fractionOnSegment(element, drag.segmentIndex, x, y);
     const measure = lineSegmentMeasurements[drag.elementId]?.[drag.segmentIndex];
-    updateOpenings(drag.elementId, drag.segmentIndex, openings => openings.map((o, i) => (i === drag.openingIndex ? { ...o, ...openingPlacement(fraction, measure, o) } : o)));
+    updateOpenings(drag.elementId, drag.segmentIndex, openings => openings.map((o, i) => (i === drag.openingIndex
+      ? { ...o, ...openingPlacement(fraction, measure, o, openings.filter((_, other) => other !== drag.openingIndex)) }
+      : o)));
     return true;
   };
   const handleOpeningDragEnd = (): boolean => {
@@ -919,6 +925,7 @@ export default function DrawSketchScreen() {
     const drag = openingDragRef.current;
     if (!drag) return false;
     openingDragRef.current = null;
+    setOpeningDrag(null);
     if (!drag.moved) openOpeningEditor(drag.elementId, drag.segmentIndex, drag.openingIndex);
     return true;
   };
@@ -2013,7 +2020,7 @@ export default function DrawSketchScreen() {
   // Render element
   const renderElement = (element: DrawElement) => renderSketchElement({
     selectedElementId, renderTransformHandles, selectedLineSegment, lineSegmentMeasurements,
-    measureLineStyles, polygonAreaOptions, diagonalPick, numpadTargetId, lineNumbersVisible, polygonWalls, scale,
+    measureLineStyles, polygonAreaOptions, diagonalPick, numpadTargetId, openingDrag, lineNumbersVisible, polygonWalls, scale,
     getPolylineElementsWithMeasurements, labelOffsets, polygonAreaVisible, calculatePolygonAreaM2,
     formatAreaM2, editingPolylinePoint,
   }, element);

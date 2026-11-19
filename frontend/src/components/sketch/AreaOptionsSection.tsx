@@ -6,7 +6,7 @@ import { PolygonAreaOption, computePolygon, fitVerticesToDrawing, normalizeAreaO
 import { NumpadTarget } from './WallHeightSection';
 
 // Genauere Flächenberechnung für ein Polygon (alles optional):
-// alle Ecken rechtwinklig, Winkel je Ecke oder Diagonalen zwischen zwei frei gewählten Ecken
+// Winkel je Ecke oder Diagonalen zwischen zwei frei gewählten Ecken
 
 type Props = {
   element: any;
@@ -28,6 +28,9 @@ type Props = {
   anchorSegment?: number;
   // Alle eindeutig bestimmten Räume der Skizze geraderücken
   onStraightenAll?: () => void;
+  // Automatisch geraderücken, sobald der Raum eindeutig bestimmt ist
+  autoStraighten?: boolean;
+  onAutoStraightenChange?: (on: boolean) => void;
   // Maß-Fenster zu einer Stelle scrollen (y relativ zum scrollbaren Inhalt)
   onScrollTo?: (y: number) => void;
 };
@@ -54,7 +57,7 @@ export const withPairs = (option: PolygonAreaOption | undefined, pointCount: num
 // Ecke k liegt zwischen Linie k und Linie k+1 (Ecke 0: zwischen letzter Linie und Linie 1)
 const cornerName = (k: number, n: number) => `Linie ${k === 0 ? n : k}/${k + 1}`;
 
-export const AreaOptionsSection = ({ element, measures, shapePoints, option, onChange, activeFieldId, onFieldFocus, pickState, onPickDiagonal, focusFieldId, onFocusHandled, onStraighten, anchorSegment, onStraightenAll, onScrollTo }: Props) => {
+export const AreaOptionsSection = ({ element, measures, shapePoints, option, onChange, activeFieldId, onFieldFocus, pickState, onPickDiagonal, focusFieldId, onFocusHandled, onStraighten, anchorSegment, onStraightenAll, autoStraighten, onAutoStraightenChange, onScrollTo }: Props) => {
   const latest = useRef({ option, onChange });
   latest.current = { option, onChange };
   const values = useRef<{ [id: string]: string }>({});
@@ -141,7 +144,8 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   const straightened = hasShape ? fitVerticesToDrawing(result!.vertices, points, anchorSegment) : null;
   const canStraighten = !!straightened && straightened.some((p, k) => Math.hypot(p.x - points[k].x, p.y - points[k].y) > 1);
 
-  let status = 'Fläche aus den gezeichneten Winkeln – Abweichung vom genauen Maß möglich. Für genaue Werte Winkel oder Diagonalen angeben.';
+  const missing = (count: number) => `Noch ${count} ${count === 1 ? 'Angabe fehlt' : 'Angaben fehlen'}: unten „Winkel angeben“ (rechte Ecke = 90) oder „Diagonalen angeben“ – dann ist die Fläche genau${autoStraighten ? ' und die Skizze rückt sich gerade' : ''}. Bis dahin Näherung aus der Zeichnung.`;
+  let status = missing(Math.max(1, needed));
   let warn = true;
   if (!result) {
     status = 'Erst alle Seiten bemaßen – dann werden Winkel und Diagonalen berechnet.';
@@ -153,18 +157,19 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
   } else if (rightAngles && result.rightAnglesRejected !== undefined) {
     status = `„Rechtwinklig“ passt nicht zu den Seitenmaßen${isFinite(result.rightAnglesRejected) ? ` (Abweichung ${(result.rightAnglesRejected * 100).toFixed(0)} cm)` : ''} und wird nicht verwendet. Bitte Maße prüfen oder Winkel/Diagonale angeben.`;
   } else if (result.extras >= needed) {
-    status = `Form eindeutig bestimmt – Fläche ${formatAreaM2(result.area)}. Alle übrigen Winkel und Diagonalen sind berechnet.`;
+    status = `Raum eindeutig bestimmt – Fläche ${formatAreaM2(result.area)}. Alle übrigen Winkel und Diagonalen sind berechnet.`;
     warn = false;
   } else if (rightAngles) {
     status = 'Alle Ecken werden als rechtwinklig gerechnet.';
     warn = false;
   } else if (result.extras > 0) {
-    status = `Noch ${needed - result.extras} Winkel oder Diagonale(n) für eine genaue Fläche – Werte mit ≈ sind bis dahin Näherung aus der Zeichnung.`;
+    status = missing(needed - result.extras);
   }
 
   return (
     <View style={styles.box} onLayout={(e) => { boxY.current = e.nativeEvent.layout.y; tryScroll(); }}>
       <Text testID="area-status" style={[styles.hint, warn && styles.warn]}>{status}</Text>
+      {!!onAutoStraightenChange && toggle('area-auto-straighten-toggle', 'Automatisch geraderücken (sobald der Raum bestimmt ist)', !!autoStraighten, () => onAutoStraightenChange(!autoStraighten), 'git-merge-outline')}
       {!!onStraighten && hasShape && (
         <TouchableOpacity
           testID="area-straighten"
@@ -184,7 +189,8 @@ export const AreaOptionsSection = ({ element, measures, shapePoints, option, onC
           <Text style={styles.pickText} numberOfLines={2}>Alle Räume geraderücken</Text>
         </TouchableOpacity>
       )}
-      {n >= 4 && toggle('area-right-angles-toggle', 'Alle Ecken rechtwinklig', rightAngles, () => onChange({ ...option, rightAngles: !rightAngles }), 'square-outline')}
+      {/* Frühere Angabe „Alle Ecken rechtwinklig“: nicht mehr wählbar, lässt sich in alten Skizzen nur noch ausschalten */}
+      {n >= 4 && rightAngles && toggle('area-right-angles-toggle', 'Alle Ecken rechtwinklig (alte Angabe – antippen zum Entfernen)', rightAngles, () => onChange({ ...option, rightAngles: false }), 'square-outline')}
 
       {n >= 4 && toggle('area-angles-toggle', 'Winkel angeben', useAngles, () => onChange({ ...option, useAngles: !useAngles }), 'analytics')}
       {n >= 4 && useAngles && points.map((_, k) =>

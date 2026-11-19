@@ -871,3 +871,13 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
   Rezept + alle testIDs: /app/tests/e2e/iter71_recipe.md. Offene Kleinigkeiten: '-0,5' / 'abc' im Abstandsfeld ohne Hinweis (wird als 0 gelesen).
 - Sprache: Umschalter DE/EN existiert in Einstellungen (saveLanguage). User will Zweisprachigkeit behalten -> neue Teile
   (RoomTutorial, RoomCoach, WallHeightSection, OpeningInsertMenu, tip()-Texte, manual.ts) sind noch fest deutsch = offene Uebersetzung.
+- Auto-Geraderuecken (User-Wunsch): draw.tsx Effekt auf [lineSegmentMeasurements, polygonAreaOptions], 500ms entprellt; rueckt Raum gerade,
+  sobald determined. Key je Element (Masse+Optionen) in autoStraightenKeysRef: erstes Sehen (= Laden alter Skizze) merkt nur. Nicht bei
+  backgroundImage / image-Elementen. Schalter 'area-auto-straighten-toggle' unter Mehr (AsyncStorage aufmassprofi_auto_straighten, Standard AN).
+  Knoepfe 'Skizze geraderuecken' / 'Alle Raeume' bleiben. Undo nimmt es zurueck, kein erneutes Springen.
+- 'Alle Ecken rechtwinklig' ENTFERNT (User: verwirrend, z.B. 8-Eck). Solver-Option rightAngles bleibt fuer alte Skizzen; Schalter erscheint
+  nur noch, wenn in alter Skizze aktiv (zum Entfernen). Steuerung nur ueber Winkel (90 eintippen) / Diagonalen.
+- area-status neu: 'Noch X Angabe(n) fehlt/fehlen: Winkel angeben (rechte Ecke = 90) oder Diagonalen angeben ...'.
+- RoomCoach jetzt 8 Schritte (Diagonale + Geraderuecken zusammengelegt), RoomTutorial Seiten 4+5 und manual.ts (Kapitel raeume) angepasst.
+- Selbst live geprueft: Winkel 90 -> springt auf Rechteck; Uebung Schritt 5->6 nach Diagonale 5; Undo ohne Rueck-Sprung.
+  NICHT geprueft: Automatik AUS, Foto-Ausnahme, Laden alter Skizze, Raum mit >4 Ecken, Handy-Groesse.

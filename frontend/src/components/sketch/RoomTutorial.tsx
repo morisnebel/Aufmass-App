@@ -5,14 +5,14 @@ import Ionicons from '@react-native-vector-icons/ionicons';
 import { ButtonChips, SketchButtonKey } from './ButtonChips';
 
 // Tutorial „Räume, Türen & Fenster“: Bilder mit kurzem Text zum Durchblättern.
-// Zeigt Linien anwählen, Punkte verschieben, Winkel/Diagonalen, Wandhöhe und Öffnungen. Läuft offline.
+// Zeigt Linien anwählen, Punkte verschieben, Winkel/Diagonalen, Geraderücken, Wandhöhe und Öffnungen. Läuft offline.
 type Scene = 'draw' | 'select' | 'points' | 'angles' | 'straighten' | 'height' | 'insert' | 'move' | 'check' | 'pdf';
 const STEPS: { scene: Scene; buttons: SketchButtonKey[]; title: string; text: string; hint?: string }[] = [
   { scene: 'draw', buttons: ['polygon', 'tap', 'finishRoom'], title: 'Raum zeichnen', text: 'Werkzeug „Polygon“ wählen und nacheinander jede Ecke antippen. Zum Schließen wieder auf den ersten Punkt tippen oder im kleinen Polygon-Fenster „Raum“ wählen („Linie“ beendet offen).', hint: 'Grob zeichnen reicht – gerechnet wird später mit deinen Maßen.' },
   { scene: 'select', buttons: ['edit', 'tap', 'add'], title: 'Linie anwählen und bemaßen', text: 'Auf „Bearbeiten“ (Hand) wechseln und eine Linie antippen. Das Maß-Fenster öffnet sich: Länge eintippen und „Hinzufügen“. Sind alle Seiten bemaßt, erscheinen die m².', hint: 'Die gewählte Linie ist orange. Mit „Nächste Linie“ springt die App automatisch weiter.' },
   { scene: 'points', buttons: ['points', 'drag'], title: 'Einzelne Punkte verschieben', text: '„Punkte“ in der Werkzeugleiste einschalten und eine Ecke an die richtige Stelle ziehen. In diesem Modus öffnet sich kein Maß-Fenster.', hint: 'Die Fläche ändert sich dabei nicht – sie hängt nur an deinen Maßen.' },
-  { scene: 'angles', buttons: ['more', 'rightAngles', 'angles', 'diagonals'], title: 'Schiefe Räume: Winkel und Diagonalen', text: 'Im Maß-Fenster unter „Mehr“: „Alle Ecken rechtwinklig“, „Winkel angeben“ oder „Diagonalen angeben“. Unter jedem Feld steht der berechnete Wert. Nach dem Verschieben einer Ecke legt die App die passende Diagonale selbst an.', hint: 'Rot heißt: Die Angabe passt nicht zu den übrigen Maßen und wird nicht verwendet.' },
-  { scene: 'straighten', buttons: ['more', 'straighten', 'straightenAll'], title: 'Skizze geraderücken', text: 'Ist der Raum eindeutig bestimmt, zieht „Skizze geraderücken“ die Zeichnung auf die berechnete Form. Die angetippte Linie bleibt an ihrem Platz.', hint: '„Alle Räume geraderücken“ erledigt das für die ganze Skizze. Mit Rückgängig nimmst du es zurück.' },
+  { scene: 'angles', buttons: ['more', 'diagonals', 'angles'], title: 'Die fehlende Angabe: Diagonale oder Winkel', text: 'Die Seitenlängen allein legen einen Raum noch nicht fest – vier Seiten können ein Rechteck oder ein schiefes Viereck sein. Deshalb braucht die App noch eine Angabe. Im Maß-Fenster unter „Mehr“: „Diagonalen angeben“ (von Ecke zu Ecke messen) oder „Winkel angeben“ (rechte Ecke = 90). Der Hinweis oben im Bereich sagt, wie viele Angaben noch fehlen.', hint: 'Ein Viereck braucht 1 Angabe, ein Fünfeck 2, ein Achteck 5 (immer Ecken − 3). Rot heißt: Die Angabe passt nicht zu den übrigen Maßen und wird nicht verwendet.' },
+  { scene: 'straighten', buttons: ['more', 'autoStraighten', 'straighten'], title: 'Skizze rückt sich von selbst gerade', text: 'Sobald der Raum eindeutig bestimmt ist, springt die Zeichnung automatisch auf die berechnete Form – auch bei jeder späteren Maßänderung. Die angetippte Linie bleibt an ihrem Platz. Vor der letzten Angabe passiert nichts, weil die Form noch nicht feststeht.', hint: 'Auf Fotos und Plänen bleibt die Zeichnung stehen. Unter „Mehr“ lässt sich die Automatik ausschalten; „Skizze geraderücken“ und „Alle Räume geraderücken“ gibt es weiter für den Handbetrieb. Rückgängig nimmt es zurück.' },
   { scene: 'height', buttons: ['more', 'wall'], title: 'Wandhöhe eintragen', text: 'Im Maß-Fenster „Mehr“ → „Wandhöhe“ aufklappen. „Höhe alle Linien“ gilt für den ganzen Raum, „Höhe diese Linie“ nur für die gewählte Wand.', hint: 'Mit Wandhöhe bekommen die Linien Nummern – sie passen zur Wandliste im PDF.' },
   { scene: 'insert', buttons: ['longPress', 'addOpening'], title: 'Tür oder Fenster einfügen', text: 'Eine Linie etwa eine halbe Sekunde gedrückt halten und Tür, Fenster oder Sonstiges wählen. Die Öffnung sitzt an der gedrückten Stelle. Alternativ im Wand-Bereich „+ Tür“ / „+ Fenster“.', hint: 'Breite × Höhe wird als Abzug von der Wandfläche gerechnet.' },
   { scene: 'move', buttons: ['drag', 'tap'], title: 'Öffnung verschieben und ändern', text: 'Die Markierung auf der Linie ziehen – sie stößt an Ecken und Nachbarn an, die Maßkette zeigt die Abstände zu beiden Ecken. Kurz antippen öffnet Breite, Höhe, Art und Abstand.', hint: 'T = Tür (braun), F = Fenster (blau), S = Sonstiges (grau).' },
@@ -110,7 +110,7 @@ function Illustration({ scene }: { scene: Scene }) {
           <Line x1={50} y1={50} x2={250} y2={50} stroke={ORANGE} strokeWidth={4} />
           {corners()}
           {label(150, 42, 'bleibt an ihrem Platz', ORANGE, 10)}
-          {box(85, 88, 130, 36, ['Skizze geraderücken', '· Linie 1 bleibt'], '#2e7d32')}
+          {box(85, 88, 130, 36, ['rückt automatisch gerade', '· Linie 1 bleibt'], '#2e7d32')}
         </G>
       )}
       {scene === 'height' && (

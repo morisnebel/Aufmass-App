@@ -41,6 +41,8 @@ export type MeasurePanelOptionsProps = {
   setPendingAreaField: React.Dispatch<React.SetStateAction<string | null>>;
   straightenPolygon: (elementId: string, points: { x: number; y: number }[]) => void;
   straightenAllPolygons: () => void;
+  autoStraighten: boolean;
+  changeAutoStraighten: (on: boolean) => void;
   startPractice: () => void;
   practice: boolean;
   openingCopy: { elementId: string; segmentIndex: number; openingIndex: number; opening: WallOpening; } | null;
@@ -63,7 +65,7 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
     changeLineAutoNext, laserSound, changeLaserSound, lineMeasureHistory, undoLastLineMeasurement,
     lineNumbersVisible, changeLineNumbersVisible, selectedLineSegment, elements,
     lineSegmentMeasurements, polygonWalls, setPolygonWalls, wallSectionOpen, setWallSectionOpen,
-    numpadTargetId, panelKeyboardOpen, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, openingCopy, setOpeningCopy, startPractice, practice, scrollMeasurePanelTo,
+    numpadTargetId, panelKeyboardOpen, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, autoStraighten, changeAutoStraighten, openingCopy, setOpeningCopy, startPractice, practice, scrollMeasurePanelTo,
     calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
     polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick, setPolygonAreaOptions,
   } = props;
@@ -217,7 +219,7 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
         );
       })()}
 
-      {/* Genauere Fläche: rechtwinklig / Diagonale */}
+      {/* Genauere Fläche: Winkel / Diagonalen, Geraderücken */}
       {selectedLineSegment && (
         <AreaOptionsSection
           element={elements.find(e => e.id === selectedLineSegment.elementId)}
@@ -233,6 +235,8 @@ export function MeasurePanelOptions(props: MeasurePanelOptionsProps) {
           onStraighten={(points) => straightenPolygon(selectedLineSegment.elementId, points)}
           anchorSegment={selectedLineSegment.segmentIndex}
           onStraightenAll={straightenAllPolygons}
+          autoStraighten={autoStraighten}
+          onAutoStraightenChange={changeAutoStraighten}
           onScrollTo={scrollMeasurePanelTo}
           onFieldFocus={(id, target) => {
             if (!panelKeyboardOpen) setPanelKeyboardOpen(true);

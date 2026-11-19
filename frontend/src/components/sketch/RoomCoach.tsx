@@ -10,7 +10,7 @@ export type RoomCoachStatus = {
   lineSelected: boolean; // Maß-Fenster offen, Linie des Raums gewählt
   allMeasured: boolean; // alle Seiten bemaßt
   pointsKey: string; // Eckpunkte des Raums (ändert sich beim Verschieben)
-  determined: boolean; // Form durch Winkel/Diagonale/rechtwinklig eindeutig bestimmt
+  determined: boolean; // Form durch Winkel/Diagonalen eindeutig bestimmt
   straight: boolean; // Zeichnung passt zur berechneten Form
   hasHeight: boolean; // Wandhöhe eingetragen
   openingCount: number; // Türen/Fenster am Raum
@@ -23,8 +23,7 @@ const STEPS: Step[] = [
   { title: 'Linie anwählen', buttons: ['edit', 'tap'], text: 'Wechsle auf „Bearbeiten“ (Hand) und tippe eine Linie des Raums an. Das Maß-Fenster öffnet sich.', done: s => s.lineSelected || s.allMeasured },
   { title: 'Alle Seiten bemaßen', buttons: ['tap', 'add'], text: 'Tippe für jede Linie ein Maß ein (z. B. 4 und 3) und bestätige mit „Hinzufügen“. Danach die nächste Linie antippen, bis die m² erscheinen.', done: s => s.allMeasured },
   { title: 'Eine Ecke verschieben', buttons: ['closePanel', 'points', 'drag'], text: 'Schließe das Maß-Fenster, schalte „Punkte“ ein und ziehe eine Ecke ein Stück zur Seite. Die m² bleiben gleich.', done: (s, start) => s.pointsKey !== start.pointsKey },
-  { title: 'Diagonale eingeben', buttons: ['diagonals', 'rightAngles'], text: 'Die App hat die passende Diagonale angelegt und ihr Feld gewählt. Tippe eine Länge ein (bei 4 × 3 m z. B. 5). Alternativ „Alle Ecken rechtwinklig“ einschalten.', done: s => s.determined },
-  { title: 'Skizze geraderücken', buttons: ['more', 'straighten'], text: 'Tippe im Maß-Fenster unter „Mehr“ auf „Skizze geraderücken“. Die Zeichnung springt auf die berechnete Form.', done: s => s.determined && s.straight },
+  { title: 'Diagonale eingeben – Skizze rückt gerade', buttons: ['diagonals', 'angles', 'straighten'], text: 'Vier Seiten allein legen den Raum nicht fest – er könnte auch schief sein. Die App hat deshalb eine Diagonale angelegt und ihr Feld gewählt: Tippe ihre Länge ein (bei 4 × 3 m: 5). Die Skizze springt dann von selbst auf die richtige Form. Alternativ „Winkel angeben“ und 90 für eine rechte Ecke. Automatik aus? Dann „Skizze geraderücken“ tippen.', done: s => s.determined && s.straight },
   { title: 'Wandhöhe eintragen', buttons: ['more', 'wall'], text: 'Unter „Mehr“ den Bereich „Wandhöhe“ aufklappen, „Höhe alle Linien“ antippen und z. B. 2,5 eintippen.', done: s => s.hasHeight },
   { title: 'Tür oder Fenster einfügen', buttons: ['longPress'], text: 'Halte eine Linie des Raums etwa eine halbe Sekunde gedrückt und wähle Tür oder Fenster.', done: s => s.openingCount > 0 },
   { title: 'Öffnung verschieben', buttons: ['closePanel', 'drag'], text: 'Schließe das Maß-Fenster und ziehe die Markierung der Öffnung auf ihrer Linie an eine andere Stelle. Die Maßkette zeigt die Abstände.', done: (s, start) => s.openingCount > 0 && s.openingKey !== start.openingKey },

@@ -25,3 +25,9 @@ cancelled the responder on web): mouse.move to marker on the line, down, 20px st
 Read positions: [...document.querySelectorAll('[data-testid^=opening-marker]')].map(g=>g.textContent)  e.g. 'F 1,00×1,20 ↦1,45'.
 Verified: window dragged across door stops at 1,45 (door 0,56+0,885), opening-chain visible during drag, vertical wall drag 1,00->2,00.
 STILL NOT EXECUTED LIVE: T2b, T3 steps 7-9 inside practice, coach skip/toggle/exit, T4, T5 (390x844), O5 (type switch/copy/delete), O6 (save/reopen), O7.
+
+## After auto-straighten change
+RoomCoach has 8 steps now (step 5 = 'Diagonale eingeben – Skizze rückt gerade', done when determined && straight).
+area-right-angles-toggle only exists for legacy sketches with rightAngles=true. New: area-auto-straighten-toggle.
+Area/diagonal/angle fields use the in-panel numpad (numpad target, NOT DOM focus): click the field, then click numpad keys
+(page.get_by_text('5', exact=True).last) - or for area-angle-<k> click + keyboard.type works. Auto-straighten is debounced 500ms.

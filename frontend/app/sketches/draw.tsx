@@ -406,7 +406,7 @@ export default function DrawSketchScreen() {
   // Eingefrorene Polygon-Form für die Flächenberechnung: wird nur neu übernommen, wenn sich
   // ein Linien-Maß oder die Punktanzahl ändert – Punkte verschieben ändert die Fläche nicht
   const [polygonAreaShapes, setPolygonAreaShapes] = useState<PolygonAreaShapes>({});
-  // Zusatzangaben je Polygon: alle Ecken rechtwinklig / Diagonale
+  // Zusatzangaben je Polygon: Winkel / Diagonalen
   const [polygonAreaOptions, setPolygonAreaOptions] = useState<PolygonAreaOptions>({});
   useEffect(() => {
     setPolygonAreaShapes(prev => {
@@ -771,6 +771,43 @@ export default function DrawSketchScreen() {
     addToHistory(newElements);
     showAlert('Geraderücken', count === 1 ? '1 Raum wurde geradegerückt.' : `${count} Räume wurden geradegerückt.`);
   };
+  // Automatisch geraderücken (Standard AN): Ändert sich ein Maß, Winkel oder eine Diagonale und ist der Raum
+  // damit eindeutig bestimmt, springt die Zeichnung von selbst auf die berechnete Form.
+  // Nicht beim Laden vorhandener Skizzen (erstes Sehen merkt nur den Stand) und nicht auf Fotos/Plänen.
+  const [autoStraighten, setAutoStraighten] = useState(true);
+  useEffect(() => {
+    AsyncStorage.getItem('aufmassprofi_auto_straighten').then(saved => setAutoStraighten(saved !== '0'));
+  }, []);
+  const changeAutoStraighten = (on: boolean) => {
+    setAutoStraighten(on);
+    AsyncStorage.setItem('aufmassprofi_auto_straighten', on ? '1' : '0');
+  };
+  const autoStraightenKeysRef = useRef<{ [elementId: string]: string }>({});
+  const autoStraightenLatest = useRef({ elements, selectedLineSegment, polygonAreaShapes });
+  autoStraightenLatest.current = { elements, selectedLineSegment, polygonAreaShapes };
+  useEffect(() => {
+    // Kurz warten, damit die Skizze nicht bei jeder getippten Ziffer springt
+    const timer = setTimeout(() => {
+    const { elements, selectedLineSegment, polygonAreaShapes } = autoStraightenLatest.current;
+    const seen = autoStraightenKeysRef.current;
+    const onPhoto = !!backgroundImage || elements.some(el => el.type === 'image');
+    let changed = false;
+    const newElements = elements.map(el => {
+      if (el.type !== 'polyline' || !el.data?.closed) return el;
+      const key = JSON.stringify([lineSegmentMeasurements[el.id] || {}, polygonAreaOptions[el.id] || {}]);
+      const previous = seen[el.id];
+      seen[el.id] = key;
+      if (previous === undefined || previous === key || !autoStraighten || onPhoto) return el;
+      const points = straightenedPolygonPoints(el, lineSegmentMeasurements, polygonAreaShapes[el.id]?.points, polygonAreaOptions[el.id],
+        selectedLineSegment?.elementId === el.id ? selectedLineSegment.segmentIndex : undefined);
+      if (!points) return el;
+      changed = true;
+      return { ...el, data: { ...el.data, points: shiftIntoBounds(points, screenWidth, canvasHeight) } };
+    });
+    if (changed) addToHistory(newElements);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [lineSegmentMeasurements, polygonAreaOptions]);
   // Nach dem Verschieben einer Ecke: Ist der Raum noch nicht durch Winkel/Diagonalen bestimmt,
   // wird die Diagonale ab der verschobenen Ecke angelegt und ihr Eingabefeld ausgewählt
   const autoDiagonalAfterPointMove = (element: DrawElement, pointIndex: number): boolean => {
@@ -2572,7 +2609,7 @@ export default function DrawSketchScreen() {
           changePanelOptionsOpen, changeLineAutoAdd, lineAutoNext, changeLineAutoNext,
           changeLaserSound, lineMeasureHistory, undoLastLineMeasurement, lineNumbersVisible,
           changeLineNumbersVisible, polygonWalls, setPolygonWalls, setWallSectionOpen,
-          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, openingCopy, setOpeningCopy, startPractice, practice,
+          numpadTargetId, setPanelKeyboardOpen, numpadTargetRef, setNumpadTargetId, pendingAreaField, setPendingAreaField, straightenPolygon, straightenAllPolygons, autoStraighten, changeAutoStraighten, openingCopy, setOpeningCopy, startPractice, practice,
           calculatePolygonAreaM2, polygonAreaVisible, setPolygonAreaVisible, formatAreaM2,
           polygonAreaOptions, polygonAreaShapes, diagonalPick, setDiagonalPick,
           setPolygonAreaOptions, setShowMeasureStyleSettings, showMeasureStyleSettings,

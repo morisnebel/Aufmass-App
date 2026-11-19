@@ -616,7 +616,7 @@ export const generateProjectPdfHtml = async (ctx: ProjectPdfContext): Promise<st
           const areas = measuredPolylines
             .map((el: any, i: number) => ({
               label: el.name ? `S${i + 1} – ${el.name}` : `S${i + 1}`,
-              area: calculatePolygonAreaM2(el, segMeasures, metadata.polygonAreaShapes?.[el.id]?.points),
+              area: calculatePolygonAreaM2(el, segMeasures, metadata.polygonAreaShapes?.[el.id]?.points, metadata.polygonAreaOptions?.[el.id]),
               wall: calculateWallAreaM2(el, segMeasures[el.id], metadata.polygonWalls?.[el.id])?.total ?? null,
             }))
             .filter((a: any) => a.area !== null || a.wall !== null);

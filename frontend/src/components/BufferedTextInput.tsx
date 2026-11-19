@@ -19,6 +19,18 @@ const DEVICE_MIN_EVENTS = 3;
 const MEASUREMENT_RE = /^\s*[+-]?\d+(?:[.,]\d+)?\s*(?:mm|cm|dm|km|m|ft|in)?\s*$/i;
 const OPEN_EXPRESSION_RE = /[+\-*/×x÷(]\s*$/;
 
+// Protokoll der letzten Eingaben in Maßfeldern (nur im Arbeitsspeicher) – zur Laser-Diagnose
+export type InputLogEntry = { at: number; type: 'key' | 'text' | 'result'; value: string };
+const inputLog: InputLogEntry[] = [];
+const logInput = (type: InputLogEntry['type'], value: string) => {
+  // Abschluss ohne neue Eingabe (z.B. beim Verlassen des Feldes) nicht doppelt protokollieren
+  if (type === 'result' && (inputLog.length === 0 || inputLog[inputLog.length - 1].type === 'result')) return;
+  inputLog.push({ at: Date.now(), type, value });
+  if (inputLog.length > 300) inputLog.shift();
+};
+export const getInputLog = (): InputLogEntry[] => [...inputLog];
+export const clearInputLog = () => { inputLog.length = 0; };
+
 export type InputSequence = {
   base: string; // Feldinhalt vor der Eingabe
   pos: number; // Einfügeposition des ersten Zeichens
@@ -150,6 +162,7 @@ const BufferedTextInput = forwardRef<any, Props>(
         }
       }
       emit(next);
+      if (replaceRef.current && mounted) logInput('result', next);
       if (fromDevice && mounted) {
         setCheckVisible(true);
         if (checkTimer.current) clearTimeout(checkTimer.current);
@@ -160,6 +173,7 @@ const BufferedTextInput = forwardRef<any, Props>(
 
     const handleChange = useCallback(
       (next: string) => {
+        if (replaceRef.current) logInput('text', next);
         seq.current = advanceSequence(seq.current, textRef.current, next, Date.now());
         textRef.current = next;
         setText(next);
@@ -207,6 +221,7 @@ const BufferedTextInput = forwardRef<any, Props>(
         onChangeText={handleChange}
         onKeyPress={(e) => {
           const key = e.nativeEvent.key;
+          if (replaceOnBurst) logInput('key', key);
           const now = Date.now();
           const k = keys.current;
           if (key.length !== 1) {

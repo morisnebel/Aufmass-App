@@ -21,10 +21,32 @@ export type PolygonAreaShapes = { [elementId: string]: { points: { x: number; y:
 export const areaShapeKey = (pointCount: number, measures: { [seg: number]: string } | undefined): string =>
   `${pointCount}|${Array.from({ length: pointCount }, (_, i) => measures?.[i] || '').join('|')}`;
 
+// Zusatzangaben für eine genauere Fläche
+export type PolygonAreaOption = { rightAngles?: boolean; diagonal?: string };
+export type PolygonAreaOptions = { [elementId: string]: PolygonAreaOption };
+
+const heron = (a: number, b: number, c: number): number | null => {
+  const s = (a + b + c) / 2;
+  const under = s * (s - a) * (s - b) * (s - c);
+  return under > 0 ? Math.sqrt(under) : null;
+};
+
+// Viereck über eine gemessene Diagonale (Ecke Linie 4/1 ↔ Ecke Linie 2/3): zwei Dreiecke, exakt ohne Winkel.
+// null, wenn Maße fehlen oder die Diagonale nicht zu den Seiten passt.
+export const quadDiagonalAreaM2 = (measures: { [seg: number]: string } | undefined, diagonal: string | undefined): number | null => {
+  const d = parseMeasurementToMeters(diagonal || '');
+  const l = [0, 1, 2, 3].map(i => parseMeasurementToMeters(measures?.[i] || ''));
+  if (!(d > 0) || l.some(v => !(v > 0))) return null;
+  const first = heron(l[0], l[1], d);
+  const second = heron(l[2], l[3], d);
+  return first !== null && second !== null ? Math.round((first + second) * 100) / 100 : null;
+};
+
 export const calculatePolygonAreaM2 = (
   element: any,
   lineSegmentMeasurements: { [id: string]: { [seg: number]: string } },
-  shapePoints?: { x: number; y: number }[]
+  shapePoints?: { x: number; y: number }[],
+  option?: PolygonAreaOption
 ): number | null => {
   if (element.type !== 'polyline' || !element.data?.closed) return null;
   const points: { x: number; y: number }[] =
@@ -34,6 +56,12 @@ export const calculatePolygonAreaM2 = (
   if (!measures) return null;
 
   const n = points.length; // n Punkte = n Segmente (inkl. Schluss-Segment n-1)
+
+  // Viereck mit gemessener Diagonale: exakt, unabhängig von der Zeichnung
+  if (n === 4 && option?.diagonal) {
+    const diagonalArea = quadDiagonalAreaM2(measures, option.diagonal);
+    if (diagonalArea !== null) return diagonalArea;
+  }
 
   // 1) Alle Segmente müssen ein numerisches Maß haben
   const lengths: number[] = [];
@@ -66,6 +94,8 @@ export const calculatePolygonAreaM2 = (
   // (inkl. Schluss-Drehung) aufs 45°-Raster einrasten (Toleranz ±12°)
   const SNAP_STEP = Math.PI / 4; // 45°
   const SNAP_TOL = (12 * Math.PI) / 180; // ±12°
+  // „Alle Ecken rechtwinklig“: jede Ecke wird auf ±90° (bzw. 0°) gesetzt, egal wie schief gezeichnet
+  const forceRight = !!option?.rightAngles;
   const turns: number[] = [];
   const wasSnapped: boolean[] = [];
   for (let i = 0; i < n; i++) {
@@ -74,8 +104,8 @@ export const calculatePolygonAreaM2 = (
     // Normalisieren auf (-180°, 180°]
     while (turn > Math.PI) turn -= 2 * Math.PI;
     while (turn <= -Math.PI) turn += 2 * Math.PI;
-    const snapped = Math.round(turn / SNAP_STEP) * SNAP_STEP;
-    if (Math.abs(turn - snapped) <= SNAP_TOL) {
+    const snapped = forceRight ? Math.round(turn / (Math.PI / 2)) * (Math.PI / 2) : Math.round(turn / SNAP_STEP) * SNAP_STEP;
+    if (forceRight || Math.abs(turn - snapped) <= SNAP_TOL) {
       turns.push(snapped);
       wasSnapped.push(true);
     } else {
@@ -90,6 +120,10 @@ export const calculatePolygonAreaM2 = (
   const turnSum = turns.reduce((a, b) => a + b, 0);
   const target = turnSum >= 0 ? 2 * Math.PI : -2 * Math.PI;
   const residual = target - turnSum;
+  // Zeichnung lässt sich nicht rechtwinklig schließen: normale Berechnung verwenden
+  if (forceRight && Math.abs(residual) > 1e-6) {
+    return calculatePolygonAreaM2(element, lineSegmentMeasurements, shapePoints, { ...option, rightAngles: false });
+  }
   if (Math.abs(residual) > 1e-9) {
     const freeIdx: number[] = [];
     for (let i = 0; i < n; i++) {

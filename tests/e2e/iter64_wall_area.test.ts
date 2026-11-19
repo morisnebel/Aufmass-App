@@ -59,3 +59,20 @@ assert.strictEqual(pa.calculatePolygonAreaM2(moved, m4, pts), 12); // mit eingef
 assert.strictEqual(pa.calculatePolygonAreaM2(moved, { a: { ...m4.a, 0: '5m', 2: '5m' } }, pts), 15);
 assert.notStrictEqual(pa.areaShapeKey(4, m4.a), pa.areaShapeKey(4, { ...m4.a, 0: '5m' }));
 console.log('OK shape');
+
+// iter77: rechtwinklig + Diagonale
+const skew = { ...closed, data: { closed: true, points: [{ x: 0, y: 0 }, { x: 100, y: 10 }, { x: 130, y: 95 }, { x: 5, y: 80 }] } };
+assert.notStrictEqual(pa.calculatePolygonAreaM2(skew, m4), 12);
+assert.strictEqual(pa.calculatePolygonAreaM2(skew, m4, undefined, { rightAngles: true }), 12);
+// L-Form rechtwinklig: 4x3 minus 2x1 = 10
+const lPts = [{ x: 0, y: 0 }, { x: 105, y: 8 }, { x: 95, y: 50 }, { x: 55, y: 45 }, { x: 48, y: 82 }, { x: -6, y: 75 }];
+const lEl = { id: 'l', type: 'polyline', data: { closed: true, points: lPts } };
+const lM = { l: { 0: '4m', 1: '2m', 2: '2m', 3: '1m', 4: '2m', 5: '3m' } };
+assert.strictEqual(pa.calculatePolygonAreaM2(lEl, lM, undefined, { rightAngles: true }), 10);
+// Diagonale: Rechteck 4x3 → Diagonale 5 → 12; Raute/Parallelogramm mit Diagonale 4 → kleiner
+assert.strictEqual(pa.quadDiagonalAreaM2(m4.a, '5m'), 12);
+assert.strictEqual(pa.calculatePolygonAreaM2(skew, m4, undefined, { diagonal: '5' }), 12);
+assert.strictEqual(pa.quadDiagonalAreaM2(m4.a, '4m'), 11.12); // 2 × Heron(4,3,4)
+assert.strictEqual(pa.quadDiagonalAreaM2(m4.a, '9m'), null); // passt nicht → ignoriert
+assert.strictEqual(pa.calculatePolygonAreaM2(closed, m4, undefined, { diagonal: '9m' }), 12);
+console.log('OK options');

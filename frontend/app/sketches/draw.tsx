@@ -39,7 +39,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Speichereffiziente Deep-Clone-Funktion (verhindert OOM bei großen base64-Strings)
 import { deepCloneElement, simplifyPath, DrawElement, FontFamily, FONT_FAMILIES, DrawMode, TOOL_SIZES_KEY } from '../../src/sketch/sketchShared';
 import { buildPreviewSvg } from '../../src/sketch/sketchSvg';
-import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, PolygonAreaShapes, areaShapeKey } from '../../src/sketch/polygonArea';
+import { parseMeasurementToMeters as parseMeasurementToMetersShared, calculatePolygonAreaM2 as calculatePolygonAreaM2Shared, PolygonAreaShapes, PolygonAreaOptions, areaShapeKey } from '../../src/sketch/polygonArea';
+import { AreaOptionsSection, AREA_DIAGONAL_FIELD } from '../../src/components/sketch/AreaOptionsSection';
+import { LaserLog } from '../../src/components/sketch/LaserLog';
 import BufferedTextInput from '../../src/components/BufferedTextInput';
 import { playLaserFeedback } from '../../src/utils/laserFeedback';
 import { LaserSoundOptions } from '../../src/components/sketch/LaserSoundOptions';
@@ -484,6 +486,8 @@ export default function DrawSketchScreen() {
   // Eingefrorene Polygon-Form für die Flächenberechnung: wird nur neu übernommen, wenn sich
   // ein Linien-Maß oder die Punktanzahl ändert – Punkte verschieben ändert die Fläche nicht
   const [polygonAreaShapes, setPolygonAreaShapes] = useState<PolygonAreaShapes>({});
+  // Zusatzangaben je Polygon: alle Ecken rechtwinklig / Diagonale
+  const [polygonAreaOptions, setPolygonAreaOptions] = useState<PolygonAreaOptions>({});
   useEffect(() => {
     setPolygonAreaShapes(prev => {
       let changed = false;
@@ -924,12 +928,14 @@ export default function DrawSketchScreen() {
   };
   const [measureKeyboardHeight, setMeasureKeyboardHeight] = useState(0);
   const numpadTargetLabel = (id: string) => {
+    if (id === AREA_DIAGONAL_FIELD) return 'Diagonale';
     const opening = id.match(/^wall-opening-(width|height)-(\d+)$/);
     if (opening) return `Öffnung ${parseInt(opening[2], 10) + 1} ${opening[1] === 'width' ? 'Breite' : 'Höhe'}`;
     return ({ 'wall-height-all': 'Höhe alle Linien', 'wall-height-line': 'Höhe diese Linie', 'wall-deduction-line': 'Weiterer Abzug' } as { [key: string]: string })[id] || 'Eingabe';
   };
   const numpadTargetValue = (id: string): string => {
     if (!selectedLineSegment) return '';
+    if (id === AREA_DIAGONAL_FIELD) return polygonAreaOptions[selectedLineSegment.elementId]?.diagonal || '';
     const wall = polygonWalls[selectedLineSegment.elementId];
     const segment = wall?.segments?.[selectedLineSegment.segmentIndex];
     const opening = id.match(/^wall-opening-(width|height)-(\d+)$/);
@@ -1092,7 +1098,7 @@ export default function DrawSketchScreen() {
   // rekonstruiert (Bowditch-Ausgleich für den Schließfehler), dann Shoelace-Formel.
   // So ergibt z.B. ein Rechteck mit 5m × 4m exakt 20,00 m².
   const calculatePolygonAreaM2 = (element: DrawElement): number | null =>
-    calculatePolygonAreaM2Shared(element, lineSegmentMeasurements, polygonAreaShapes[element.id]?.points);
+    calculatePolygonAreaM2Shared(element, lineSegmentMeasurements, polygonAreaShapes[element.id]?.points, polygonAreaOptions[element.id]);
 
   // Formatiert eine Fläche für die Anzeige (deutsches Format)
   const formatAreaM2 = (area: number): string => `${area.toFixed(2).replace('.', ',')} m²`;
@@ -1660,6 +1666,7 @@ export default function DrawSketchScreen() {
         polygonAreaVisible,
         polygonWalls,
         polygonAreaShapes,
+        polygonAreaOptions,
       };
       // Große Bild-URIs separat speichern (wie beim normalen Speichern)
       const extractedImageOps: Promise<any>[] = [];
@@ -1820,6 +1827,7 @@ export default function DrawSketchScreen() {
         console.log('Resetting to clean state for new/different sketch');
         setLineSegmentMeasurements({});
         setPolygonWalls({});
+    setPolygonAreaOptions({});
         setSelectedLineSegment(null);
         setElements([]);
         setHistory([[]]);
@@ -1955,6 +1963,7 @@ export default function DrawSketchScreen() {
           }
           setPolygonWalls(metadata.polygonWalls || {});
           setPolygonAreaShapes(metadata.polygonAreaShapes || {});
+          setPolygonAreaOptions(metadata.polygonAreaOptions || {});
         } else if (sketch.metadata) {
           // Fallback: metadata still in main array (shouldn't happen after migration)
           try {
@@ -1989,6 +1998,7 @@ export default function DrawSketchScreen() {
             }
             setPolygonWalls(parsedMeta.polygonWalls || {});
             setPolygonAreaShapes(parsedMeta.polygonAreaShapes || {});
+          setPolygonAreaOptions(parsedMeta.polygonAreaOptions || {});
           } catch (e) {
             console.error('Error parsing fallback metadata:', e);
           }
@@ -2344,6 +2354,7 @@ export default function DrawSketchScreen() {
           polygonAreaVisible,
           polygonWalls,
           polygonAreaShapes,
+          polygonAreaOptions,
         };
 
         console.log('Auto-saving sketch with', elements.length, 'elements');
@@ -2808,6 +2819,7 @@ export default function DrawSketchScreen() {
     setSelectedElementId(null);
     setLineSegmentMeasurements({});
     setPolygonWalls({});
+    setPolygonAreaOptions({});
     setSelectedLineSegment(null);
     // Alle Summenbox-Positionen zurücksetzen
     setTotalLfmBoxPositions({});
@@ -5521,6 +5533,11 @@ export default function DrawSketchScreen() {
               );
             })()}
             
+            {/* Gemessene Diagonale (Viereck) gestrichelt anzeigen */}
+            {closed && points.length === 4 && !!polygonAreaOptions[element.id]?.diagonal?.trim() && (
+              <Line x1={points[0].x} y1={points[0].y} x2={points[2].x} y2={points[2].y} stroke="#2e7d32" strokeWidth={1.2} strokeDasharray="6,4" />
+            )}
+
             {/* Linien-Nummern (passend zu „Linie x von n“ und zur Wandliste) */}
             {lineNumbersVisible && (hasSelectedSegment || hasWallHeights(polygonWalls[element.id])) && (() => {
               const numberScale = Math.max(scale, 0.5);
@@ -6187,6 +6204,7 @@ export default function DrawSketchScreen() {
         polygonAreaVisible, // Speichere Polygon-Flächen-Sichtbarkeit
         polygonWalls, // Speichere Wandhöhen/Abzüge
         polygonAreaShapes,
+        polygonAreaOptions,
       };
 
       console.log('Saving sketch with', elements.length, 'elements, bgChanged:', backgroundImageChangedRef.current);
@@ -8106,6 +8124,24 @@ export default function DrawSketchScreen() {
               </TouchableOpacity>
             );
           })()}
+
+          {/* Genauere Fläche: rechtwinklig / Diagonale */}
+          {selectedLineSegment && (
+            <AreaOptionsSection
+              element={elements.find(e => e.id === selectedLineSegment.elementId)}
+              measures={lineSegmentMeasurements[selectedLineSegment.elementId]}
+              option={polygonAreaOptions[selectedLineSegment.elementId]}
+              onChange={(option) => setPolygonAreaOptions(prev => ({ ...prev, [selectedLineSegment.elementId]: option }))}
+              activeFieldId={numpadTargetId}
+              onFieldFocus={(id, target) => {
+                if (!panelKeyboardOpen) setPanelKeyboardOpen(true);
+                numpadTargetRef.current = target;
+                setNumpadTargetId(id);
+              }}
+            />
+          )}
+
+          <LaserLog />
           
           </>
           )}
@@ -8619,6 +8655,9 @@ export default function DrawSketchScreen() {
                   <LaserSoundOptions />
                 </View>
               )}
+              <View style={{ marginHorizontal: -10, marginBottom: 6 }}>
+                <LaserLog />
+              </View>
               
               <View style={styles.arrowHeadsContainer}>
                 <Text style={styles.modalLabel}>Pfeilspitzen:</Text>

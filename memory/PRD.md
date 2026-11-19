@@ -855,3 +855,11 @@ Offen: Bestaetigung durch Nutzer in Expo Go (iPhone). Falls weiterhin Probleme: 
 - Nicht live geprueft (nur Code-Review): RoomTutorial-Autostart, RoomCoach-Durchlauf, Toolbar-Tooltip (Web), Dreieck-Geraderuecken, PDF-Vorschau-Schalter.
 - Kleine offene Hinweise: Toolbar-Beschriftungen teils Englisch, testID project-card-<id> auf Home nicht gefunden.
 - iOS: Deployer bestaetigt - letzter iOS-Build + TestFlight-Upload ERFOLGREICH; frueherer Apple-500 war voruebergehend. Erledigt.
+- iteration_70 (Tutorial/Uebung + Abzuege): NUR 2/18 Punkte live gefahren (Editor laedt, Toolbar deutsch bei app_language='de').
+  T1-T4 + O1-O7 NICHT live getestet - Playwright traf Canvas/Polygon-Palette nicht (fehlende testIDs). OFFEN: testIDs fuer
+  Toolbar-Werkzeuge, Polygon-Unterpalette, Canvas, bemasste Linien ergaenzen, dann erneut testen.
+  Code-Review-Hinweise geprueft, KEIN Fehler: negativer Abstand wird von parseMeasurementToMeters als 0 gelesen (Regex ohne Minus);
+  autoDiagonalAfterPointMove existiert (draw.tsx ~776); Abzug zaehlt Breite x Hoehe auch bei Konflikt (gewollt, Warnung sichtbar).
+- Toolbar-Sprache: KEIN Bug. i18n (i18n/index.ts) folgt der Geraetesprache (de/en), kein Sprachumschalter in der App.
+  Englische Labels im Test kamen vom englischen Testbrowser. Neuere Teile (Tutorial, Abzuege) sind fest deutsch -> auf englischen
+  Geraeten gemischt. Entscheidung User offen: immer Deutsch erzwingen ODER neue Teile uebersetzen. Kein Code geaendert.

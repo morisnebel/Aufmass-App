@@ -32,10 +32,12 @@ const STEPS: Step[] = [
 
 // compact: Maß-Fenster ist auf einem kleinen Bildschirm offen – Karte klappt zur schmalen Leiste ein
 // (maxWidth = freier Platz neben dem Fenster), Antippen klappt sie wieder auf.
-export function RoomCoach({ status, bottom, onExit, compact, maxWidth }: { status: RoomCoachStatus; bottom: number; onExit: () => void; compact?: boolean; maxWidth?: number }) {
+export function RoomCoach({ status, bottom, onExit, compact, maxWidth, onStep }: { status: RoomCoachStatus; bottom: number; onExit: () => void; compact?: boolean; maxWidth?: number; onStep?: (buttons: SketchButtonKey[]) => void }) {
   const [index, setIndex] = useState(0);
   const [toggled, setToggled] = useState<boolean | null>(null);
   useEffect(() => { setToggled(null); }, [compact, index]);
+  // Knöpfe des aktuellen Schritts melden (leuchten in der Werkzeugleiste auf)
+  useEffect(() => { onStep?.(index < STEPS.length ? STEPS[index].buttons : []); }, [index]);
   const small = toggled ?? !!compact;
   const setSmall = (value: boolean) => setToggled(value);
   const start = useRef(status);

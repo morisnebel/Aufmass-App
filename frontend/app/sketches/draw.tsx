@@ -1389,6 +1389,7 @@ export default function DrawSketchScreen() {
     labelOffsets: typeof labelOffsets; measureLineStyles: typeof measureLineStyles;
   }>(null);
   const [practice, setPractice] = useState(false);
+  const [coachButtons, setCoachButtons] = useState<string[]>([]);
   const closeEditorPanels = () => {
     setShowLineMeasurementNumpad(false);
     setSelectedLineSegment(null);
@@ -1425,6 +1426,7 @@ export default function DrawSketchScreen() {
     setMeasureLineStyles(stash.measureLineStyles);
     practiceStashRef.current = null;
     setPractice(false);
+    setCoachButtons([]);
     // Übung aus der Hilfe gestartet: zurück zur Hilfe
     if (practiceOnly) {
       allowLeaveRef.current = true;
@@ -2202,6 +2204,7 @@ export default function DrawSketchScreen() {
 
       <SketchToolbar
         {...{
+          coachButtons,
           isPhoneLandscape, isPhoneDevice, setPhotoEditMode, takePhotoAndInsert, t,
           loadProjectPhotos, insertImage, importFromFiles, photoEditMode, setSelectedElementId,
           setDrawMode, setZoomMode, drawMode, selectDrawMode, zoomMode, androidPinchRef,
@@ -2722,6 +2725,7 @@ export default function DrawSketchScreen() {
           status={practiceStatus}
           bottom={insets.bottom + 10}
           onExit={endPractice}
+          onStep={setCoachButtons}
           compact={isPhoneDevice && (showLineMeasurementNumpad || (drawMode === 'polyline' && polylinePoints.length > 0))}
           maxWidth={!showLineMeasurementNumpad ? Math.max(110, screenWidth - 250) : Math.max(130, screenWidth - 26 - Math.round(screenWidth * (panelOptionsOpen && wallSectionOpen ? 0.78 : numpadSize === 'L' ? 0.55 : numpadSize === 'M' ? 0.45 : 0.35)))}
         />

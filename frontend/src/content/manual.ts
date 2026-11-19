@@ -1,3 +1,4 @@
+import { MANUAL_ICON_BOX, MANUAL_ICON_PATHS } from './manualIcons';
 // Bedienungsanleitung Aufmaßprofi – gemeinsame Inhalte für Hilfe-Seite und PDF
 export type ManualStep = { text: string; info?: string; pro?: boolean; icon?: string; iconColor?: string };
 export type ManualSection = { id: string; icon: string; color: string; title: string; intro: string; steps: ManualStep[]; tips?: string[]; pro?: boolean };
@@ -129,7 +130,7 @@ export const MANUAL: ManualSection[] = [
       { icon: 'add-circle', iconColor: '#1976d2', text: 'Hinzufügen / Fertig (Maß-Fenster): Schreibt das eingetippte Maß an die gewählte Linie. Ist das Feld leer, schließt der Knopf das Fenster.' },
       { icon: 'trash-outline', iconColor: '#f44336', text: 'Maß löschen (Maß-Fenster): Entfernt das Maß der gewählten Linie.' },
     ],
-    tips: ['Die Werkzeugleiste lässt sich auf dem Handy seitlich wischen – dort liegen weitere Knöpfe.', 'Die Namen einiger Knöpfe (z. B. Zeiger- und Memo-Kürzel) kannst du in den Einstellungen anpassen; das Symbol bleibt gleich.'],
+    tips: ['Schnellhilfe: Einen Knopf der Werkzeugleiste lange gedrückt halten – eine Sprechblase erklärt, wozu er gut ist.', 'Die Werkzeugleiste lässt sich auf dem Handy seitlich wischen – dort liegen weitere Knöpfe.', 'Die Namen einiger Knöpfe (z. B. Zeiger- und Memo-Kürzel) kannst du in den Einstellungen anpassen; das Symbol bleibt gleich.'],
   },
   {
     id: 'raeume', icon: 'grid-outline', color: '#5d4037', title: 'Räume: Linien, Punkte, Winkel, Wände, Türen & Fenster',
@@ -267,6 +268,13 @@ const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const PRO = '<span class="pro">PRO</span>';
 
 // HTML für das PDF (Kurzanleitung + ausführliche Anleitung inkl. aller Erklärungen)
+// Knopf-Symbol als eingebettete Zeichnung (im Kapitel „Alle Knöpfe erklärt“)
+const iconSvg = (st: ManualStep) => {
+  const d = st.icon ? MANUAL_ICON_PATHS[st.icon] : undefined;
+  if (!d) return '';
+  return `<span class="ic" style="border-color:${st.iconColor || '#333'}"><svg viewBox="0 0 ${MANUAL_ICON_BOX} ${MANUAL_ICON_BOX}" width="15" height="15"><path d="${d}" fill="${st.iconColor || '#333'}"/></svg></span>`;
+};
+
 export const manualHtml = (isPro = false) => `<!DOCTYPE html><html><head><meta charset="utf-8"/><style>
   .pro { display: inline-block; background: #d97706; color: #fff; font-size: 9px; font-weight: 800; border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: middle; }
   body { font-family: -apple-system, Helvetica, Arial, sans-serif; color: #0f172a; font-size: 12px; line-height: 1.45; }
@@ -278,6 +286,7 @@ export const manualHtml = (isPro = false) => `<!DOCTYPE html><html><head><meta c
   .info { background: #f1f5f9; border-left: 3px solid #1976d2; padding: 5px 8px; margin-top: 4px; color: #334155; font-size: 11px; }
   .tip { background: #fff7e6; border-left: 3px solid #d97706; padding: 5px 8px; margin-top: 6px; font-size: 11px; }
   section { page-break-inside: avoid; } .foot { margin-top: 24px; color: #64748b; font-size: 10px; }
+li.btn{list-style:none;position:relative;margin-left:-18px;padding-left:30px;margin-bottom:5px}.ic{position:absolute;left:0;top:0;width:21px;height:21px;border:1.3px solid #333;border-radius:5px;display:flex;align-items:center;justify-content:center;background:#fff}
 </style></head><body>
 <h1>Aufmaßprofi – Bedienungsanleitung</h1>
 <div class="sub">Die App für digitales Aufmaß · Schritt für Schritt erklärt · ${isPro ? `Deine Version: Pro. Mit ${PRO} markierte Funktionen gibt es nur in der Pro-Version.` : ''}</div>
@@ -285,7 +294,7 @@ export const manualHtml = (isPro = false) => `<!DOCTYPE html><html><head><meta c
 ${QUICK_START.map(q => `<li><b>${esc(q.title)}:</b> ${esc(q.text)}</li>`).join('')}
 </ol></div>
 ${getManual(isPro).map(sec => `<section><h2>${esc(sec.title)}${sec.pro ? PRO : ''}</h2><div class="intro">${esc(sec.intro)}</div><ol class="steps">
-${sec.steps.map(st => `<li>${esc(st.text)}${st.pro ? PRO : ''}${st.info ? `<div class="info">ℹ️ ${esc(st.info)}</div>` : ''}</li>`).join('')}
+${sec.steps.map(st => `<li${st.icon ? ' class="btn"' : ''}>${iconSvg(st)}${esc(st.text)}${st.pro ? PRO : ''}${st.info ? `<div class="info">ℹ️ ${esc(st.info)}</div>` : ''}</li>`).join('')}
 </ol>${(sec.tips || []).map(t => `<div class="tip">💡 ${esc(t)}</div>`).join('')}</section>`).join('')}
 <div class="foot">Maße und Berechnungen dienen als Unterstützung und ersetzen keine Statik, Bauplanung oder amtliche Vermessung. Alle Daten bleiben ausschließlich auf deinem Gerät.</div>
 </body></html>`;

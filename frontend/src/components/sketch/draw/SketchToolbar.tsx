@@ -1,5 +1,7 @@
 import type { TFunction } from 'i18next';
 import React from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ButtonTip } from '../ButtonTip';
 import { View, Text, TouchableOpacity, Alert, Platform, ScrollView, Animated } from 'react-native';
 import { styles } from '../../../styles/sketchDrawStyles';
 import Ionicons from '@react-native-vector-icons/ionicons';
@@ -11,6 +13,7 @@ import Svg, { Path, Line, Rect, Text as SvgText, Polygon } from 'react-native-sv
 
 
 export type SketchToolbarProps = {
+  coachButtons: string[];
   isPhoneLandscape: boolean;
   isPhoneDevice: boolean;
   setPhotoEditMode: React.Dispatch<React.SetStateAction<boolean>>;
@@ -78,7 +81,28 @@ export type SketchToolbarProps = {
   clearAll: () => void;
 };
 
+const COACH_GLOW = { borderWidth: 3, borderColor: '#ff6d00', backgroundColor: '#fff3e0', shadowColor: '#ff6d00', shadowOpacity: 0.9, shadowRadius: 8, elevation: 8 };
+
 export function SketchToolbar(props: SketchToolbarProps) {
+  const insets = useSafeAreaInsets();
+  // Langer Druck auf einen Knopf zeigt seine Erklärung als Sprechblase
+  const [tipLabel, setTipLabel] = React.useState<string | null>(null);
+  const tip = (label: string) => ({ onLongPress: () => setTipLabel(label), delayLongPress: 450 });
+  // Übung: Knopf, der als Nächstes dran ist, leuchtet auf (nicht mehr, sobald er aktiv ist) und wird in Sicht gescrollt
+  const scrollRef = React.useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const scrollX = React.useRef(0);
+  const coachRefs = { edit: React.useRef<React.ComponentRef<typeof View>>(null), points: React.useRef<React.ComponentRef<typeof View>>(null), polygon: React.useRef<React.ComponentRef<typeof View>>(null) };
+  const coachTarget = (['polygon', 'edit', 'points'] as const).find(key => props.coachButtons.includes(key));
+  const glow = (key: 'edit' | 'points' | 'polygon', active: boolean) => (coachTarget === key && !active ? COACH_GLOW : null);
+  React.useEffect(() => {
+    if (!coachTarget) return;
+    const timer = setTimeout(() => {
+      coachRefs[coachTarget].current?.measureInWindow((x: number) => {
+        if (typeof x === 'number') scrollRef.current?.scrollTo({ x: Math.max(0, scrollX.current + x - 60), animated: true });
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [coachTarget]);
   const {
     isPhoneLandscape, isPhoneDevice, setPhotoEditMode, takePhotoAndInsert, t, loadProjectPhotos,
     insertImage, importFromFiles, photoEditMode, setSelectedElementId, setDrawMode, setZoomMode,
@@ -98,6 +122,9 @@ export function SketchToolbar(props: SketchToolbarProps) {
       {/* Toolbar mit Labels - scrollbar für iPhone und im Querformat */}
       <View ref={tourRef('sk-toolbar')} collapsable={false} style={[styles.toolbarContainer, isPhoneLandscape && { borderBottomWidth: 0.5 }]}>
         <ScrollView 
+          ref={scrollRef}
+          onScroll={(e) => { scrollX.current = e.nativeEvent.contentOffset.x; }}
+          scrollEventThrottle={64}
           horizontal={isPhoneDevice || isPhoneLandscape} 
           showsHorizontalScrollIndicator={isPhoneDevice}
           style={[styles.toolbar, (isPhoneDevice || isPhoneLandscape) && styles.toolbarPhone, isPhoneLandscape && { maxHeight: 50, paddingVertical: 2 }]}
@@ -107,7 +134,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         
         {/* 1. neues Foto */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={[styles.toolButtonPhotoWide, isPhoneDevice && styles.toolButtonPhotoWidePhone]} onPress={() => { setPhotoEditMode(false); takePhotoAndInsert(); }}>
+          <TouchableOpacity style={[styles.toolButtonPhotoWide, isPhoneDevice && styles.toolButtonPhotoWidePhone]} {...tip('Foto')} onPress={() => { setPhotoEditMode(false); takePhotoAndInsert(); }}>
             <Ionicons name="camera" size={isPhoneDevice ? 18 : 20} color="#4caf50" />
           </TouchableOpacity>
           <Text style={[styles.toolButtonLabelWide, isPhoneDevice && styles.toolButtonLabelWidePhone]}>{t('sketches.photo')}</Text>
@@ -117,6 +144,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity 
             style={styles.toolButtonPhotoWide} 
+            {...tip('Foto aus Projekt')}
             onPress={() => { setPhotoEditMode(false); loadProjectPhotos(); }}
           >
             <Ionicons name="images" size={20} color="#1976d2" />
@@ -126,7 +154,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
 
         {/* 3. Galeriefotos */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={() => { setPhotoEditMode(false); insertImage(); }}>
+          <TouchableOpacity style={styles.toolButtonPhotoWide} {...tip('Aus Galerie')} onPress={() => { setPhotoEditMode(false); insertImage(); }}>
             <Ionicons name="image" size={20} color="#9C27B0" />
           </TouchableOpacity>
           <Text style={styles.toolButtonLabelWide}>{t('sketches.photoFromGallery')}</Text>
@@ -134,7 +162,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
 
         {/* 3.5 Bild aus Dateien */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonPhotoWide} onPress={() => { setPhotoEditMode(false); importFromFiles(); }}>
+          <TouchableOpacity style={styles.toolButtonPhotoWide} {...tip('Aus Dateien')} onPress={() => { setPhotoEditMode(false); importFromFiles(); }}>
             <Ionicons name="document" size={20} color="#FF5722" />
           </TouchableOpacity>
           <Text style={styles.toolButtonLabelWide}>{t('sketches.fromFiles')}</Text>
@@ -144,6 +172,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity 
             style={[styles.toolButtonInner, photoEditMode && styles.photoEditButtonActive]} 
+            {...tip('Position')}
             onPress={() => {
               const newPhotoEditMode = !photoEditMode;
               setPhotoEditMode(newPhotoEditMode);
@@ -164,6 +193,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity 
             style={[styles.toolButtonInner, drawMode === 'crop' && styles.toolButtonActive]} 
+            {...tip('Zuschneiden')}
             onPress={() => selectDrawMode(drawMode === 'crop' ? 'select' : 'crop')}
           >
             <Ionicons name="crop-outline" size={18} color={drawMode === 'crop' ? '#fff' : '#9C27B0'} />
@@ -186,6 +216,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
                 borderColor: zoomMode ? '#4caf50' : '#f44336',
               }
             ]}
+            {...tip('Zoom')}
             onPress={() => {
               const newZoomMode = !zoomMode;
               setZoomMode(newZoomMode);
@@ -214,7 +245,9 @@ export function SketchToolbar(props: SketchToolbarProps) {
         {/* 6. Hand - Bearbeiten */}
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
-            style={[styles.toolButtonInner, drawMode === 'select' && styles.toolButtonActive]}
+            style={[styles.toolButtonInner, drawMode === 'select' && styles.toolButtonActive, glow('edit', drawMode === 'select')]}
+            {...tip('Bearbeiten (Hand)')}
+            ref={coachRefs.edit}
             onPress={() => selectDrawMode('select')}
           >
             <Ionicons name="hand-left" size={18} color={drawMode === 'select' ? '#fff' : '#333'} />
@@ -230,7 +263,9 @@ export function SketchToolbar(props: SketchToolbarProps) {
               accessibilityRole="switch"
               accessibilityState={{ checked: pointMoveOnly }}
               accessibilityLabel="Punkte verschieben"
-              style={[styles.toolButtonInner, pointMoveOnly && styles.toolButtonActive]}
+              style={[styles.toolButtonInner, pointMoveOnly && styles.toolButtonActive, glow('points', pointMoveOnly)]}
+              {...tip('Punkte')}
+              ref={coachRefs.points}
               onPress={() => {
                 setPointMoveOnly(!pointMoveOnly);
                 if (!pointMoveOnly) {
@@ -251,6 +286,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Maßlinie Button */}
             <TouchableOpacity
               style={[styles.toolButtonInnerWide, drawMode === 'arrow' && styles.toolButtonActive]}
+              {...tip('M (Maßpfeil)')}
               onPress={() => selectDrawMode('arrow')}
             >
               <Svg width={46} height={22} viewBox="0 0 56 28">
@@ -287,7 +323,9 @@ export function SketchToolbar(props: SketchToolbarProps) {
             </TouchableOpacity>
             {/* Polygon Maße Button */}
             <TouchableOpacity
-              style={[styles.toolButtonInner, drawMode === 'polyline' && styles.toolButtonActive]}
+              style={[styles.toolButtonInner, drawMode === 'polyline' && styles.toolButtonActive, glow('polygon', drawMode === 'polyline')]}
+              {...tip('Polygon')}
+              ref={coachRefs.polygon}
               onPress={() => {
                 selectDrawMode('polyline');
                 setPolylinePoints([]);
@@ -333,6 +371,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Punkt hinzufügen Button */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'addPoint' && styles.toolButtonActive]}
+              {...tip('+Pt')}
               onPress={() => selectDrawMode('addPoint')}
             >
               <Ionicons name="add-circle-outline" size={22} color={drawMode === 'addPoint' ? '#fff' : '#4caf50'} />
@@ -340,6 +379,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Punkt entfernen Button */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'removePoint' && styles.toolButtonActive]}
+              {...tip('-Pt')}
               onPress={() => selectDrawMode('removePoint')}
             >
               <Ionicons name="remove-circle-outline" size={22} color={drawMode === 'removePoint' ? '#fff' : '#f44336'} />
@@ -357,6 +397,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[styles.toolButtonInner, !selectedElementId && styles.toolButtonDisabled]}
+            {...tip('Element löschen')}
             onPress={() => {
               if (selectedElementId) {
                 setShowDeleteConfirm(true);
@@ -377,6 +418,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
               !selectedElementId && styles.toolButtonDisabled,
               showElementStyleEditor && selectedElementId && styles.toolButtonActive,
             ]}
+            {...tip('Stil')}
             onPress={() => {
               if (selectedElementId) {
                 setShowElementStyleEditor(!showElementStyleEditor);
@@ -453,6 +495,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[styles.toolButtonInner, drawMode === 'pen' && styles.toolButtonActive]}
+            {...tip('Stift')}
             onPress={() => selectDrawMode('pen')}
           >
             <Ionicons name="create" size={18} color={drawMode === 'pen' ? '#fff' : '#333'} />
@@ -467,6 +510,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             <View style={{ zIndex: 9999 }}>
               <TouchableOpacity
                 style={[styles.toolButtonInner, drawMode === 'line' && styles.toolButtonActive]}
+                {...tip('Linie')}
                 onPress={() => {
                   if (drawMode === 'line') {
                     // Bereits aktiv → Modal toggle
@@ -495,12 +539,14 @@ export function SketchToolbar(props: SketchToolbarProps) {
             </View>
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'circle' && styles.toolButtonActive]}
+              {...tip('Kreis')}
               onPress={() => { selectDrawMode('circle'); setShowLineTypePicker(false); }}
             >
               <Ionicons name="ellipse-outline" size={18} color={drawMode === 'circle' ? '#fff' : '#333'} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'rect' && styles.toolButtonActive]}
+              {...tip('Rechteck')}
               onPress={() => { selectDrawMode('rect'); setShowLineTypePicker(false); }}
             >
               <Ionicons name="square-outline" size={18} color={drawMode === 'rect' ? '#fff' : '#333'} />
@@ -519,6 +565,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolButtonWithLabel}>
           <TouchableOpacity
             style={[styles.toolButtonInner, showProtractor && styles.toolButtonActive]}
+            {...tip('Winkel')}
             onPress={() => {
               if (!showProtractor) {
                 // Canvas-Snapshot erstellen BEVOR das Protractor-Overlay angezeigt wird
@@ -569,6 +616,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Memo-Pfeil */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'pointer' && styles.toolButtonActive]}
+              {...tip('Zeiger')}
               onPress={() => selectDrawMode('pointer')}
             >
               <Ionicons name="arrow-forward" size={20} color={drawMode === 'pointer' ? '#fff' : '#e91e63'} />
@@ -576,6 +624,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Text Button */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'text' && styles.toolButtonActive]}
+              {...tip('Text')}
               onPress={() => selectDrawMode('text')}
             >
               <Ionicons name="text" size={18} color={drawMode === 'text' ? '#fff' : '#333'} />
@@ -583,6 +632,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Notiz Button (Annotation Memo) */}
             <TouchableOpacity
               style={[styles.toolButtonInner, drawMode === 'memo' && styles.toolButtonActive]}
+              {...tip('Memo')}
               onPress={() => selectDrawMode('memo')}
             >
               <Ionicons name="chatbox-outline" size={18} color={drawMode === 'memo' ? '#fff' : '#E74C3C'} />
@@ -590,6 +640,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             {/* Notizen zur Skizze Button */}
             <TouchableOpacity
               style={[styles.toolButtonInner, showNotesModal && styles.toolButtonActive, notes.trim() && !showNotesModal && styles.toolButtonWithBadge]}
+              {...tip('Notizen')}
               onPress={() => setShowNotesModal(true)}
             >
               <View style={styles.notesButtonContainer}>
@@ -616,7 +667,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         <View style={styles.toolGroupWithLabel}>
           <View style={styles.toolGroupRow}>
             {/* Color picker */}
-            <TouchableOpacity style={styles.toolButtonInner} onPress={() => setShowColorPicker(!showColorPicker)}>
+            <TouchableOpacity style={styles.toolButtonInner} {...tip('Farbe und Strichstärke')} onPress={() => setShowColorPicker(!showColorPicker)}>
               <View style={[styles.colorPreviewSmall, { backgroundColor: drawColor }]} />
             </TouchableOpacity>
 
@@ -682,6 +733,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             <TouchableOpacity
               style={[styles.toolButtonInner, !canUndo && styles.toolButtonDisabled]}
               testID="sketch-undo-button"
+              {...tip('Rückgängig')}
               onPress={undo}
               disabled={!canUndo}
             >
@@ -691,6 +743,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
             <TouchableOpacity
               style={[styles.toolButtonInner, !canRedo && styles.toolButtonDisabled]}
               testID="sketch-redo-button"
+              {...tip('Wiederholen')}
               onPress={redo}
               disabled={!canRedo}
             >
@@ -704,7 +757,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
 
         {/* ========== SEITE LÖSCHEN ========== */}
         <View style={styles.toolButtonWithLabel}>
-          <TouchableOpacity style={styles.toolButtonInner} onPress={() => {
+          <TouchableOpacity style={styles.toolButtonInner} {...tip('Alles löschen')} onPress={() => {
             if (Platform.OS === 'web') {
               if (confirm('Möchten Sie alle Elemente löschen?')) {
                 clearAll();
@@ -722,6 +775,7 @@ export function SketchToolbar(props: SketchToolbarProps) {
         </View>
       </ScrollView>
       </View>
+      <ButtonTip label={tipLabel} top={insets.top + 150} onClose={() => setTipLabel(null)} />
     </>
   );
 }
